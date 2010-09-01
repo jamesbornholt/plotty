@@ -1,0 +1,103 @@
+body {
+	padding: 0;
+	margin: 0;
+}
+
+div {
+	padding: 0;
+	margin: 0;
+	font-family: Arial;
+}
+
+#pipeline-templates {
+	display: none;
+}
+
+#pipeline {
+    float: left;
+	padding: 0 20px;
+	width: 440px;
+}
+
+.remove-button {
+	width: 20px;
+	height: 20px;
+	float: right;
+	display: block;
+	margin: 1px;
+	border: 1px;
+	cursor: pointer;
+}
+
+.odd {
+    background: #eee;
+}
+
+.pipeline {
+	width: 400px;
+}
+
+.pipeline:first-child {
+    margin-top: 20px;
+}
+
+.pipeline-content {
+	border: 1px solid black;
+	border-bottom: 0;
+	padding: 20px;
+	background: transparent;
+}
+
+.pipeline-header {
+	font-weight: bold;
+}
+
+.pipeline-footer {
+	width: 400px;
+	height: 20px;
+	background: transparent url(arrow.gif) center top no-repeat;
+}
+
+
+#pipeline-log {
+	background: #eee;
+}
+#pipeline-add {
+	background: #ddd;
+	border-bottom: 1px solid black;
+	margin-bottom: 20px;
+}
+#pipeline-values {
+    background: #eee;
+}
+#pipeline-load {
+	background: white;
+	border-bottom: 1px solid black;
+	margin-bottom: 20px;
+}
+#pipeline-save {
+    background: white;
+    border-bottom: 1px solid black;
+    margin-bottom: 20px;
+}
+.filter {
+	background: #f5cac2;
+}
+.aggregate {
+	background: #c5f5c1;
+}
+.normalize {
+	background: #a7e2f5;
+}
+.graph {
+	background: #f5f0c1;
+}
+
+#output {
+    margin-left: 440px;
+}
+
+.ci {
+    font-size: 75%;
+    color: gray;
+}

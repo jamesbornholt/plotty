@@ -1,0 +1,98 @@
+<html>
+<head>
+    <title>Pipeline</title>
+    <link rel="stylesheet" href="static/pipeline.css" type="text/css" />
+	<script type="text/javascript" charset="utf-8" src="static/jquery.js"></script>
+	<script type="text/javascript" charset="utf-8" src="static/pickle.js"></script>
+	<script type="text/javascript" charset="utf-8" src="static/pipeline.js"></script>
+</head>
+<body>
+	<div id="pipeline-templates">
+		<div id="pipeline-filter-template" class="pipeline filter">
+			<button type="button" class="remove-button">X</button>
+			<div class="pipeline-content">
+				<span class="pipeline-header">Filter</span> <br />
+				<select name="filters[0][0]['col']"><option>benchmark</option><option>hfac</option></select> is <select name="filters[0][0]['val']"><option>compress</option><option>fop</option></select> <button type="button">-</button><br />
+				<select name="filters[0][1]['col']"><option>benchmark</option><option>hfac</option></select> is <select name="filters[0][1]['val']"><option>compress</option><option>fop</option></select> <button type="button">-</button> <button type="button">+</button>
+			</div>
+			<div class="pipeline-footer"></div>
+		</div>
+		<div id="pipeline-aggregate-template" class="pipeline aggregate">
+			<button type="button" class="remove-button">X</button>
+			<div class="pipeline-content">
+				<span class="pipeline-header">Aggregate</span> <br />
+				<select name="aggregate[0]['type']"><option>mean</option><option>geomean</option></select> over <select name="aggregate[0]['col']"><option>benchmark</option><option>hfac</option></select>
+			</div>
+			<div class="pipeline-footer"></div>
+		</div>
+		<div id="pipeline-normalize-template" class="pipeline normalize">
+			<button type="button" class="remove-button">X</button>
+			<div class="pipeline-content">
+				<span class="pipeline-header">Normalize</span> <br />
+				Over <select name="normalize[0]['col']"><option>configuration</option><option>benchmark</option></select> to <select name="normalize[0]['val']"><option>jrmc</option><option>ibm</option></select>
+			</div>
+			<div class="pipeline-footer"></div>
+		</div>
+		<div id="pipeline-graph-template" class="pipeline graph">
+			<button type="button" class="remove-button">X</button>
+			<div class="pipeline-content">
+				<span class="pipeline-header">Graph</span> <br />
+				Type: <select name="graph[0]['type']"><option>XY Scatter</option><option>Histogram</option></select> <br />
+				x-axis: <select name="graph[0]['xaxis']"><option>hfac</option><option>...</option></select> <br />
+				y-axis: <select name="graph[0]['yaxis']"><option>value</option></select>
+			</div>
+			<div class="pipeline-footer"></div>
+		</div>
+	</div>
+	<div id="pipeline">
+		<div id="pipeline-load" class="pipeline">
+			<div class="pipeline-content">
+				<span class="pipeline-header">Load Saved Pipeline</span> <br />
+				<select name="saved"><option>TODO POPULATE</option></select>
+			</div>
+		</div>
+		<div id="pipeline-log" class="pipeline">
+			<div class="pipeline-content">
+				<span class="pipeline-header">Log Files</span> <br />
+				<table id="pipeline-log-table">
+				    <tr>
+				        <td>
+				            <select class="select-log">
+				                <option value="-1" selected></option>
+				                {% for log in logs %}
+				                <option value="{{ log.id }}">{{ log.Name }}</option>
+				                {% endfor %}
+				            </select>
+				        </td>
+				        <td><button type="button" class="remove-row">-</button></td>
+				        <td><button type="button" class="add-row">+</button></td>
+				    </tr>
+				</table>
+			</div>
+			<div class="pipeline-footer"></div>
+		</div>
+		<div id="pipeline-values" class="pipeline">
+			<div class="pipeline-content">
+				<span class="pipeline-header">Values</span> <br />
+				Existing value: <select name="value"><option>bmtime</option><option>power</option></select><br />
+				or derived value: <input type="text" name="derived-value" value="power.watts * bmtime" />
+			</div>
+			<div class="pipeline-footer"></div>
+		</div>
+		<div id="pipeline-add" class="pipeline">
+			<div class="pipeline-content">
+				<span class="pipeline-header">Add Block</span> <br />
+				<button type="button" id="add-filter">Filter</button><button type="button" id="add-aggregate">Aggregate</button><button type="button" id="add-normalize">Normalize</button><button type="button" id="add-graph">Graph</button>
+			</div>
+		</div>
+		<div id="pipeline-save" class="pipeline">
+		    <div class="pipeline-content">
+		        <span class="pipeline-header">Save Pipeline</span> <br />
+		        <input type="text" name="name" /> <button type="button">Save</button>
+		    </div>
+		</div>
+	</div>
+	<div id="output">
+    </div>
+</body>
+</html>
