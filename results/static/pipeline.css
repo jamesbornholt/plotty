@@ -95,9 +95,14 @@ div {
 
 #output {
     margin-left: 440px;
+    padding: 20px 0;
 }
 
 .ci {
     font-size: 75%;
     color: gray;
+}
+
+#select-values {
+    width: 100%;
 }

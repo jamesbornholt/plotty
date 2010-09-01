@@ -3,14 +3,19 @@ from results.DataTypes import *
 import logging
 
 class FilterBlock:
-    def process(self, datatable, **kwargs):
+    def process(self, datatable, filters):
         newRows = []
         for row in datatable:
             add = True
-            for (key,val) in kwargs.items():
-                if key not in row.scenario or row.scenario[key] <> val:
-                    add = False
-                    break
+            for filt in filters:
+                if filt['is']:
+                    if filt['column'] not in row.scenario or row.scenario[filt['column']] <> filt['value']:
+                        add = False
+                        break
+                else:
+                    if filt['column'] in row.scenario and row.scenario[filt['column']] == filt['value']:
+                        add = False
+                        break
             if add:
                 newRows.append(row)
         datatable.rows = newRows

@@ -1,7 +1,5 @@
 # Create your views here.
 
-# Create your views here.
-
 import os, datetime, math
 #from scipy import stats
 from django.shortcuts import render_to_response
@@ -46,7 +44,8 @@ def list(request):
 #        agg['ciperc'] = agg['ci'] / agg['avg'] * 100
 #        agg['Scenario'] = Scenario.objects.get(id=agg['Scenario_id'])
 #    
-    dt = DataTable(log=Log.objects.all()[0])
+    dt = DataTable(logs=[1])
+    dt.selectValues(['power.avg', 'bmtime'])
     logging.debug('%d rows initially' % len(dt.rows))
     #FilterBlock().process(dt, benchmark='compress', iteration='4')
     FilterBlock().process(dt, benchmark='compress', iteration='4')
@@ -64,7 +63,6 @@ def list(request):
 
 def pipeline(request):
     logs = Log.objects.all()
-    
     return render_to_response('pipeline.html', {
-        'logs': logs
+        'logs': logs,
     }, context_instance=RequestContext(request))

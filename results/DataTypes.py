@@ -3,17 +3,20 @@ from django.core.cache import cache
 import logging
 
 class DataTable:
-    def __init__(self, log):
-        self.rows = cache.get('log%d' % log.id)
-        if self.rows == None:
-            logging.debug('Reloading %s from DB' % log)
-            self.rows = list()
-            scvars = self.preloadScenarioVars(log)
-            results = self.loadResults(log)
-            self.collateResults(results, scvars)
-            cache.set('log%d' % log.id, self.rows)
-        else:
-            logging.debug('Loading %s from cache' % log)
+    def __init__(self, logs):
+        self.rows = []
+        for log_id in logs:
+            log = Log.objects.filter(id=log_id)[0]
+            rows = cache.get('log%d' % log.id)
+            if rows == None:
+                logging.debug('Reloading %s from DB' % log)
+                scvars = self.preloadScenarioVars(log)
+                results = self.loadResults(log)
+                self.collateResults(results, scvars)
+                cache.set('log%d' % log.id, self.rows)
+            else:
+                self.rows.extend(rows)
+                logging.debug('Loading %s from cache' % log)
     
     def __iter__(self):
         return iter(self.rows)
@@ -57,6 +60,14 @@ class DataTable:
                 if val not in values:
                     values.append(val)
         return scenarios, values
+    
+    def selectValues(self, vals):
+        if 'invocation' not in vals:
+            vals.append('invocation')
+        for row in self.rows:
+            for (key,val) in row.values.items():
+                if key not in vals:
+                    del row.values[key]
 
 
 class DataRow:
