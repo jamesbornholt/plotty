@@ -1,5 +1,5 @@
 # Django settings for django_site project.
-import sys, os
+import sys, os, memcache
 
 DEBUG = True
 TEMPLATE_DEBUG = DEBUG
@@ -14,6 +14,7 @@ else:
     #CACHE_BACKEND = 'memcached://127.0.0.1:11211/?timeout=3600'
 
 CACHE_BACKEND = 'memcached://127.0.0.1:11211/?timeout=3600'
+memcache.SERVER_MAX_VALUE_LENGTH = 5*1024*1024
 
 sys.path.insert(0, ROOT_DIR)
 ADMINS = (
