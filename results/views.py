@@ -44,11 +44,12 @@ def list(request):
 #        agg['ciperc'] = agg['ci'] / agg['avg'] * 100
 #        agg['Scenario'] = Scenario.objects.get(id=agg['Scenario_id'])
 #    
-    dt = DataTable(logs=[1])
+    dt = DataTable(logs=[2])
     dt.selectValues(['power.avg', 'bmtime'])
     logging.debug('%d rows initially' % len(dt.rows))
     #FilterBlock().process(dt, benchmark='compress', iteration='4')
-    FilterBlock().process(dt, benchmark='compress', iteration='4')
+    FilterBlock().process(dt, [{'column': 'benchmark', 'is': True, 'value': 'compress'},
+                               {'column': 'iteration', 'is': True, 'value': '4'}])
     logging.debug('%d rows after filtering' % len(dt.rows))
     AggregateBlock().process(dt, column='invocation', type='mean')
     logging.debug('%d rows after aggregating' % len(dt.rows))
