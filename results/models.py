@@ -37,4 +37,4 @@ class Log(models.Model):
     Date       = models.DateTimeField()    
     
     def __unicode__(self):
-        return "%s at %s" % (self.Name, self.Date)
+        return "[%d] %s at %s" % (self.id, self.Name, self.Date)

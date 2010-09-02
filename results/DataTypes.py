@@ -1,23 +1,26 @@
 from results.models import *
 from django.core.cache import cache
-import logging
+import logging, sys
 
 class DataTable:
     def __init__(self, logs):
         self.rows = []
         for log_id in logs:
-            log = Log.objects.filter(id=log_id)[0]
-            rows = cache.get('log%d' % log.id)
+            logging.debug('Attempting to load log ID %d from cache' % log_id)
+            rows = cache.get('log%d' % log_id)
             if rows == None:
-                logging.debug('Reloading %s from DB' % log)
+                rows = []
+                log = Log.objects.filter(id=log_id)[0]
+                logging.debug('Cache empty, reloading %s from DB' % log)
                 scvars = self.preloadScenarioVars(log)
                 results = self.loadResults(log)
-                self.collateResults(results, scvars)
-                cache.set('log%d' % log.id, self.rows)
+                self.collateResults(results, scvars, rows)
+                ret = cache.set('log%d' % log_id, rows)
+                logging.debug('Storing %d rows to cache for log ID %d (object size %d)' % (len(rows), log_id, sys.getsizeof(rows)))
             else:
-                self.rows.extend(rows)
-                logging.debug('Loading %s from cache' % log)
-    
+                logging.debug('Loaded %d rows from cache' % len(rows))
+            self.rows.extend(rows)
+
     def __iter__(self):
         return iter(self.rows)
 
@@ -41,13 +44,13 @@ class DataTable:
             results[scid][inv][res.Key] = res.Value
         return results
 
-    def collateResults(self, results, scenarios):
+    def collateResults(self, results, scenarios, rows):
         for (sc_id,res) in results.iteritems():
             for (inv,cols) in res.iteritems():
                 row = DataRow(scenarios[sc_id], inv)
                 for (key,val) in cols.iteritems():
                     row.values[key] = val
-                self.rows.append(row)
+                rows.append(row)
 
     def headers(self):
         scenarios = list()
