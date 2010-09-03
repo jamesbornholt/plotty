@@ -16,7 +16,7 @@ div {
 #pipeline {
     float: left;
 	padding: 0 20px;
-	width: 440px;
+	width: 400px;
 }
 
 .remove-button {
@@ -105,4 +105,11 @@ div {
 
 #select-values {
     width: 100%;
+}
+
+#loading-indicator {
+    float: left;
+    height: 20px;
+    margin: 20px 0;
+    visibility: hidden;
 }

@@ -292,6 +292,12 @@ function refreshPipeline() {
 }
 
 $(document).ready(function() {
+    $(document).ajaxStart(function() {
+        $('#loading-indicator').css({visibility: 'visible'});
+    });
+    $(document).ajaxStop(function() {
+        $('#loading-indicator').css({display: 'hidden'});
+    });
 	$("#add-filter").click(function() {
 		addBlock('filter');
 	});
