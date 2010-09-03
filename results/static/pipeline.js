@@ -1,3 +1,18 @@
+if ( typeof console === 'undefined' ) {
+    var console = {
+        log: function() {}
+    }
+}
+if ( typeof Array.prototype.map === 'undefined' ) {
+    Array.prototype.map = function(func, context) {
+        var newList = [];
+        for ( var i = 0; i < this.length; i++ ) {
+            newList.push(func.call(context, this[i]));
+        }
+        return newList;
+    }
+}
+
 var PipelineEncoder = {
     /*
      * Constants
@@ -38,9 +53,9 @@ var PipelineEncoder = {
      * Misc
      */
     reverse_dict_lookup: function(dict, lookup) {
-        for ( i in dict )
-            if ( dict[i] == lookup )
-                return i;
+        for ( var j in dict )
+            if ( dict[j] == lookup )
+                return j;
         return null;
     },
     
@@ -50,23 +65,23 @@ var PipelineEncoder = {
     decode_pipeline: function(data) {
         if ( !this.hasInited )
             this.init();
-        chunks = data.split(this.BLOCK_SEPARATOR);
-        selected_columns = chunks[1].split(this.GROUP_SEPARATOR);
-        selected_logs = chunks[0].split(this.GROUP_SEPARATOR).map(function(i) {return parseInt(i)});
+        var chunks = data.split(this.BLOCK_SEPARATOR);
+        var selected_columns = chunks[1].split(this.GROUP_SEPARATOR);
+        var selected_logs = chunks[0].split(this.GROUP_SEPARATOR).map(function(i) {return parseInt(i)});
         return {'logs': selected_logs, 'columns': selected_columns, 'blocks': chunks.slice(2).map(this.decode_pipeline_block, this)};
     },
     
     decode_pipeline_block: function(data) {
-        type = parseInt(data[0]);
+        var type = parseInt(data[0]);
         return this.BLOCK_DECODES[type].call(this, data.substr(1));
     },
     
     decode_filter_block: function(data) {
-        filter_strings = data.split(this.GROUP_SEPARATOR);
-        filters = [];
-        for ( i in filter_strings ) {
-            split = filter_strings[i].split(this.FILTER_PARAM_SEPARATOR);
-            filter_dict = {'column': split[0], 'value': split[2]};
+        var filter_strings = data.split(this.GROUP_SEPARATOR);
+        var filters = [];
+        for ( var i = 0; i < filter_strings.length; i++ ) {
+            var split = filter_strings[i].split(this.FILTER_PARAM_SEPARATOR);
+            var filter_dict = {'column': split[0], 'value': split[2]};
             if ( split[1] == '0' )
                 filter_dict['is'] = false;
             else
@@ -77,12 +92,12 @@ var PipelineEncoder = {
     },
     
     decode_aggregate_block: function(data) {
-        params_string = data.split(this.GROUP_SEPARATOR);
+        var params_string = data.split(this.GROUP_SEPARATOR);
         return {'type': 'aggregate', 'params': {'column': params_string[0], 'type': this.AGGREGATE_TYPES[parseInt(params_string[1])]}};
     },
     
     decode_normalise_block: function(data) {
-        params_string = data.split(this.GROUP_SEPARATOR);
+        var params_string = data.split(this.GROUP_SEPARATOR);
         return {'type': 'normalise', 'params': {'column': params_string[0], 'value': params_string[1]}}
     },
     
@@ -105,8 +120,9 @@ var PipelineEncoder = {
     },
     
     encode_filter_block: function(data) {
-        filter_strings = [];
-        for ( i in data['filters'] ) {
+        var filter_strings = [];
+        for ( var i = 0; i < data['filters'].length; i++ ) {
+            var is_type;
             if ( data['filters'][i]['is'] )
                 is_type = '1';
             else
@@ -126,11 +142,11 @@ var PipelineEncoder = {
     
     encode_graph_block: function(data) {
         return '';
-    },
+    }
 }
 
 function addBlock(type) {
-	newBlock = $('#pipeline-' + type + '-template').clone();
+	var newBlock = $('#pipeline-' + type + '-template').clone();
 	newBlock.attr('id', '');
 	
 	// do some replaces on the contents...
@@ -139,7 +155,7 @@ function addBlock(type) {
 }
 
 function updateAddRemoveButtons(table) {
-    rows = $('tr', table);
+    var rows = $('tr', table);
     if ( rows.length > 1 ) {
         /*rows.each(function(i) {
             $('.remove-row', this).attr('disabled', '');
@@ -155,8 +171,8 @@ function updateAddRemoveButtons(table) {
 }
 
 function addBlockTableRow(button) {
-    table = $(button).parents('table');
-    newRow = $('tr:first-child', table).clone();
+    var table = $(button).parents('table');
+    var newRow = $('tr:first-child', table).clone();
     
     $('select', newRow).each(function() {
         this.selectedIndex = 0;
@@ -168,80 +184,81 @@ function addBlockTableRow(button) {
 }
 
 function removeBlockTableRow(button) {
-    table = $(button).parents('table');
+    var table = $(button).parents('table');
     $(button).parents('tr').remove();
     updateAddRemoveButtons(table);
 }
 
 function updateAvailableColumns(data) {
     $('.select-filter-column').each(function() {
-        oldValue = $(this).val();
+        var oldValue = $(this).val();
+        console.log('oldValue: ' + oldValue);
         this.options.length = 0;
         this.options.add(new Option("[" + data.columns.length + " options]", '', oldValue == ''));
-        for ( i in data.columns ) {
+        for ( var i = 0; i < data.columns.length; i++ ) {
             this.options.add(new Option(data.columns[i], data.columns[i], oldValue == data.columns[i]));
         }
     });
     $('.select-aggregate-column').each(function() {
-        oldValue = $(this).val();
+        var oldValue = $(this).val();
         this.options.length = 0;
         this.options.add(new Option("[" + data.columns.length + " options]", '', oldValue == ''));
-        for ( i in data.columns ) {
+        for ( var i = 0; i < data.columns.length; i++ ) {
             this.options.add(new Option(data.columns[i], data.columns[i], oldValue == data.columns[i]));
         }
     });
     
-    values_select = $('#select-values');
-    oldValues = values_select.val() || [];
+    var values_select = $('#select-values');
+    var oldValues = values_select.val() || [];
     console.log(oldValues);
-    values_select = values_select.get(0);
+    var values_select = values_select.get(0);
     values_select.options.length = 0;
-    for ( i in data.keys ) {
+    for ( var i = 0; i < data.keys.length; i++ ) {
         values_select.options.add(new Option(data.keys[i], data.keys[i]));
     }
-    for ( i = 0; i < values_select.options.length; i++ ) {
-        if ( oldValues.indexOf(values_select.options[i].value) > -1 ) {
-            values_select.options[i].selected = true;
-        }
-    }
+    if ( oldValues.length > 0 )
+        for ( var i = 0; i < values_select.options.length; i++ )
+            if ( oldValues.indexOf(values_select.options[i].value) > -1 )
+                values_select.options[i].selected = true;
 }
 
 function updateAvailableValues(vals) {
     this.options.length = 0;
     this.options.add(new Option("[" + vals.length + " options]", '', true));
-    for ( i in vals ) {
+    for ( var i = 0; i < vals.length; i++ ) {
         this.options.add(new Option(vals[i], vals[i]));
     }
 }
 
 function selectedLogFiles() {
-    logs = [];
-    log_selects = $('.select-log').get();
-    for ( i in log_selects ) {
+    var logs = [];
+    var log_selects = $('.select-log').get();
+    for ( var i = 0; i < log_selects.length; i++ ) {
         logs.push($(log_selects[i]).val());
     }
     return logs;
 }
 
 function serialisePipeline() {
-    dict = {}
+    var dict = {}
     dict['logs'] = selectedLogFiles();
     dict['columns'] = $('#select-values').val();
     
-    blocks = []
-    throwInvalid = false;
+    var blocks = [];
+    var throwInvalid = false;
     if ( $('#pipeline .pipeline-block').length == 0 )
         return false;
     $('#pipeline .pipeline-block').each(function() {
         if ( $(this).hasClass('filter') ) {
-            filters = []
+            var filters = []
             $('tr', this).each(function() {
+                var is;
                 if ( $('.select-filter-is', this).val() == 'is' )
                     is = true;
                 else
                     is = false;
-                column = $('.select-filter-column', this).val();
-                value = $('.select-filter-value', this).val();
+                var column = $('.select-filter-column', this).val();
+                var value = $('.select-filter-value', this).val();
                 if ( column == '' || value == '' ) {
                     throwInvalid = true;
                     return false;
@@ -251,8 +268,8 @@ function serialisePipeline() {
             blocks.push({'type': 'filter', 'filters': filters});
         }
         else if ( $(this).hasClass('aggregate') ) {
-            column = $('.select-aggregate-column', this).val();
-            type = $('.select-aggregate-type', this).val();
+            var column = $('.select-aggregate-column', this).val();
+            var type = $('.select-aggregate-type', this).val();
             if ( column == '' || type == '' ) {
                 throwInvalid = true;
                 return false;
@@ -260,8 +277,8 @@ function serialisePipeline() {
             blocks.push({'type': 'aggregate', 'params': {'column': column, 'type': type}});
         }
         else if ( $(this).hasClass('normalise') ) {
-            column = $('.select-normalise-column', this).val();
-            value = $('.select-normalise-value', this).val();
+            var column = $('.select-normalise-column', this).val();
+            var value = $('.select-normalise-value', this).val();
             if ( column == '' || value == '' ) {
                 throwInvalid = true;
                 return false;
@@ -281,22 +298,26 @@ function serialisePipeline() {
 }
 
 function refreshPipeline() {
-    pipeline = serialisePipeline();
+    var pipeline = serialisePipeline();
     if ( pipeline ) {
-        encoded = PipelineEncoder.encode_pipeline(pipeline);
+        var encoded = PipelineEncoder.encode_pipeline(pipeline);
         console.log(encoded);
         $.get('/results/ajax/pipeline/' + encoded, function(data) {
-            $('#output').html(data);
+            $('#output table').remove();
+            $('#output').append(data);
         });
     }
 }
 
 $(document).ready(function() {
+    $.ajaxSetup({
+        cache: false
+    });
     $(document).ajaxStart(function() {
         $('#loading-indicator').css({visibility: 'visible'});
     });
     $(document).ajaxStop(function() {
-        $('#loading-indicator').css({display: 'hidden'});
+        $('#loading-indicator').css({visibility: 'hidden'});
     });
 	$("#add-filter").click(function() {
 		addBlock('filter');
@@ -321,11 +342,11 @@ $(document).ready(function() {
 	    removeBlockTableRow(this);
 	    refreshPipeline();
 	});
-	$(".select-log").live('change', function() {
+	$("#pipeline-log").delegate(".select-log", 'change', function() {
 	    $.getJSON('/results/ajax/log-values/' + selectedLogFiles().join(',') + '/', updateAvailableColumns);
 	});
-	$(".select-filter-column").live('change', function() {
-	    values_select = $('.select-filter-value', $(this).parents('tr')).get(0);
+	$("#pipeline").delegate(".select-filter-column", 'change', function() {
+	    var values_select = $('.select-filter-value', $(this).parents('tr')).get(0);
 	    $.ajax({
 	        context: values_select,
 	        dataType: 'json',
@@ -334,5 +355,5 @@ $(document).ready(function() {
 	    });
 	});
 	
-	$("#pipeline-log, #pipeline-values, .pipeline-block").find('select').live('change', refreshPipeline);
+	$("#pipeline").delegate('select', 'change', refreshPipeline);
 });

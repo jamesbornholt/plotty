@@ -10,6 +10,8 @@ import json
 def filter_values(request, logids, col):
     values = []
     for i in logids.split(','):
+        if i == '':
+            continue
         log_values = ScenarioVar.objects.filter(Log__id=int(i), Key=col).values('Value').distinct()
         for value in log_values:
             if value['Value'] not in values:
@@ -20,6 +22,8 @@ def filter_values(request, logids, col):
 def log_values(request, logids):
     columns = []
     for i in logids.split(','):
+        if i == '':
+            continue
         log_cols = ScenarioVar.objects.filter(Log__id=int(i)).values('Key').distinct()
         for col in log_cols:
             if col['Key'] not in columns:
@@ -28,6 +32,8 @@ def log_values(request, logids):
     columns.sort()
     keys = []
     for i in logids.split(','):
+        if i == '':
+            continue
         log_keys = Result.objects.filter(Log__id=i).values('Key').distinct()
         for key in log_keys:
             if key['Key'] not in keys:

@@ -90,7 +90,7 @@ div {
 	background: #a7e2f5;
 }
 .graph {
-	background: #f5f0c1;
+	background: #e269f0;
 }
 
 #output {
@@ -108,8 +108,8 @@ div {
 }
 
 #loading-indicator {
-    float: left;
     height: 20px;
-    margin: 20px 0;
+    background: #f5f0c1;
+    border: 1px solid #e3d554;
     visibility: hidden;
 }
