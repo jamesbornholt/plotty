@@ -15,7 +15,6 @@ def doimport(path, name, console=False):
         reader = csv.DictReader(open(path, 'rb'))
         for row in reader:
             result = Result()
-            result.Invocation = row['invocation']
             result.Key = row['key']
             result.Value = row['value']
             result.Log = log
@@ -39,7 +38,7 @@ def doimport(path, name, console=False):
 def hash_scenario(row):
     hashstr = ""
     for key in row:
-        if key not in ['invocation', 'key', 'value']:
+        if key not in ['key', 'value']:
             hashstr += key + row[key]
     return hashstr
     
@@ -50,7 +49,7 @@ def create_scenario(row, log):
     scen.save()
     
     for key in row:
-        if key not in ['invocation', 'key', 'value']:
+        if key not in ['key', 'value']:
             var = ScenarioVar()
             var.Key = key
             var.Value = row[key]

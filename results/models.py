@@ -1,14 +1,13 @@
 from django.db import models
 
 class Result(models.Model):
-    Invocation = models.IntegerField()
     Key        = models.CharField(max_length=255)
     Value      = models.FloatField()
     Scenario   = models.ForeignKey('Scenario')
     Log        = models.ForeignKey('Log')
     
     def __unicode__(self):
-        return "[%d] %s = %f" % (self.Invocation, self.Key, self.Value)
+        return "%s = %f" % (self.Key, self.Value)
 
 class Scenario(models.Model):
     Log        = models.ForeignKey('Log')

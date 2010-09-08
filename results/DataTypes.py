@@ -36,21 +36,16 @@ class DataTable:
         results = {}
         for res in Result.objects.filter(Log=log):
             scid = res.Scenario_id
-            inv = res.Invocation
             if not scid in results:
                 results[scid] = {}
-            if not inv in results[scid]:
-                results[scid][inv] = {}
-            results[scid][inv][res.Key] = res.Value
+            results[scid][res.Key] = res.Value
         return results
 
     def collateResults(self, results, scenarios, rows):
-        for (sc_id,res) in results.iteritems():
-            for (inv,cols) in res.iteritems():
-                row = DataRow(scenarios[sc_id], inv)
-                for (key,val) in cols.iteritems():
-                    row.values[key] = val
-                rows.append(row)
+        for (sc_id,cols) in results.iteritems():
+            row = DataRow(scenarios[sc_id])
+            row.values = cols
+            rows.append(row)
 
     def headers(self):
         scenarios = list()
@@ -65,8 +60,6 @@ class DataTable:
         return scenarios, values
     
     def selectValues(self, vals):
-        if 'invocation' not in vals:
-            vals.append('invocation')
         for row in self.rows:
             for (key,val) in row.values.items():
                 if key not in vals:
@@ -74,13 +67,10 @@ class DataTable:
 
 
 class DataRow:
-    def __init__(self, scenario=None, invocation=-1):
+    def __init__(self, scenario=None):
         if scenario == None:
             scenario = {}
-        if invocation == -1:
-            self.values = {}
-        else:
-            self.values = {'invocation': invocation}
+        self.values = {}
         self.scenario = scenario
 
 

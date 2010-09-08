@@ -25,24 +25,20 @@ class AggregateBlock:
     def process(self, datatable, **kwargs):
         groups = {}
         scenarios = {}
-        invocation = kwargs['column'] == 'invocation'
         for row in datatable:
-            if not invocation and kwargs['column'] not in row.scenario:
+            if kwargs['column'] not in row.scenario:
                 continue
             schash = self.scenario_hash(scenario=row.scenario, exclude=kwargs['column'])
             if schash not in scenarios:
                 groups[schash] = []
                 scenarios[schash] = copy.copy(row.scenario)
-                if not invocation:
-                    del scenarios[schash][kwargs['column']]
+                del scenarios[schash][kwargs['column']]
             groups[schash].append(row.values)
         
         newRows = []
         for (sc, rows) in groups.items():
             aggregates = {}
             for row in rows:
-                if 'invocation' in row:
-                    del row['invocation']
                 for (key,val) in row.items():
                     if key not in aggregates:
                         aggregates[key] = DataAggregate()
