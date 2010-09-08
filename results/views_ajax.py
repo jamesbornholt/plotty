@@ -28,7 +28,6 @@ def log_values(request, logids):
         for col in log_cols:
             if col['Key'] not in columns:
                 columns.append(col['Key'])
-    columns.append('invocation')
     columns.sort()
     keys = []
     for i in logids.split(','):
