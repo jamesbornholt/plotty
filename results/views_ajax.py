@@ -49,6 +49,8 @@ def pipeline(request, pipeline):
             AggregateBlock().process(dt, **block['params'])
         elif block['type'] == 'filter':
             FilterBlock().process(dt, block['filters'])
+        elif block['type'] == 'normalise':
+            NormaliseBlock().process(dt, **block['params'])
     
     scenarios, values = dt.headers()
     

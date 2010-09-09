@@ -2,6 +2,13 @@ import math, copy
 from results.DataTypes import *
 import logging
 
+def scenario_hash(scenario, exclude):
+    hashstr = ""
+    for (key,val) in scenario.items():
+        if not key == exclude:
+            hashstr += key + val
+    return hashstr
+
 class FilterBlock:
     def process(self, datatable, filters):
         newRows = []
@@ -28,7 +35,7 @@ class AggregateBlock:
         for row in datatable:
             if kwargs['column'] not in row.scenario:
                 continue
-            schash = self.scenario_hash(scenario=row.scenario, exclude=kwargs['column'])
+            schash = scenario_hash(scenario=row.scenario, exclude=kwargs['column'])
             if schash not in scenarios:
                 groups[schash] = []
                 scenarios[schash] = copy.copy(row.scenario)
@@ -64,9 +71,35 @@ class AggregateBlock:
         
         datatable.rows = newRows
 
-    def scenario_hash(self, scenario, exclude):
-        hashstr = ""
-        for (key,val) in scenario.items():
-            if not key == exclude:
-                hashstr += key + val
-        return hashstr
+
+class NormaliseBlock:
+    def process(self, datatable, **kwargs):
+        scenarios = {}
+        normalisers = {}
+        for row in datatable:
+            if kwargs['column'] not in row.scenario:
+                continue
+            schash = scenario_hash(scenario=row.scenario, exclude=kwargs['column'])
+            if schash not in scenarios:
+                scenarios[schash] = []
+            scenarios[schash].append(row)
+            if row.scenario[kwargs['column']] == kwargs['value']:
+                normalisers[schash] = copy.copy(row.values)
+        
+        newRows = []
+        
+        logging.debug('%d scenarios' % len(scenarios))
+        logging.debug('%d normalisers' % len(normalisers))
+        
+        for (sc, rows) in scenarios.items():
+            if sc not in normalisers:
+                continue
+            for row in rows:
+                for (key,val) in row.values.items():
+                    if key not in normalisers[sc]:
+                        del row.values[key]
+                        continue
+                    row.values[key] = row.values[key] / normalisers[sc][key]
+                newRows.append(row)
+        
+        datatable.rows = newRows

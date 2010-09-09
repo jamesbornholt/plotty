@@ -29,6 +29,8 @@ class DataTable:
         for scvar in ScenarioVar.objects.filter(Log=log):
             if not scvar.Scenario_id in scvars:
                 scvars[scvar.Scenario_id] = {}
+            if scvar.Key == 'Name':
+                continue
             scvars[scvar.Scenario_id][scvar.Key] = scvar.Value
         return scvars
 

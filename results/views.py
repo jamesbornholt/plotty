@@ -51,6 +51,8 @@ def list(request):
     FilterBlock().process(dt, [{'column': 'benchmark', 'is': True, 'value': 'compress'},
                                {'column': 'iteration', 'is': True, 'value': '4'}])
     logging.debug('%d rows after filtering' % len(dt.rows))
+    NormaliseBlock().process(dt, column='build', value='jdk1.6.0.s')
+    logging.debug('%d rows after normalising' % len(dt.rows))
     AggregateBlock().process(dt, column='invocation', type='mean')
     logging.debug('%d rows after aggregating' % len(dt.rows))
 
