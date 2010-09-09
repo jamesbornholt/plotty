@@ -59,15 +59,14 @@ class AggregateBlock:
                     if val < aggregates[key].min:
                         aggregates[key].min = val
             for (key,agg) in aggregates.items():
-                aggregates[key].type = 'mean'
-                aggregates[key].value = agg.sum / agg.count
-                if agg.count > 1:
-                    aggregates[key].stdev = math.sqrt((1/(agg.count - 1)) * (agg.sqsum - (agg.count * agg.value * agg.value)))
                 if kwargs['type'] == 'geomean':
                     aggregates[key].value = math.pow(agg.product, 1.0/agg.count)
-                    #logging.debug(agg.product)
-                    #logging.debug('geomean: %dth root of %s', (agg.count, str(agg.product)))
                     aggregates[key].type = 'geomean'
+                elif kwargs['type'] == 'mean':
+                    aggregates[key].value = agg.sum / agg.count
+                    aggregates[key].type = 'mean'
+                if agg.count > 1:
+                    aggregates[key].stdev = math.sqrt((1/(agg.count - 1)) * (agg.sqsum - (agg.sum * agg.sum / agg.count)))
             newRow = DataRow()
             newRow.scenario = scenarios[sc]
             newRow.values = aggregates
