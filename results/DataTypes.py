@@ -78,9 +78,14 @@ class DataRow:
 
 class DataAggregate:
     def __init__(self, value=0, count=0, stdev=0):
+        # Actual values
         self.value = value
         self.count = count
         self.stdev = stdev
+        self.min = float('+inf')
+        self.max = float('-inf')
+        
+        # Intermediate values
         self.sum = 0
         self.product = 1
         self.sqsum = 0

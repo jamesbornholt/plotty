@@ -54,6 +54,10 @@ class AggregateBlock:
                     #logging.debug('product *= %s = %s' % (str(val), aggregates[key].product))
                     aggregates[key].sqsum += val * val
                     aggregates[key].count += 1
+                    if val > aggregates[key].max:
+                        aggregates[key].max = val
+                    if val < aggregates[key].min:
+                        aggregates[key].min = val
             for (key,agg) in aggregates.items():
                 aggregates[key].type = 'mean'
                 aggregates[key].value = agg.sum / agg.count
