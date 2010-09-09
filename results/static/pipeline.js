@@ -190,27 +190,30 @@ function removeBlockTableRow(button) {
 }
 
 function updateAvailableColumns(data) {
+    console.log('updateAvailableColumns: ', data);
     $('.select-filter-column').each(function() {
         var oldValue = $(this).val();
-        console.log('oldValue: ' + oldValue);
         this.options.length = 0;
-        this.options.add(new Option("[" + data.columns.length + " options]", '', oldValue == ''));
+        this.options.add(new Option("[" + data.columns.length + " options]", ''));
         for ( var i = 0; i < data.columns.length; i++ ) {
-            this.options.add(new Option(data.columns[i], data.columns[i], oldValue == data.columns[i]));
+            this.options.add(new Option(data.columns[i], data.columns[i]));
+            if ( data.columns[i] == oldValue )
+                this.options.selectedIndex = i+1;
         }
     });
     $('.select-aggregate-column').each(function() {
         var oldValue = $(this).val();
         this.options.length = 0;
-        this.options.add(new Option("[" + data.columns.length + " options]", '', oldValue == ''));
+        this.options.add(new Option("[" + data.columns.length + " options]", ''));
         for ( var i = 0; i < data.columns.length; i++ ) {
-            this.options.add(new Option(data.columns[i], data.columns[i], oldValue == data.columns[i]));
+            this.options.add(new Option(data.columns[i], data.columns[i]));
+            if ( data.columns[i] == oldValue )
+                this.options.selectedIndex = i+1;
         }
     });
     
     var values_select = $('#select-values');
     var oldValues = values_select.val() || [];
-    console.log(oldValues);
     var values_select = values_select.get(0);
     values_select.options.length = 0;
     for ( var i = 0; i < data.keys.length; i++ ) {
@@ -223,6 +226,7 @@ function updateAvailableColumns(data) {
 }
 
 function updateAvailableValues(vals) {
+    console.log('updateAvailableValues: ', vals, ' for dropdown: ', this);
     this.options.length = 0;
     this.options.add(new Option("[" + vals.length + " options]", '', true));
     for ( var i = 0; i < vals.length; i++ ) {
@@ -298,10 +302,11 @@ function serialisePipeline() {
 }
 
 function refreshPipeline() {
+    console.log('refreshPipeline()');
     var pipeline = serialisePipeline();
     if ( pipeline ) {
         var encoded = PipelineEncoder.encode_pipeline(pipeline);
-        console.log(encoded);
+        console.log('Loading pipeline: ' + encoded);
         $.get('/results/ajax/pipeline/' + encoded, function(data) {
             $('#output table').remove();
             $('#output').append(data);
