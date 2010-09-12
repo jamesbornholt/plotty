@@ -1,4 +1,9 @@
+html {
+    height: 100%;
+}
+
 body {
+    height: 100%;
 	padding: 0;
 	margin: 0;
 }
@@ -17,6 +22,9 @@ div {
     float: left;
 	padding: 0 20px;
 	width: 400px;
+	overflow: auto;
+	height: 100%;
+	position: fixed;
 }
 
 .remove-button {
@@ -95,7 +103,7 @@ div {
 
 #output {
     margin-left: 440px;
-    padding: 20px 0;
+    padding: 20px 20px;
 }
 
 .ci {
@@ -103,8 +111,9 @@ div {
     color: gray;
 }
 
-#select-values {
+#select-scenario-cols, #select-value-cols {
     width: 100%;
+    height: 100px;
 }
 
 #loading-indicator {
