@@ -162,7 +162,7 @@ jQuery.fn.toChecklist = function(o) { // "o" stands for options
 		var h = jSelectElem.height(); /* : '100%'; */
 		var w = jSelectElem.width();
 		// We have to account for the extra thick left border.
-		w -= 4;
+		//w -= 4;
 
 
 		// Make sure it's a SELECT element, and that it's a multiple one.
@@ -522,5 +522,19 @@ jQuery.fn.isChecklist = function() {
 	// and we want to specifically return true or false.
 	return (isChecklist)? true : false;
 };
+
+// Override the jQuery val function to handle this fancy new multi-select
+var oldValFunction = jQuery.fn.val;
+
+jQuery.fn.val = function() {
+    if ( this.isChecklist() ) {
+        return $('input:checked', this).map(function() {
+            return this.value;
+        }).get();
+    }
+    else {
+        return oldValFunction.apply(this);
+    }
+}
 
 })(jQuery);
