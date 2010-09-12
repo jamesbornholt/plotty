@@ -38,12 +38,13 @@ def log_values(request, logids):
             if key['Key'] not in keys:
                 keys.append(key['Key'])
     keys.sort()
-    return HttpResponse(json.dumps({'columns': columns, 'keys': keys}))
+    return HttpResponse(json.dumps({'scenarioCols': columns, 'valueCols': keys}))
 
 def pipeline(request, pipeline):
     decoded = results.PipelineEncoder.decode_pipeline(pipeline)
     dt = DataTable(logs=decoded['logs'])
-    dt.selectValues(decoded['columns'])
+    dt.selectValueColumns(decoded['value_columns'])
+    dt.selectScenarioColumns(decoded['scenario_columns'])
     for block in decoded['blocks']:
         if block['type'] == 'aggregate':
             AggregateBlock().process(dt, **block['params'])

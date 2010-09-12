@@ -27,8 +27,9 @@ def reverse_dict_lookup(haystack, lookup):
 def decode_pipeline(data):
     chunks = data.split(BLOCK_SEPARATOR)
     selected_logs = map(int, chunks[0].split(GROUP_SEPARATOR))
-    selected_columns = chunks[1].split(GROUP_SEPARATOR)
-    return {'logs': selected_logs, 'columns': selected_columns, 'blocks': map(decode_pipeline_block, chunks[2:])}
+    scenario_columns = chunks[1].split(GROUP_SEPARATOR)
+    value_columns = chunks[2].split(GROUP_SEPARATOR)
+    return {'logs': selected_logs, 'scenario_columns': scenario_columns, 'value_columns': value_columns, 'blocks': map(decode_pipeline_block, chunks[3:])}
     
 def decode_pipeline_block(data):
     return BLOCK_DECODES[int(data[0])](data[1:])
@@ -68,7 +69,7 @@ BLOCK_DECODES = { 0: decode_filter_block,
 #
 
 def encode_pipeline(data):
-    start = [GROUP_SEPARATOR.join(map(str, data['logs'])), GROUP_SEPARATOR.join(data['columns'])]
+    start = [GROUP_SEPARATOR.join(map(str, data['logs'])), GROUP_SEPARATOR.join(data['scenario_columns']), GROUP_SEPARATOR.join(data['value_columns'])]
     start.extend(map(encode_pipeline_block, data['blocks']))
     return BLOCK_SEPARATOR.join(start)
     

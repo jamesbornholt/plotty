@@ -29,8 +29,6 @@ class DataTable:
         for scvar in ScenarioVar.objects.filter(Log=log):
             if not scvar.Scenario_id in scvars:
                 scvars[scvar.Scenario_id] = {}
-            if scvar.Key == 'Name':
-                continue
             scvars[scvar.Scenario_id][scvar.Key] = scvar.Value
         return scvars
 
@@ -61,11 +59,16 @@ class DataTable:
                     values.append(val)
         return scenarios, values
     
-    def selectValues(self, vals):
+    def selectValueColumns(self, vals):
         for row in self.rows:
             for (key,val) in row.values.items():
                 if key not in vals:
                     del row.values[key]
+    def selectScenarioColumns(self, cols):
+        for row in self.rows:
+            for (key,val) in row.scenario.items():
+                if key not in cols:
+                    del row.scenario[key]
 
 
 class DataRow:

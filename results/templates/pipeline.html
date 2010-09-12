@@ -3,8 +3,10 @@
 <head>
     <title>Pipeline</title>
     <link rel="stylesheet" href="static/pipeline.css" type="text/css" />
-	<script type="text/javascript" charset="utf-8" src="static/jquery.js"></script>
-	<script type="text/javascript" charset="utf-8" src="static/pipeline.js"></script>
+    <link rel="stylesheet" href="static/jquery.toChecklist.css" type="text/css" />
+    <script type="text/javascript" charset="utf-8" src="static/jquery.js"></script>
+    <script type="text/javascript" charset="utf-8" src="static/jquery.toChecklist.js"></script>
+    <script type="text/javascript" charset="utf-8" src="static/pipeline.js"></script>
 </head>
 <body>
 	<div id="pipeline-templates">
@@ -15,7 +17,7 @@
 				<table class="pipeline-filter-table">
 				    <tr>
 				        <td>
-				            <select class="select-filter-column"><option></option></select>
+				            <select class="select-filter-column scenario-column"><option></option></select>
 				        </td>
 				        <td>
 				            <select class="select-filter-is"><option value="is" selected="selected">is</option><option value="not">is not</option></select>
@@ -34,7 +36,7 @@
 			<button type="button" class="remove-button">X</button>
 			<div class="pipeline-content">
 				<span class="pipeline-header">Aggregate</span> <br />
-				<select class="select-aggregate-type" name="aggregate[0]['type']"><option>mean</option><option>geomean</option></select> over <select class="select-aggregate-column" name="aggregate[0]['col']"><option></option></select>
+				<select class="select-aggregate-type" name="aggregate[0]['type']"><option>mean</option><option>geomean</option></select> over <select class="select-aggregate-column scenario-column" name="aggregate[0]['col']"><option></option></select>
 			</div>
 			<div class="pipeline-footer"></div>
 		</div>
@@ -86,8 +88,11 @@
 		</div>
 		<div id="pipeline-values" class="pipeline">
 			<div class="pipeline-content">
-				<span class="pipeline-header">Values</span> <br />
-				<select id="select-values" multiple="multiple">
+			    <span class="pipeline-header">Scenario Columns</span> <br />
+			    <select id="select-scenario-cols" multiple="multiple">
+			    </select> <br />
+				<span class="pipeline-header">Value Columns</span> <br />
+				<select id="select-value-cols" multiple="multiple">
 				</select>
 			</div>
 			<div class="pipeline-footer"></div>
@@ -106,7 +111,7 @@
 		</div>
 	</div>
 	<div id="output">
-                <div id="loading-indicator"><img src="static/loading.gif" /> Loading...</div>
-        </div>
+        <div id="loading-indicator"><img src="static/loading.gif" /> Loading...</div>
+    </div>
 </body>
 </html>

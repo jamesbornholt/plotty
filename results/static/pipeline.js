@@ -66,9 +66,10 @@ var PipelineEncoder = {
         if ( !this.hasInited )
             this.init();
         var chunks = data.split(this.BLOCK_SEPARATOR);
-        var selected_columns = chunks[1].split(this.GROUP_SEPARATOR);
+        var scenario_columns = chunks[1].split(this.GROUP_SEPARATOR);
+        var value_columns = chunks[2].split(this.GROUP_SEPARATOR);
         var selected_logs = chunks[0].split(this.GROUP_SEPARATOR).map(function(i) {return parseInt(i)});
-        return {'logs': selected_logs, 'columns': selected_columns, 'blocks': chunks.slice(2).map(this.decode_pipeline_block, this)};
+        return {'logs': selected_logs, 'scenario_columns': scenario_columns, 'value_columns': value_columns, 'blocks': chunks.slice(3).map(this.decode_pipeline_block, this)};
     },
     
     decode_pipeline_block: function(data) {
@@ -112,7 +113,7 @@ var PipelineEncoder = {
     encode_pipeline: function(data) {
         if ( !this.hasInited )
             this.init();
-        return [data['logs'].join(this.GROUP_SEPARATOR), data['columns'].join(this.GROUP_SEPARATOR)].concat(data['blocks'].map(this.encode_pipeline_block, this)).join(this.BLOCK_SEPARATOR);
+        return [data['logs'].join(this.GROUP_SEPARATOR), data['scenario_columns'].join(this.GROUP_SEPARATOR), data['value_columns'].join(this.GROUP_SEPARATOR)].concat(data['blocks'].map(this.encode_pipeline_block, this)).join(this.BLOCK_SEPARATOR);
     },
     
     encode_pipeline_block: function(data) {
@@ -191,38 +192,49 @@ function removeBlockTableRow(button) {
 
 function updateAvailableColumns(data) {
     console.log('updateAvailableColumns: ', data);
-    $('.select-filter-column').each(function() {
+    $('.scenario-column').each(function() {
         var oldValue = $(this).val();
         this.options.length = 0;
-        this.options.add(new Option("[" + data.columns.length + " options]", ''));
-        for ( var i = 0; i < data.columns.length; i++ ) {
-            this.options.add(new Option(data.columns[i], data.columns[i]));
-            if ( data.columns[i] == oldValue )
-                this.options.selectedIndex = i+1;
-        }
-    });
-    $('.select-aggregate-column').each(function() {
-        var oldValue = $(this).val();
-        this.options.length = 0;
-        this.options.add(new Option("[" + data.columns.length + " options]", ''));
-        for ( var i = 0; i < data.columns.length; i++ ) {
-            this.options.add(new Option(data.columns[i], data.columns[i]));
-            if ( data.columns[i] == oldValue )
+        this.options.add(new Option("[" + data.scenarioCols.length + " options]", ''));
+        for ( var i = 0; i < data.scenarioCols.length; i++ ) {
+            this.options.add(new Option(data.scenarioCols[i], data.scenarioCols[i]));
+            if ( data.scenarioCols[i] == oldValue )
                 this.options.selectedIndex = i+1;
         }
     });
     
-    var values_select = $('#select-values');
-    var oldValues = values_select.val() || [];
-    var values_select = values_select.get(0);
-    values_select.options.length = 0;
-    for ( var i = 0; i < data.keys.length; i++ ) {
-        values_select.options.add(new Option(data.keys[i], data.keys[i]));
-    }
-    if ( oldValues.length > 0 )
-        for ( var i = 0; i < values_select.options.length; i++ )
-            if ( oldValues.indexOf(values_select.options[i].value) > -1 )
-                values_select.options[i].selected = true;
+    updateMultiSelect('#select-scenario-cols', data.scenarioCols, true);
+    updateMultiSelect('#select-value-cols', data.valueCols, false);
+}
+
+/* It's much easier to throw out the old multi-select and build a new one
+ * when we need to update the available values, when we're using the checkbox
+ * plugin. */
+function updateMultiSelect(id, vals, considerSelectAll) {
+    // Get the old selections
+    var selection = $(id).val() || [];
+    var selectAll = false;
+    if ( considerSelectAll && (selection.length == $(id).children('input').length || selection.length == 0) )
+        selectAll = true;
+    
+    // Build a new select
+    var dropdown = document.createElement('select');
+    dropdown.multiple = "multiple";
+    for ( var i = 0; i < vals.length; i++ )
+        dropdown.options.add(new Option(vals[i], vals[i]));
+    if ( selectAll || selection.length > 0 )
+        for ( var i = 0; i < vals.length; i++ )
+            if ( selectAll || selection.indexOf(dropdown.options[i].value) > -1 )
+                dropdown.options[i].selected = true;
+                
+    dropdown.id = $(id).attr('id');
+    //dropdown.style.width = "100%";
+    
+    // Replace the old select
+    $(id).replaceWith(dropdown);
+    
+    // Now transform it
+    $(id).toChecklist();
 }
 
 function updateAvailableValues(vals) {
@@ -246,7 +258,8 @@ function selectedLogFiles() {
 function serialisePipeline() {
     var dict = {}
     dict['logs'] = selectedLogFiles();
-    dict['columns'] = $('#select-values').val();
+    dict['scenario_columns'] = $('#select-scenario-cols').val();
+    dict['value_columns'] = $('#select-value-cols').val();
     
     var blocks = [];
     var throwInvalid = false;
@@ -359,6 +372,24 @@ $(document).ready(function() {
 	        success: updateAvailableValues
 	    });
 	});
+	$("#pipeline-values").delegate("#select-scenario-cols input", 'change', function() {
+	    var selected = $(this).parents("#select-scenario-cols").val() || [];
+	    $('.scenario-column').each(function() {
+	        var oldValue = $(this).val();
+            this.options.length = 0;
+            this.options.add(new Option("[" + selected.length + " options]", ''));
+            for ( var i = 0; i < selected.length; i++ ) {
+                this.options.add(new Option(selected[i], selected[i]));
+                if ( selected[i] == oldValue )
+                    this.options.selectedIndex = i+1;
+            }
+	    });
+	    refreshPipeline();
+	});
+	$("#pipeline-values").delegate("#select-value-cols input", 'change', function() {
+	    refreshPipeline();
+	});
+	$("#select-scenario-cols, #select-value-cols").toChecklist();
 	
 	$("#pipeline").delegate('select', 'change', refreshPipeline);
 });
