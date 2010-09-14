@@ -224,7 +224,7 @@ function updateMultiSelect(id, vals, considerSelectAll) {
         dropdown.options.add(new Option(vals[i], vals[i]));
     if ( selectAll || selection.length > 0 )
         for ( var i = 0; i < vals.length; i++ )
-            if ( selectAll || selection.indexOf(dropdown.options[i].value) > -1 )
+            if ( selectAll || jQuery.inArray(dropdown.options[i].value, selection) > -1 )
                 dropdown.options[i].selected = true;
                 
     dropdown.id = $(id).attr('id');
@@ -324,6 +324,9 @@ function refreshPipeline() {
             $('#output table').remove();
             $('#output').append(data);
         });
+    }
+    else if ( $('#pipeline .pipeline-block').length == 0 ) {
+        $('#output table').remove();
     }
 }
 
