@@ -45,7 +45,8 @@ def list(request):
 #        agg['Scenario'] = Scenario.objects.get(id=agg['Scenario_id'])
 #    
     dt = DataTable(logs=[2])
-    dt.selectValues(['power.avg', 'bmtime'])
+    dt.selectValueColumns(['power.avg', 'bmtime'])
+    dt.selectScenarioColumns(['benchmark', 'iteration', 'invocation', 'build', 'hfac', 'heap'])
     logging.debug('%d rows initially' % len(dt.rows))
     #FilterBlock().process(dt, benchmark='compress', iteration='4')
     FilterBlock().process(dt, [{'column': 'benchmark', 'is': True, 'value': 'compress'},

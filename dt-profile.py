@@ -7,14 +7,11 @@ from results.DataTypes import *
 from results.models import *
 from results.Blocks import *
 
-#import psyco
-#psyco.profile()
-
 print 'Building data table...'
 dt = DataTable(logs=[2])
 print 'Built data table with %d rows.' % len(dt.rows)
 print 'Selecting values...'
-dt.selectValues(['power.avg', 'bmtime'])
+dt.selectValueColumns(['power.avg', 'bmtime'])
 print 'Filtering to benchmark=compress, iteration=4...'
 FilterBlock().process(dt, [{'column': 'benchmark', 'is': True, 'value': 'compress'},
                            {'column': 'iteration', 'is': True, 'value': '4'}])
