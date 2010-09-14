@@ -68,7 +68,7 @@ var PipelineEncoder = {
         var chunks = data.split(this.BLOCK_SEPARATOR);
         var scenario_columns = chunks[1].split(this.GROUP_SEPARATOR);
         var value_columns = chunks[2].split(this.GROUP_SEPARATOR);
-        var selected_logs = chunks[0].split(this.GROUP_SEPARATOR).map(function(i) {return parseInt(i)});
+        var selected_logs = chunks[0].split(this.GROUP_SEPARATOR);
         return {'logs': selected_logs, 'scenario_columns': scenario_columns, 'value_columns': value_columns, 'blocks': chunks.slice(3).map(this.decode_pipeline_block, this)};
     },
     

@@ -1,22 +1,25 @@
-from results.models import *
 from django.core.cache import cache
-import logging, sys
+import logging, sys, csv, os
+from plotty import settings
+
+def scenario_hash(scenario, exclude=[]):
+    hashstr = ""
+    for (key,val) in scenario.items():
+        if key not in exclude:
+            hashstr += key + val
+    return hashstr
 
 class DataTable:
     def __init__(self, logs):
         self.rows = []
-        for log_id in logs:
-            logging.debug('Attempting to load log ID %d from cache' % log_id)
-            rows = cache.get('log%d' % log_id)
+        for log in logs:
+            logging.debug('Attempting to load log %s from cache' % log)
+            rows = cache.get(log)
             if rows == None:
-                rows = []
-                log = Log.objects.filter(id=log_id)[0]
-                logging.debug('Cache empty, reloading %s from DB' % log)
-                scvars = self.preloadScenarioVars(log)
-                results = self.loadResults(log)
-                self.collateResults(results, scvars, rows)
-                ret = cache.set('log%d' % log_id, rows)
-                logging.debug('Storing %d rows to cache for log ID %d (object size %d)' % (len(rows), log_id, sys.getsizeof(rows)))
+                logging.debug('Cache empty, reloading %s from file' % log)
+                rows = self.loadCSV(log)
+                ret = cache.set(log, rows)
+                logging.debug('Storing %d rows to cache for log %s' % (len(rows), log))
             else:
                 logging.debug('Loaded %d rows from cache' % len(rows))
             self.rows.extend(rows)
@@ -24,28 +27,19 @@ class DataTable:
     def __iter__(self):
         return iter(self.rows)
 
-    def preloadScenarioVars(self, log):
-        scvars = {}
-        for scvar in ScenarioVar.objects.filter(Log=log):
-            if not scvar.Scenario_id in scvars:
-                scvars[scvar.Scenario_id] = {}
-            scvars[scvar.Scenario_id][scvar.Key] = scvar.Value
-        return scvars
-
-    def loadResults(self, log):
-        results = {}
-        for res in Result.objects.filter(Log=log):
-            scid = res.Scenario_id
-            if not scid in results:
-                results[scid] = {}
-            results[scid][res.Key] = res.Value
-        return results
-
-    def collateResults(self, results, scenarios, rows):
-        for (sc_id,cols) in results.iteritems():
-            row = DataRow(scenarios[sc_id])
-            row.values = cols
-            rows.append(row)
+    def loadCSV(self, log):
+        scenarios = {}
+        
+        reader = csv.DictReader(open(os.path.join(settings.BM_LOG_DIR, log), 'rb'))
+        for line in reader:
+            key = line.pop('key')
+            value = line.pop('value')
+            schash = scenario_hash(line)
+            if schash not in scenarios:
+                scenarios[schash] = DataRow(line)
+            scenarios[schash].values[key] = float(value)
+        
+        return scenarios.values()
 
     def headers(self):
         scenarios = list()

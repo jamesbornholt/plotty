@@ -1,42 +1,37 @@
-from results.models import *
 import results.PipelineEncoder
 from django.http import HttpResponse
 from django.shortcuts import render_to_response
 from django.template import RequestContext
 from results.DataTypes import *
 from results.Blocks import *
-import json
+import json, csv
 
-def filter_values(request, logids, col):
+def filter_values(request, logs, col):
+    """ Given a particular scenario column, find all possible values of that
+        column inside the given log files """
     values = []
-    for i in logids.split(','):
-        if i == '':
-            continue
-        log_values = ScenarioVar.objects.filter(Log__id=int(i), Key=col).values('Value').distinct()
-        for value in log_values:
-            if value['Value'] not in values:
-                values.append(value['Value'])
+    # The log files are almost certainly cached by now, so this is quick
+    dt = DataTable(logs.split(','))
+    for row in dt:
+        if row.scenario[col] not in values:
+            values.append(row.scenario[col])
     values.sort()
     return HttpResponse(json.dumps(values))
     
-def log_values(request, logids):
+def log_values(request, logs):
+    """ Given a set of log files, find all possible scenario variables in those
+        logs, and all possible value keys """
     columns = []
-    for i in logids.split(','):
-        if i == '':
-            continue
-        log_cols = ScenarioVar.objects.filter(Log__id=int(i)).values('Key').distinct()
-        for col in log_cols:
-            if col['Key'] not in columns:
-                columns.append(col['Key'])
-    columns.sort()
     keys = []
-    for i in logids.split(','):
-        if i == '':
-            continue
-        log_keys = Result.objects.filter(Log__id=i).values('Key').distinct()
-        for key in log_keys:
-            if key['Key'] not in keys:
-                keys.append(key['Key'])
+    dt = DataTable(logs.split(','))
+    for row in dt:
+        for col in row.scenario.iterkeys():
+            if col not in columns:
+                columns.append(col)
+        for key in row.values.iterkeys():
+            if key not in keys:
+                keys.append(key)
+    columns.sort()
     keys.sort()
     return HttpResponse(json.dumps({'scenarioCols': columns, 'valueCols': keys}))
 

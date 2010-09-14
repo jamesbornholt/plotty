@@ -17,6 +17,20 @@ CACHE_BACKEND = 'memcached://127.0.0.1:11211/?timeout=3600'
 memcache.SERVER_MAX_VALUE_LENGTH = 5*1024*1024
 
 sys.path.insert(0, ROOT_DIR)
+
+DEBUG_TOOLBAR_PANELS = (
+    'debug_toolbar.panels.version.VersionDebugPanel',
+    'debug_toolbar.panels.timer.TimerDebugPanel',
+    'debug_toolbar.panels.settings_vars.SettingsVarsDebugPanel',
+    'debug_toolbar.panels.headers.HeaderDebugPanel',
+    #'debug_toolbar.panels.request_vars.RequestVarsDebugPanel',
+    #'debug_toolbar.panels.sql.SQLDebugPanel',
+    'debug_toolbar.panels.template.TemplateDebugPanel',
+    'debug_toolbar.panels.cache.CacheDebugPanel',
+    'debug_toolbar.panels.signals.SignalDebugPanel',
+    'debug_toolbar.panels.logger.LoggingPanel',
+)
+
 ADMINS = (
     # ('Your Name', 'your_email@domain.com'),
 )
@@ -46,18 +60,6 @@ def custom_show_debug_toolbar(request):
 DEBUG_TOOLBAR_CONFIG = {
     'SHOW_TOOLBAR_CALLBACK': custom_show_debug_toolbar,
 }
-
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.mysql', # Add 'postgresql_psycopg2', 'postgresql', 'mysql', 'sqlite3' or 'oracle'.
-        'NAME': 'plotty',                      # Or path to database file if using sqlite3.
-        'USER': 'plotty',                      # Not used with sqlite3.
-        'PASSWORD': 'plotty',                  # Not used with sqlite3.
-        'HOST': '',                      # Set to empty string for localhost. Not used with sqlite3.
-        'PORT': '',                      # Set to empty string for default. Not used with sqlite3.
-    }
-}
-
 
 
 # Local time zone for this installation. Choices can be found here:
@@ -129,7 +131,7 @@ TEMPLATE_DIRS = (
 INSTALLED_APPS = (
 #    'django.contrib.auth',
     'django.contrib.contenttypes',
-    'django.contrib.sessions',
+#    'django.contrib.sessions',
     'django.contrib.sites',
 #    'django.contrib.messages',
     # Uncomment the next line to enable the admin:

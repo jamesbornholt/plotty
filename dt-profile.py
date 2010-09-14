@@ -8,7 +8,7 @@ from results.models import *
 from results.Blocks import *
 
 print 'Building data table...'
-dt = DataTable(logs=[2])
+dt = DataTable(logs=['../logs/i7-Bloomfield-2661data.csv'])
 print 'Built data table with %d rows.' % len(dt.rows)
 print 'Selecting values...'
 dt.selectValueColumns(['power.avg', 'bmtime'])
