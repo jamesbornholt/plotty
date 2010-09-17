@@ -1,6 +1,7 @@
 from django.core.cache import cache
-import logging, sys, csv, os
+import logging, sys, csv, os, math
 from plotty import settings
+from scipy import stats
 
 def scenario_hash(scenario, exclude=[]):
     hashstr = ""
@@ -89,4 +90,35 @@ class DataAggregate:
         self.type = ''
         
     def __unicode__(self):
-        return "%.3f [n=%d]" % (self.value, self.count)
+        ci = stats.t.isf(0.025, self.count-1) * self.stdev / math.sqrt(self.count)
+        ci_percent = ci / self.value * 100
+        return "%.3f [s=%.4f, n=%d]" % (self.value, self.stdev, self.count)
+    
+    def __float__(self):
+        return self.value
+    
+    def __cmp__(self, other):
+        if float(self) > float(other):
+            return 1
+        elif float(self) < float(other):
+            return -1
+        else:
+            return 0
+    
+    def __div__(self, other):
+        if isinstance(other, DataAggregate):
+            res = DataAggregate()
+            res.value = self.value / other.value
+            res.count = min(self.count, other.count)
+            res.stdev = self.stdev / other.stdev # This isn't right!!
+            res.min = self.min / other.max
+            res.max = self.max / other.min
+            return res
+        else:
+            res = DataAggregate()
+            res.value = self.value / other
+            res.count = self.count
+            res.stdev = self.stdev
+            res.min = self.min
+            res.max = self.max
+            return res

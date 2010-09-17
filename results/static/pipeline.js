@@ -13,6 +13,10 @@ if ( typeof Array.prototype.map === 'undefined' ) {
     }
 }
 
+// Adds a distinct number to every normalise block to make sure the radio
+// buttons toggle around correctly
+var normaliseBlockCount = 0;
+
 var PipelineEncoder = {
     /*
      * Constants
@@ -99,7 +103,10 @@ var PipelineEncoder = {
     
     decode_normalise_block: function(data) {
         var params_string = data.split(this.GROUP_SEPARATOR);
-        return {'type': 'normalise', 'params': {'column': params_string[0], 'value': params_string[1]}}
+        if ( params_string[0] == '0' )
+            return {'type': 'normalise', 'params': {'normaliser': 'select', 'column': params_string[1], 'value': params_string[2]}};
+        else if ( params_string[0] == '1' )
+            return {'type': 'normalise', 'params': {'normaliser': 'best', 'group': params_string.slice(1)}};
     },
     
     decode_graph_block: function(data) {
@@ -138,7 +145,10 @@ var PipelineEncoder = {
     },
     
     encode_normalise_block: function(data) {
-        return [data['params']['column'], data['params']['value']].join(this.GROUP_SEPARATOR);
+        if ( data['params']['normaliser'] == 'select' )
+            return ['0', data['params']['column'], data['params']['value']].join(this.GROUP_SEPARATOR);
+        else
+            return ['1', data['params']['group'].join(this.GROUP_SEPARATOR)].join(this.GROUP_SEPARATOR);
     },
     
     encode_graph_block: function(data) {
@@ -150,8 +160,12 @@ function addBlock(type) {
 	var newBlock = $('#pipeline-' + type + '-template').clone();
 	newBlock.attr('id', '');
 	
-	// do some replaces on the contents...
-	
+	if ( type == 'normalise' ) {
+	    $('input:radio', newBlock).attr('name', 'normalise-type-' + normaliseBlockCount).first().attr('checked', 'checked');
+	    $('.select-normalise-group').attr('name', 'normalise-group-' + normaliseBlockCount);
+	    normaliseBlockCount++;
+    }
+	    
 	newBlock.insertBefore('#pipeline-add');
 }
 
@@ -203,38 +217,43 @@ function updateAvailableColumns(data) {
         }
     });
     
-    updateMultiSelect('#select-scenario-cols', data.scenarioCols, true);
+    updateMultiSelect('#select-scenario-cols, .select-normalise-group', data.scenarioCols, true);
     updateMultiSelect('#select-value-cols', data.valueCols, false);
 }
 
 /* It's much easier to throw out the old multi-select and build a new one
  * when we need to update the available values, when we're using the checkbox
  * plugin. */
-function updateMultiSelect(id, vals, considerSelectAll) {
+function updateMultiSelect(selector, vals, considerSelectAll) {
     // Get the old selections
-    var selection = $(id).val() || [];
-    var selectAll = false;
-    if ( considerSelectAll && (selection.length == $(id).children('input').length || selection.length == 0) )
-        selectAll = true;
-    
-    // Build a new select
-    var dropdown = document.createElement('select');
-    dropdown.multiple = "multiple";
-    for ( var i = 0; i < vals.length; i++ )
-        dropdown.options.add(new Option(vals[i], vals[i]));
-    if ( selectAll || selection.length > 0 )
+    $(selector).each(function() {
+        var selection = $(this).val() || [];
+        var selectAll = false;
+        if ( considerSelectAll && (selection.length == $(this).children('input').length || selection.length == 0) )
+            selectAll = true;
+        
+        // Build a new select
+        var dropdown = document.createElement('select');
+        dropdown.multiple = "multiple";
         for ( var i = 0; i < vals.length; i++ )
-            if ( selectAll || jQuery.inArray(dropdown.options[i].value, selection) > -1 )
-                dropdown.options[i].selected = true;
-                
-    dropdown.id = $(id).attr('id');
-    //dropdown.style.width = "100%";
-    
-    // Replace the old select
-    $(id).replaceWith(dropdown);
-    
-    // Now transform it
-    $(id).toChecklist();
+            dropdown.options.add(new Option(vals[i], vals[i]));
+        if ( selectAll || selection.length > 0 )
+            for ( var i = 0; i < vals.length; i++ )
+                if ( selectAll || jQuery.inArray(dropdown.options[i].value, selection) > -1 )
+                    dropdown.options[i].selected = true;
+                    
+        dropdown.id = $(this).attr('id');
+        dropdown.name = $(this).attr('name');
+        dropdown.className = $(this).attr('class');
+        //dropdown.style.width = "100%";
+        
+        // Replace the old select
+        $(this).replaceWith(dropdown);
+    });
+
+    // Transform only the visible ones (we can't transform the invisible ones
+    // until they show up otherwise the dimensions are broken)
+    $(selector).filter(':visible').toChecklist();
 }
 
 function updateAvailableValues(vals) {
@@ -260,6 +279,9 @@ function serialisePipeline() {
     dict['logs'] = selectedLogFiles();
     dict['scenario_columns'] = $('#select-scenario-cols').val();
     dict['value_columns'] = $('#select-value-cols').val();
+    
+    if ( dict['scenario_columns'].length == 0 || dict['value_columns'].length == 0 )
+        return false;
     
     var blocks = [];
     var throwInvalid = false;
@@ -294,13 +316,29 @@ function serialisePipeline() {
             blocks.push({'type': 'aggregate', 'params': {'column': column, 'type': type}});
         }
         else if ( $(this).hasClass('normalise') ) {
-            var column = $('.select-normalise-column', this).val();
-            var value = $('.select-normalise-value', this).val();
-            if ( column == '' || value == '' ) {
+            var selected_type = $('input:radio:checked', this);
+            if ( selected_type.val() == 'select' ) {
+                var column = $('.select-normalise-column', this).val();
+                var value = $('.select-normalise-value', this).val();
+                if ( column == '' || value == '' ) {
+                    throwInvalid = true;
+                    return false;
+                }
+                blocks.push({'type': 'normalise', 'params': {'normaliser': 'select', 'column': column, 'value': value}});
+            }
+            else if ( selected_type.val() == 'best' ) {
+                var group = $('.select-normalise-group', this).val();
+                /*if ( group.length == 0 ) {
+                    throwInvalid = true;
+                    return false;
+                }*/
+                blocks.push({'type': 'normalise', 'params': {'normaliser': 'best', 'group': group}});
+            }
+            else {
+                console.log('val = ' + selected_type.val());
                 throwInvalid = true;
                 return false;
             }
-            blocks.push({'type': 'normalise', 'params': {'column': column, 'value': type}});
         }
         else if ( $(this).hasClass('graph') ) {
             blocks.push({'type': 'graph'});
@@ -320,9 +358,11 @@ function refreshPipeline() {
     if ( pipeline ) {
         var encoded = PipelineEncoder.encode_pipeline(pipeline);
         console.log('Loading pipeline: ' + encoded);
+        $('#pipeline-debug-link').attr('href', 'list/' + encoded);
         $.get('/results/ajax/pipeline/' + encoded, function(data) {
             $('#output table').remove();
             $('#output').append(data);
+            $('#output table').tablesorter();
         });
     }
     else if ( $('#pipeline .pipeline-block').length == 0 ) {
@@ -346,8 +386,8 @@ $(document).ready(function() {
 	$("#add-aggregate").click(function() {
 		addBlock('aggregate');
 	});
-	$("#add-normalize").click(function() {
-		addBlock('normalize');
+	$("#add-normalise").click(function() {
+		addBlock('normalise');
 	});
 	$("#add-graph").click(function() {
 		addBlock('graph');
@@ -360,6 +400,7 @@ $(document).ready(function() {
 	    addBlockTableRow(this);
 	});
 	$(".remove-row").live('click', function() {
+	    if ( this.disabled === true ) return; // This is the silliest IE bug ever
 	    removeBlockTableRow(this);
 	    refreshPipeline();
 	});
@@ -368,6 +409,15 @@ $(document).ready(function() {
 	});
 	$("#pipeline").delegate(".select-filter-column", 'change', function() {
 	    var values_select = $('.select-filter-value', $(this).parents('tr')).get(0);
+	    $.ajax({
+	        context: values_select,
+	        dataType: 'json',
+	        url: '/results/ajax/filter-values/' + selectedLogFiles().join(',') + '/' + $(this).val() + '/',
+	        success: updateAvailableValues
+	    });
+	});
+	$("#pipeline").delegate(".select-normalise-column", 'change', function() {
+	    var values_select = $('.select-normalise-value', $(this).parent()).get(0);
 	    $.ajax({
 	        context: values_select,
 	        dataType: 'json',
@@ -391,6 +441,24 @@ $(document).ready(function() {
 	});
 	$("#pipeline-values").delegate("#select-value-cols input", 'change', function() {
 	    refreshPipeline();
+	});
+	$("#pipeline").delegate("input:radio", 'change', function() {
+	    var group_select = $('.normalise-group', $(this).parents(".pipeline"));
+	    if ( this.checked == true && this.value == 'select' ) {
+	        group_select.css('display', 'none');
+	        $('select', $(this).parents(".pipeline")).attr('disabled', '');
+        }
+	    else if ( this.checked == true && this.value == 'best' ) {
+	        group_select.css('display', 'block');
+	        if ( $('select', group_select).length > 0 ) {
+	            $('select', group_select).toChecklist();
+	            $(this).parents(".pipeline").delegate(".select-normalise-group input", 'change', function() {
+	                refreshPipeline();
+	            });
+            }
+	        $('select', $(this).parents(".pipeline")).attr('disabled', 'disabled');
+	        refreshPipeline();
+        }
 	});
 	$("#select-scenario-cols, #select-value-cols").toChecklist();
 	

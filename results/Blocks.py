@@ -2,10 +2,12 @@ import math, copy
 from results.DataTypes import *
 import logging
 
-def scenario_hash(scenario, exclude):
+def scenario_hash(scenario, exclude=[], include=[]):
     hashstr = ""
     for (key,val) in scenario.items():
-        if not key == exclude:
+        if exclude <> [] and key not in exclude:
+            hashstr += key + val
+        elif include <> [] and key in include:
             hashstr += key + val
     return hashstr
 
@@ -35,7 +37,7 @@ class AggregateBlock:
         for row in datatable:
             if kwargs['column'] not in row.scenario:
                 continue
-            schash = scenario_hash(scenario=row.scenario, exclude=kwargs['column'])
+            schash = scenario_hash(scenario=row.scenario, exclude=[kwargs['column']])
             if schash not in scenarios:
                 groups[schash] = []
                 scenarios[schash] = copy.copy(row.scenario)
@@ -66,7 +68,7 @@ class AggregateBlock:
                     aggregates[key].value = agg.sum / agg.count
                     aggregates[key].type = 'mean'
                 if agg.count > 1:
-                    aggregates[key].stdev = math.sqrt((1/(agg.count - 1)) * (agg.sqsum - (agg.sum * agg.sum / agg.count)))
+                    aggregates[key].stdev = math.sqrt((1.0/(agg.count - 1)) * (agg.sqsum - (agg.sum * agg.sum / agg.count)))
             newRow = DataRow()
             newRow.scenario = scenarios[sc]
             newRow.values = aggregates
@@ -77,12 +79,18 @@ class AggregateBlock:
 
 class NormaliseBlock:
     def process(self, datatable, **kwargs):
+        if kwargs['normaliser'] == 'select':
+            self.processSelectNormaliser(datatable, **kwargs)
+        elif kwargs['normaliser'] == 'best':
+            self.processBestNormaliser(datatable, **kwargs)
+        
+    def processSelectNormaliser(self, datatable, **kwargs):
         scenarios = {}
         normalisers = {}
         for row in datatable:
             if kwargs['column'] not in row.scenario:
                 continue
-            schash = scenario_hash(scenario=row.scenario, exclude=kwargs['column'])
+            schash = scenario_hash(scenario=row.scenario, exclude=[kwargs['column']])
             if schash not in scenarios:
                 scenarios[schash] = []
             scenarios[schash].append(row)
@@ -104,5 +112,47 @@ class NormaliseBlock:
                         continue
                     row.values[key] = row.values[key] / normalisers[sc][key]
                 newRows.append(row)
+        
+        datatable.rows = newRows
+    
+    def processBestNormaliser(self, datatable, **kwargs):
+        scenarios = {}
+        normalisers = {}
+        
+        if kwargs['group'] == ['']:
+            kwargs['group'] = []
+        
+        #import pdb; pdb.set_trace();
+        
+        for row in datatable:
+            throw = False
+            for key in kwargs['group']:
+                if key not in row.scenario:
+                    throw = True
+                    break
+            if throw:
+                continue
+            
+            schash = scenario_hash(scenario=row.scenario, include=kwargs['group'])
+            if schash not in scenarios:
+                scenarios[schash] = []
+                normalisers[schash] = {}
+            scenarios[schash].append(row)
+            for (key,val) in row.values.items():
+                if val < normalisers[schash].get(key, float('inf')):
+                    normalisers[schash][key] = val
+        
+        newRows = []
+        
+        for (sc, rows) in scenarios.items():
+            if sc not in normalisers:
+                continue
+            for row in rows:
+                for (key,val) in row.values.items():
+                    if key not in normalisers[sc]:
+                        del row.values[key]
+                        continue
+                    row.values[key] = row.values[key] / normalisers[sc][key]
+                newRows.append(row)                
         
         datatable.rows = newRows

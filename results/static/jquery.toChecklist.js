@@ -148,6 +148,7 @@ jQuery.fn.toChecklist = function(o) { // "o" stands for options
 		// Hang on to the important information about this <select> element.
 		var jSelectElem = $(this);
 		var jSelectElemId = jSelectElem.attr('id');
+		var jSelectElemClass = jSelectElem.attr('class');
 		if (jSelectElemId == '' || !o.preferIdOverName) {
 			// Regardless of whether this is a PHP environment, we need an id
 			// for the element, and it shouldn't have brackets [] in it.
@@ -243,7 +244,7 @@ jQuery.fn.toChecklist = function(o) { // "o" stands for options
 		// Also, enclose it inside another div that has the original id, so developers
 		// can access it as before. Also, this allows the search box to be inside
 		// the div as well.
-		jSelectElem.replaceWith('<div id="'+jSelectElemId+'"><div id="'+checklistId+'">'
+		jSelectElem.replaceWith('<div id="'+jSelectElemId+'" class="'+jSelectElemClass+'"><div id="'+checklistId+'">'
 			+'<ul>'+jSelectElem.attr('innerHTML')+'</ul></div></div>');
 		var checklistDivId = '#'+checklistId;
 

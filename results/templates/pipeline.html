@@ -6,6 +6,7 @@
     <link rel="stylesheet" href="static/jquery.toChecklist.css" type="text/css" />
     <script type="text/javascript" charset="utf-8" src="static/jquery.js"></script>
     <script type="text/javascript" charset="utf-8" src="static/jquery.toChecklist.js"></script>
+    <script type="text/javascript" charset="utf-8" src="static/jquery.tablesorter.js"></script>
     <script type="text/javascript" charset="utf-8" src="static/pipeline.js"></script>
 </head>
 <body>
@@ -40,11 +41,16 @@
 			</div>
 			<div class="pipeline-footer"></div>
 		</div>
-		<div id="pipeline-normalize-template" class="pipeline normalize pipeline-block">
+		<div id="pipeline-normalise-template" class="pipeline normalise pipeline-block">
 			<button type="button" class="remove-button">X</button>
 			<div class="pipeline-content">
-				<span class="pipeline-header">Normalize</span> <br />
-				Over <select class="select-normalise-column" name="normalize[0]['col']"><option>configuration</option><option>benchmark</option></select> to <select class="select-normalise-value" name="normalize[0]['val']"><option>jrmc</option><option>ibm</option></select>
+				<span class="pipeline-header">Normalise</span> <br />
+				<label><input type="radio" name="normalise-type" value="select" checked="checked"/> to <select class="select-normalise-column scenario-column"><option></option></select> = <select class="select-normalise-value"><option></option></select></label> <br />
+				<label><input type="radio" name="normalise-type" value="best" /> to best value in group</label> <br />
+                <div class="normalise-group">
+                    <strong>Grouping</strong> <br />
+                    <select name="normalise-group" class="select-normalise-group" multiple="multiple"><option></option></select>
+                </div>
 			</div>
 			<div class="pipeline-footer"></div>
 		</div>
@@ -63,7 +69,8 @@
 		<div id="pipeline-load" class="pipeline">
 			<div class="pipeline-content">
 				<span class="pipeline-header">Load Saved Pipeline</span> <br />
-				<select name="saved"><option>NYI</option></select>
+				<select name="saved"><option>NYI</option></select> <br />
+				<a href="list/" id="pipeline-debug-link">Debug</a>
 			</div>
 		</div>
 		<div id="pipeline-log" class="pipeline">
@@ -100,7 +107,7 @@
 		<div id="pipeline-add" class="pipeline">
 			<div class="pipeline-content">
 				<span class="pipeline-header">Add Block</span> <br />
-				<button type="button" id="add-filter">Filter</button><button type="button" id="add-aggregate">Aggregate</button><button type="button" id="add-normalize">Normalize</button><button type="button" id="add-graph">Graph</button>
+				<button type="button" id="add-filter">Filter</button><button type="button" id="add-aggregate">Aggregate</button><button type="button" id="add-normalise">Normalise</button><button type="button" id="add-graph">Graph</button>
 			</div>
 		</div>
 		<div id="pipeline-save" class="pipeline">

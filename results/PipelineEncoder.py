@@ -53,7 +53,10 @@ def decode_aggregate_block(data):
      
 def decode_normalise_block(data):
     params_string = data.split(GROUP_SEPARATOR)
-    return {'type': 'normalise', 'params': {'column': params_string[0], 'value': params_string[1]}}
+    if params_string[0] == '0':
+        return {'type': 'normalise', 'params': {'normaliser': 'select', 'column': params_string[1], 'value': params_string[2]}}
+    elif params_string[0] == '1':
+        return {'type': 'normalise', 'params': {'normaliser': 'best', 'group': params_string[1:]}}
     
 def decode_graph_block(data):
     return {'type': 'graph'}
@@ -90,7 +93,10 @@ def encode_aggregate_block(data):
     return GROUP_SEPARATOR.join([data['params']['column'], str(reverse_dict_lookup(AGGREGATE_TYPES, data['params']['type']))])
 
 def encode_normalise_block(data):
-    return GROUP_SEPARATOR.join([data['params']['column'], data['params']['value']])
+    if data['params']['normaliser'] == 'select':
+        return GROUP_SEPARATOR.join(['0', data['params']['column'], data['params']['value']])
+    elif data['params']['normaliser'] == 'best':
+        return GROUP_SEPARATOR.join(['1', GROUP_SEPARATOR.join(data['params']['group'])])
 
 def encode_graph_block(data):
     return ''

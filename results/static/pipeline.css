@@ -94,7 +94,7 @@ div {
 .aggregate {
 	background: #c5f5c1;
 }
-.normalize {
+.normalise {
 	background: #a7e2f5;
 }
 .graph {
@@ -111,7 +111,7 @@ div {
     color: gray;
 }
 
-#select-scenario-cols, #select-value-cols {
+#select-scenario-cols, #select-value-cols, .select-normalise-group {
     width: 100%;
     height: 100px;
 }
@@ -121,4 +121,31 @@ div {
     background: #f5f0c1;
     border: 1px solid #e3d554;
     visibility: hidden;
+}
+
+.normalise-group {
+    display: none;
+}
+
+th.header { 
+    background-image: url(bg.gif);     
+    cursor: pointer; 
+    font-weight: bold; 
+    background-repeat: no-repeat; 
+    background-position: center left; 
+    padding-left: 20px; 
+}
+
+#output td {
+    padding-right: 10px;
+}
+
+th.headerSortUp { 
+    background-image: url(asc.gif); 
+    background-color: #eee; 
+}
+
+th.headerSortDown { 
+    background-image: url(desc.gif); 
+    background-color: #eee; 
 }
