@@ -358,7 +358,7 @@ function refreshPipeline() {
     if ( pipeline ) {
         var encoded = PipelineEncoder.encode_pipeline(pipeline);
         console.log('Loading pipeline: ' + encoded);
-        $('#pipeline-debug-link').attr('href', 'list/' + encoded);
+        $('#pipeline-debug-link').attr('href', 'list/' + encoded + '?debug');
         $.get('/results/ajax/pipeline/' + encoded, function(data) {
             $('#output table').remove();
             $('#output').append(data);
