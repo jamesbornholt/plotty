@@ -7,13 +7,12 @@ TEMPLATE_DEBUG = DEBUG
 if os.uname()[1] == 'raccoon':
     ROOT_DIR = '/home/james/django/plotty'
     BM_LOG_DIR = '/home/james/logs'
-    #CACHE_BACKEND = 'locmem://'
 else:
     ROOT_DIR = '/Users/james/socs/asc-2010/plotty'
     BM_LOG_DIR = '/Users/james/socs/asc-2010/logs'
-    #CACHE_BACKEND = 'memcached://127.0.0.1:11211/?timeout=3600'
 
-CACHE_BACKEND = 'memcached://127.0.0.1:11211/?timeout=3600'
+CACHE_TIMEOUT = 24*60*60 # 24 hours
+CACHE_BACKEND = 'memcached://127.0.0.1:11211/?timeout=%d' % CACHE_TIMEOUT
 memcache.SERVER_MAX_VALUE_LENGTH = 5*1024*1024
 
 sys.path.insert(0, ROOT_DIR)

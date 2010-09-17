@@ -14,24 +14,30 @@ class DataTable:
     def __init__(self, logs):
         self.rows = []
         for log in logs:
+            file_path = os.path.join(settings.BM_LOG_DIR, log)
             logging.debug('Attempting to load log %s from cache' % log)
-            rows = cache.get(log)
-            if rows == None:
-                logging.debug('Cache empty, reloading %s from file' % log)
-                rows = self.loadCSV(log)
-                ret = cache.set(log, rows)
+            cached_vals = cache.get(log)
+            file_last_modified = os.path.getmtime(file_path)
+            if cached_vals == None or cached_vals['last_modified'] < file_last_modified:
+                logging.debug('Cache empty or expired, reloading %s from file' % log)
+                rows, lastModified = self.loadCSV(file_path)
+                ret = cache.set(log, {'last_modified': lastModified, 'rows': rows})
                 logging.debug('Storing %d rows to cache for log %s' % (len(rows), log))
             else:
+                rows = cached_vals['rows']
                 logging.debug('Loaded %d rows from cache' % len(rows))
             self.rows.extend(rows)
 
     def __iter__(self):
         return iter(self.rows)
 
-    def loadCSV(self, log):
+    def loadCSV(self, log_path):
         scenarios = {}
+
+        # Store the log's last modified date
+        lastModified = os.path.getmtime(log_path)
         
-        reader = csv.DictReader(open(os.path.join(settings.BM_LOG_DIR, log), 'rb'))
+        reader = csv.DictReader(open(log_path, 'rb'))
         for line in reader:
             key = line.pop('key')
             value = line.pop('value')
@@ -40,7 +46,7 @@ class DataTable:
                 scenarios[schash] = DataRow(line)
             scenarios[schash].values[key] = float(value)
         
-        return scenarios.values()
+        return scenarios.values(), lastModified
 
     def headers(self):
         scenarios = list()

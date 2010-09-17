@@ -25,6 +25,7 @@ div {
 	overflow: auto;
 	height: 100%;
 	position: fixed;
+    background-color: white;
 }
 
 .remove-button {
