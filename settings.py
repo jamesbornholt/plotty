@@ -4,6 +4,10 @@ import sys, os, memcache
 DEBUG = True
 TEMPLATE_DEBUG = DEBUG
 
+# Two-tailed confidence level (i.e. this value will be halved for calls to
+# the inverse t function)
+CONFIDENCE_LEVEL = 0.95
+
 if os.uname()[1] == 'raccoon':
     ROOT_DIR = '/home/james/django/plotty'
     BM_LOG_DIR = '/home/james/logs'

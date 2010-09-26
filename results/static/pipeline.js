@@ -13,6 +13,18 @@ if ( typeof Array.prototype.map === 'undefined' ) {
     }
 }
 
+$.tablesorter.addParser({
+    id: 'confidence-interval',
+    is: function(s) {
+        return s.indexOf('class="ci"') > -1;
+    },
+    format: function(s) {
+        // parseFloat('12.34 <span ...') = 12.34
+        return parseFloat(s);
+    },
+    type: 'numeric'
+});
+
 // Adds a distinct number to every normalise block to make sure the radio
 // buttons toggle around correctly
 var normaliseBlockCount = 0;
@@ -362,7 +374,7 @@ function refreshPipeline() {
         $.get('/results/ajax/pipeline/' + encoded, function(data) {
             $('#output table').remove();
             $('#output').append(data);
-            $('#output table').tablesorter();
+            $('#output table').tablesorter({debug: true});
         });
     }
     else if ( $('#pipeline .pipeline-block').length == 0 ) {

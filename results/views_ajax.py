@@ -50,7 +50,7 @@ def pipeline(request, pipeline):
     
     scenarios, values = dt.headers()
     
-    return render_to_response('pipeline-ajax.html', {
+    return render_to_response('table.html', {
         'scenario_columns': scenarios,
         'value_columns': values,
         'results': dt,

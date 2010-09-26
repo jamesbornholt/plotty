@@ -1,42 +1,7 @@
-{% load hash_access %}
-<title>Listing</title>
+<head>
+    <link rel="stylesheet" href="/results/static/pipeline.css" type="text/css" />
+    <title>Listing</title>
+</head>
 <body>
-<table>
-    <tr>
-{% for key in scenario_columns %}
-        <th>{{ key }}</th>
-{% endfor %}
-{% comment %}
-        <th>|</th>
-        <th>Invocation</th>
-        <th>|</th>
-{% endcomment %}
-{% for key in value_columns %}
-        <th>{{ key }}</th>
-{% endfor %}
-    </tr>
-{% for result in results.rows %}
-    <tr>
-    {% for key in scenario_columns %}
-        {% if key in result.scenario %}
-            <td>{{ result.scenario|hash:key }}</td>
-        {% else %}
-            <td>*</td>
-        {% endif %}
-    {% endfor %}
-    {% comment %}
-    <td>|</td>
-    <td>{{ result.values.invocation }}</td>
-    <td>|</td>
-    {% endcomment %}
-    {% for key in value_columns %}
-        {% if key in result.values %}
-            <td>{{ result.values|hash:key }}</td>
-        {% else %}
-            <td>*</td>
-        {% endif %}
-    {% endfor %}
-    </tr>
-{% endfor %}
-</table>
+{% include "table.html" %}
 </body>

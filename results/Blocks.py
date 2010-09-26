@@ -50,25 +50,8 @@ class AggregateBlock:
             for row in rows:
                 for (key,val) in row.items():
                     if key not in aggregates:
-                        aggregates[key] = DataAggregate()
-                    aggregates[key].sum += val
-                    aggregates[key].product *= val
-                    #logging.debug('product *= %s = %s' % (str(val), aggregates[key].product))
-                    aggregates[key].sqsum += val * val
-                    aggregates[key].count += 1
-                    if val > aggregates[key].max:
-                        aggregates[key].max = val
-                    if val < aggregates[key].min:
-                        aggregates[key].min = val
-            for (key,agg) in aggregates.items():
-                if kwargs['type'] == 'geomean':
-                    aggregates[key].value = math.pow(agg.product, 1.0/agg.count)
-                    aggregates[key].type = 'geomean'
-                elif kwargs['type'] == 'mean':
-                    aggregates[key].value = agg.sum / agg.count
-                    aggregates[key].type = 'mean'
-                if agg.count > 1:
-                    aggregates[key].stdev = math.sqrt((1.0/(agg.count - 1)) * (agg.sqsum - (agg.sum * agg.sum / agg.count)))
+                        aggregates[key] = DataAggregate(kwargs['type'])
+                    aggregates[key].append(val)
             newRow = DataRow()
             newRow.scenario = scenarios[sc]
             newRow.values = aggregates

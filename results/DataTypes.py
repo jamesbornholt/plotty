@@ -81,27 +81,119 @@ class DataRow:
 
 
 class DataAggregate:
-    def __init__(self, value=0, count=0, stdev=0):
-        # Actual values
-        self.value = value
-        self.count = count
-        self.stdev = stdev
-        self.min = float('+inf')
-        self.max = float('-inf')
+    def __init__(self, newType):
+        self.type = newType
+        self._isValid = False
+        self._values = []
+
+    # Private methods
+    def _calculate(self):
+        # Calculates data for a single variable - compounds (A + B, A / B, etc)
+        # are calculated by the appropriate operator overload (__add__, __div__)
+        valSum = 0
+        valProduct = 1
+        valSquareSum = 0
+        valMin = float('+inf')
+        valMax = float('-inf')
+        for val in self._values:
+            valSum += val
+            valProduct *= val
+            valSquareSum += val**2
+            if val < valMin:
+                valMin = val
+            if val > valMax:
+                valMax = val
+        self._min = valMin
+        self._max = valMax
+        if self.type == 'geomean':
+            self._value = math.pow(valProduct, 1.0/len(self._values))
+        elif self.type == 'mean':
+            self._value = valSum / len(self._values)
+        if len(self._values) > 1:
+            # http://en.wikipedia.org/wiki/Computational_formula_for_the_variance
+            # Note x-bar = sum(x) / n
+            n = len(self._values)
+            self._stdev = math.sqrt( (1.0/(n-1)) * ( valSquareSum - (valSum * valSum / n) ) )
+
+            ciDelta = stats.t.isf((1 - settings.CONFIDENCE_LEVEL) / 2, n) * self._stdev / math.sqrt(n)
+            self._ciUp = self._value + ciDelta
+            self._ciDown = self._value - ciDelta
+        else:
+            self._stdev = 0
+            self._ciUp = self._ciDown = self._value
         
-        # Intermediate values
-        self.sum = 0
-        self.product = 1
-        self.sqsum = 0
-        self.type = ''
-        
-    def __unicode__(self):
-        ci = stats.t.isf(0.025, self.count-1) * self.stdev / math.sqrt(self.count)
-        ci_percent = ci / self.value * 100
-        return "%.3f [s=%.4f, n=%d]" % (self.value, self.stdev, self.count)
+        self._isValid = True
+
+    # Mutators
+    def append(self, value):
+        self._values.append(value)
+        self._isValid = False
     
+    def map(self, func):
+        self._isValid = False
+        self._values = map(func, self._values)
+    
+    def setType(self, newType):
+        self.type = newType
+        self._isValid = False
+    
+    def manual(self, value, ciUp, ciDown, newMin, newMax):
+        self._value = value
+        self._ciUp = ciUp
+        self._ciDown = ciDown
+        self._min = newMin
+        self._max = newMax
+        self._isValid = True
+        
+    # Getters
+    def value(self):
+        if not self._isValid:
+            self._calculate()
+        return self._value
+    
+    def values(self):
+        return self._values
+    
+    def stdev(self):
+        if not self._isValid:
+            self._calculate()
+        return self._stdev
+    
+    def count(self):
+        if not self._isValid:
+            self._calculate()
+        return len(self._values)
+    
+    def sem(self):
+        if not self._isValid:
+            self._calculate()
+        return self._stdev / math.sqrt(len(self._values))
+    
+    def min(self):
+        if not self._isValid:
+            self._calculate()
+        return self._min
+    
+    def max(self):
+        if not self._isValid:
+            self._calculate()
+        return self._max
+
+    def ci(self):
+        if not self._isValid:
+            self._calculate()
+        return self._ciDown, self._ciUp
+
+    def __unicode__(self):
+        if not self._isValid:
+            self._calculate()
+        if math.isnan(self._ciUp):
+            return "%.3f" % self._value
+        else:
+            return "%.3f <span class='ci'>(%.3f, %.3f)</span>" % (self._value, self._ciDown, self._ciUp)
+
     def __float__(self):
-        return self.value
+        return self.value()
     
     def __cmp__(self, other):
         if float(self) > float(other):
@@ -113,18 +205,24 @@ class DataAggregate:
     
     def __div__(self, other):
         if isinstance(other, DataAggregate):
-            res = DataAggregate()
-            res.value = self.value / other.value
-            res.count = min(self.count, other.count)
-            res.stdev = self.stdev / other.stdev # This isn't right!!
-            res.min = self.min / other.max
-            res.max = self.max / other.min
+            res = DataAggregate(self.type)
+            val = self.value() / other.value()
+            # Motulsky, 'Intuitive Biostatistics', pp285-6
+            tinv = stats.t.isf((1 - settings.CONFIDENCE_LEVEL) / 2, self.count() + other.count() - 2)
+            g = (tinv * (other.sem() / other.value()))**2
+            if g >= 1.0:
+                ciUp = ciDown = float('nan')
+            else:
+                sem = ( val / (1-g) ) * math.sqrt((1-g) * (self.sem() / self.value())**2 + (other.sem() / other.value()) ** 2)
+                ciUp = ( val / (1-g) ) + tinv*sem
+                ciDown = ( val / (1-g) ) - tinv*sem
+            valMin = self.min() / other.max()
+            valMax = self.max() / other.min()
+            
+            res.manual(value=val, ciUp=ciUp, ciDown=ciDown, newMin=valMin, newMax=valMax)
             return res
         else:
-            res = DataAggregate()
-            res.value = self.value / other
-            res.count = self.count
-            res.stdev = self.stdev
-            res.min = self.min
-            res.max = self.max
+            # This is a special case that probably doesn't need to be covered
+            res = copy.copy(self)
+            res.map(lambda d: d / other)
             return res

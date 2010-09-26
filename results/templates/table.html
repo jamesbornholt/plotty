@@ -1,4 +1,4 @@
-{% load hash_access %}
+{% load value_formatting %}
 <table>
     <thead>
     <tr>
@@ -22,7 +22,7 @@
     {% endfor %}
     {% for key in value_columns %}
         {% if key in result.values %}
-            <td>{{ result.values|hash:key }}</td>
+            <td>{{ result.values|present:key|safe }}</td>
         {% else %}
             <td>*</td>
         {% endif %}
