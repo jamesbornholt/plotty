@@ -36,11 +36,13 @@ class DataTable:
 
         # Store the log's last modified date
         lastModified = os.path.getmtime(log_path)
+        base_name = os.path.basename(log_path)
         
         reader = csv.DictReader(open(log_path, 'rb'))
         for line in reader:
             key = line.pop('key')
             value = line.pop('value')
+            line['logfile'] = base_name
             schash = scenario_hash(line)
             if schash not in scenarios:
                 scenarios[schash] = DataRow(line)

@@ -33,6 +33,7 @@ def list(request, pipeline):
 
 def pipeline(request):
     logs = os.listdir(settings.BM_LOG_DIR)
+    logs.sort(key=str.lower)
     return render_to_response('pipeline.html', {
         'logs': logs,
     }, context_instance=RequestContext(request))
