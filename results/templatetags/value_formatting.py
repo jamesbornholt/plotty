@@ -13,7 +13,7 @@ def hash_access(obj, hash):
 def present(obj, hash):
     val = obj.get(hash, None)
     if isinstance(val, DataAggregate) and val.count() > 1:
-        ciUp, ciDown = val.ci()
+        ciDown, ciUp = val.ci()
         if math.isnan(ciUp):
             return "%.3f" % val.value()
         else:

@@ -194,7 +194,7 @@ class DataAggregate:
         if math.isnan(self._ciUp):
             return "%.3f" % self._value
         else:
-            return "%.3f <span class='ci'>(%.3f, %.3f)</span>" % (self._value, self._ciDown, self._ciUp)
+            return "%.3f (%.3f, %.3f)" % (self._value, self._ciDown, self._ciUp)
 
     def __float__(self):
         return self.value()
