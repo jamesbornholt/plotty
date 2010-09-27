@@ -90,12 +90,14 @@ class DataAggregate:
     def _calculate(self):
         # Calculates data for a single variable - compounds (A + B, A / B, etc)
         # are calculated by the appropriate operator overload (__add__, __div__)
-        valSum = 0
-        valProduct = 1
-        valSquareSum = 0
+        valSum = 0.0
+        valProduct = 1.0
+        valSquareSum = 0.0
         valMin = float('+inf')
         valMax = float('-inf')
         for val in self._values:
+            if isinstance(val, DataAggregate):
+                val = val.value()
             valSum += val
             valProduct *= val
             valSquareSum += val**2

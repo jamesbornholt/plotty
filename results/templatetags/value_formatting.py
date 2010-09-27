@@ -12,7 +12,7 @@ def hash_access(obj, hash):
 
 def present(obj, hash):
     val = obj.get(hash, None)
-    if isinstance(val, DataAggregate) and val.count() > 0:
+    if isinstance(val, DataAggregate) and val.count() > 1:
         ciUp, ciDown = val.ci()
         if math.isnan(ciUp):
             return "%.3f" % val.value()
@@ -25,9 +25,12 @@ def present(obj, hash):
 def sparkline(values):
     im = Image.new("RGB", (len(values)*2 + 2, 20), 'white')
     draw = ImageDraw.Draw(im)
-    min_val = min(values)
-    max_val = max(values)
-    coords = zip(range(0, len(values)*2, 2), [5 + 10*(y-min_val)/(max_val-min_val) for y in values])
+    min_val = float(min(values))
+    max_val = float(max(values))
+    if max_val == min_val:
+        coords = map(lambda x: (x, 10), range(0, len(values)*2, 10))
+    else:
+        coords = zip(range(0, len(values)*2, 2), [15 - 10*(float(y)-min_val)/(max_val-min_val) for y in values])
     #coords = zip(range(0, len(values)*2, 2), [15 - y/10 for y in values])
     draw.line(coords, fill="#888888")
     min_pt = coords[values.index(min_val)]
@@ -38,7 +41,7 @@ def sparkline(values):
     
     f = StringIO.StringIO()
     im.save(f, "PNG")
-    return '<img src="data:image/png,%s" title="%s" />' % (urllib.quote(f.getvalue()), values)
+    return '<img src="data:image/png,%s" title="%s" />' % (urllib.quote(f.getvalue()), ", ".join(map(lambda v: str(float(v)), values)))
 
 register.filter('present', present)
 register.filter('hash', hash_access)
