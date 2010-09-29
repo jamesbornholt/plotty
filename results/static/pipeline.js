@@ -413,8 +413,7 @@ function refreshPipeline() {
             var sortList = [];
             for ( var i = 0; i < numScenarioHeaders; i++ )
                 sortList.push([i, 0]);
-            sortList = [];
-            $('#output table').tablesorter({debug: true});
+            $('#output table').tablesorter({sortList: sortList});
         });
     }
     else if ( $('#pipeline .pipeline-block').length == 0 ) {
