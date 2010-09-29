@@ -26,6 +26,7 @@ class FilterBlock:
                         add = False
                         break
             if add:
+                del row.scenario[filt['column']]
                 newRows.append(row)
         datatable.rows = newRows
 

@@ -12,10 +12,12 @@ def hash_access(obj, hash):
 
 def present(obj, hash):
     val = obj.get(hash, None)
-    if isinstance(val, DataAggregate) and val.count() > 1:
+    if isinstance(val, DataAggregate):
         ciDown, ciUp = val.ci()
         if math.isnan(ciUp):
             return "%.3f" % val.value()
+        elif val.count() < 1:
+            return "%.3f <span class='ci'>(%.3f, %.3f)</span>" % (val.value(), ciDown, ciUp)
         else:
             return "%.3f <span class='ci'>(%.3f, %.3f)</span> %s" % (val.value(), ciDown, ciUp, sparkline(val.values()))
     else:

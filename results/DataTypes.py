@@ -89,6 +89,7 @@ class DataAggregate:
         self._values = []
 
     # Private methods
+    
     def _calculate(self):
         # Calculates data for a single variable - compounds (A + B, A / B, etc)
         # are calculated by the appropriate operator overload (__add__, __div__)
@@ -129,6 +130,7 @@ class DataAggregate:
         self._isValid = True
 
     # Mutators
+    
     def append(self, value):
         self._values.append(value)
         self._isValid = False
@@ -150,6 +152,7 @@ class DataAggregate:
         self._isValid = True
         
     # Getters
+    
     def value(self):
         if not self._isValid:
             self._calculate()
@@ -187,6 +190,8 @@ class DataAggregate:
         if not self._isValid:
             self._calculate()
         return self._ciDown, self._ciUp
+
+    # Overloads
 
     def __unicode__(self):
         if not self._isValid:

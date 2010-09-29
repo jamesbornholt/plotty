@@ -13,6 +13,19 @@ if ( typeof Array.prototype.map === 'undefined' ) {
     }
 }
 
+if ( typeof Array.prototype.remove === 'undefined' ) {
+    Array.prototype.remove = function(element) {
+        var ret = [null];
+        for ( var i = 0; i < this.length; i++ ) {
+            if ( this[i] == element ) {
+                ret = this.splice(i, 1);
+                break;
+            }
+        }
+        return ret[0];
+    }
+}
+
 $.tablesorter.addParser({
     id: 'confidence-interval',
     is: function(s) {
@@ -179,6 +192,8 @@ function addBlock(type) {
     }
 	    
 	newBlock.insertBefore('#pipeline-add');
+	
+	updateScenarioColumns();
 }
 
 function updateAddRemoveButtons(table) {
@@ -216,21 +231,45 @@ function removeBlockTableRow(button) {
     updateAddRemoveButtons(table);
 }
 
-function updateAvailableColumns(data) {
-    console.log('updateAvailableColumns: ', data);
-    $('.scenario-column').each(function() {
-        var oldValue = $(this).val();
-        this.options.length = 0;
-        this.options.add(new Option("[" + data.scenarioCols.length + " options]", ''));
-        for ( var i = 0; i < data.scenarioCols.length; i++ ) {
-            this.options.add(new Option(data.scenarioCols[i], data.scenarioCols[i]));
-            if ( data.scenarioCols[i] == oldValue )
-                this.options.selectedIndex = i+1;
-        }
-    });
-    
+function updateAvailableData(data) {
     updateMultiSelect('#select-scenario-cols, .select-normalise-group', data.scenarioCols, true);
     updateMultiSelect('#select-value-cols', data.valueCols, false);
+
+    updateScenarioColumns(data.scenarioCols);
+}
+
+function updateScenarioColumns() {
+    var selected = $("#select-scenario-cols").val() || [];
+    
+    $('#pipeline .pipeline-block').each(function() {
+        $('.scenario-column', this).each(function() {
+            var oldValue = $(this).val();
+            this.options.length = 0;
+            this.options.add(new Option("[" + selected.length + " options]", '-1'));
+            for ( var i = 0; i < selected.length; i++ ) {
+                this.options.add(new Option(selected[i], selected[i]));
+                if ( selected[i] == oldValue )
+                    this.options.selectedIndex = i+1;
+            }
+        });
+        
+        if ( $(this).hasClass('filter') ) {
+            var filters = []
+            $('tr', this).each(function() {
+                if ( $('.select-filter-is', this).val() == 'is' ) {
+                    var value = $('.select-filter-column', this).val();
+                    if ( value != '-1' ) {
+                        selected.remove(value);
+                    }
+                }
+            });
+        }
+        else if ( $(this).hasClass('aggregate') ) {
+            var value = $('.select-aggregate-column', this).val();
+            if ( value != '-1' ) {
+            }
+        }
+    });
 }
 
 /* It's much easier to throw out the old multi-select and build a new one
@@ -310,7 +349,8 @@ function serialisePipeline() {
                     is = false;
                 var column = $('.select-filter-column', this).val();
                 var value = $('.select-filter-value', this).val();
-                if ( column == '' || value == '' ) {
+                if ( column == '-1' || value == '' ) {
+                    console.log(column, ', ', value);
                     throwInvalid = true;
                     return false;
                 }
@@ -321,7 +361,7 @@ function serialisePipeline() {
         else if ( $(this).hasClass('aggregate') ) {
             var column = $('.select-aggregate-column', this).val();
             var type = $('.select-aggregate-type', this).val();
-            if ( column == '' || type == '' ) {
+            if ( column == '-1' || type == '' ) {
                 throwInvalid = true;
                 return false;
             }
@@ -332,7 +372,7 @@ function serialisePipeline() {
             if ( selected_type.val() == 'select' ) {
                 var column = $('.select-normalise-column', this).val();
                 var value = $('.select-normalise-value', this).val();
-                if ( column == '' || value == '' ) {
+                if ( column == '-1' || value == '' ) {
                     throwInvalid = true;
                     return false;
                 }
@@ -340,14 +380,9 @@ function serialisePipeline() {
             }
             else if ( selected_type.val() == 'best' ) {
                 var group = $('.select-normalise-group', this).val();
-                /*if ( group.length == 0 ) {
-                    throwInvalid = true;
-                    return false;
-                }*/
                 blocks.push({'type': 'normalise', 'params': {'normaliser': 'best', 'group': group}});
             }
             else {
-                console.log('val = ' + selected_type.val());
                 throwInvalid = true;
                 return false;
             }
@@ -374,6 +409,11 @@ function refreshPipeline() {
         $.get('/results/ajax/pipeline/' + encoded, function(data) {
             $('#output table').remove();
             $('#output').append(data);
+            var numScenarioHeaders = $('#output table th.scenario-header').length;
+            var sortList = [];
+            for ( var i = 0; i < numScenarioHeaders; i++ )
+                sortList.push([i, 0]);
+            sortList = [];
             $('#output table').tablesorter({debug: true});
         });
     }
@@ -406,6 +446,7 @@ $(document).ready(function() {
 	});
 	$(".remove-button").live('click', function() {
 		$(this).parent().remove();
+		updateScenarioColumns();
 		refreshPipeline();
 	});
 	$(".add-row").live('click', function() {
@@ -417,7 +458,7 @@ $(document).ready(function() {
 	    refreshPipeline();
 	});
 	$("#pipeline-log").delegate(".select-log", 'change', function() {
-	    $.getJSON('/results/ajax/log-values/' + selectedLogFiles().join(',') + '/', updateAvailableColumns);
+	    $.getJSON('/results/ajax/log-values/' + selectedLogFiles().join(',') + '/', updateAvailableData);
 	});
 	$("#pipeline").delegate(".select-filter-column", 'change', function() {
 	    var values_select = $('.select-filter-value', $(this).parents('tr')).get(0);
@@ -438,17 +479,7 @@ $(document).ready(function() {
 	    });
 	});
 	$("#pipeline-values").delegate("#select-scenario-cols input", 'change', function() {
-	    var selected = $(this).parents("#select-scenario-cols").val() || [];
-	    $('.scenario-column').each(function() {
-	        var oldValue = $(this).val();
-            this.options.length = 0;
-            this.options.add(new Option("[" + selected.length + " options]", ''));
-            for ( var i = 0; i < selected.length; i++ ) {
-                this.options.add(new Option(selected[i], selected[i]));
-                if ( selected[i] == oldValue )
-                    this.options.selectedIndex = i+1;
-            }
-	    });
+	    updateScenarioColumns();
 	    refreshPipeline();
 	});
 	$("#pipeline-values").delegate("#select-value-cols input", 'change', function() {
