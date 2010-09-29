@@ -168,7 +168,7 @@
 			function detectParserForColumn(table,node) {
 				var l = parsers.length;
 				for(var i=1; i < l; i++) {
-					if(parsers[i].is($.trim(getElementText(table.config,node)),table,node)) {
+					if(parsers[i].is($.trim(node.firstChild.nodeValue),table,node)) {
 						return parsers[i];
 					}
 				}
@@ -205,7 +205,7 @@
 						cache.row.push($(c));
 						
 						for(var j=0; j < totalCells; ++j) {
-							cols.push(parsers[j].format(getElementText(table.config,c.cells[j]),table,c.cells[j]));	
+							cols.push(parsers[j].format(c.cells[j].firstChild.nodeValue,table,c.cells[j]));	
 						}
 												
 						cols.push(i); // add position for rowCache
@@ -217,7 +217,7 @@
 				
 				return cache;
 			};
-			
+			/*
 			function getElementText(config,node) {
 				
 				if(!node) return "";
@@ -239,7 +239,7 @@
 				}
 				return t;
 			}
-			
+			*/
 			function appendToTable(table,cache) {
 				
 				if(table.config.debug) {var appendTime = new Date()}
@@ -278,7 +278,7 @@
 				if(table.config.debug) { benchmark("Rebuilt table:", appendTime); }
 								
 				//apply table widgets
-				applyWidget(table);
+				//applyWidget(table);
 				
 				// trigger sortend
 				setTimeout(function() {
@@ -620,14 +620,14 @@
 						
 						appendToTable(this,cache);
 					
-					}).bind("applyWidgetId",function(e,id) {
+					});/*.bind("applyWidgetId",function(e,id) {
 						
 						getWidgetById(id).format(this);
 						
 					}).bind("applyWidgets",function() {
 						// apply widgets
 						applyWidget(this);
-					});
+					});*/
 					
 					if($.metadata && ($(this).metadata() && $(this).metadata().sortlist)) {
 						config.sortList = $(this).metadata().sortlist;
@@ -714,7 +714,7 @@
 		},
 		type: "numeric"
 	});
-	
+	/*
 	ts.addParser({
 		id: "currency",
 		is: function(s) {
@@ -834,10 +834,10 @@
 	        return $(cell).metadata()[p];
 	    },
 	  type: "numeric"
-	});
+	});*/
 	
 	// add default widgets
-	ts.addWidget({
+	/*ts.addWidget({
 		id: "zebra",
 		format: function(table) {
 			if(table.config.debug) { var time = new Date(); }
@@ -848,5 +848,5 @@
 	        .removeClass(table.config.widgetZebra.css[0]).addClass(table.config.widgetZebra.css[1]);
 			if(table.config.debug) { $.tablesorter.benchmark("Applying Zebra widget", time); }
 		}
-	});	
+	});*/
 })(jQuery);
