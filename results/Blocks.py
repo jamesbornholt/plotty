@@ -1,5 +1,6 @@
 import math, copy
 from results.DataTypes import *
+from django.template.loader import render_to_string
 import logging
 
 def scenario_hash(scenario, exclude=[], include=[]):
@@ -140,3 +141,33 @@ class NormaliseBlock:
                 newRows.append(row)                
         
         datatable.rows = newRows
+
+
+class GraphBlock:
+    def process(self, datatable, **kwargs):
+        if kwargs['graph-type'] == 'histogram':
+            return self.processHistogram(datatable, **kwargs)
+    
+    def processHistogram(self, datatable, **kwargs):
+        graph_rows = {}
+        column_keys = []
+        for row in datatable:
+            if kwargs['column'] in row.scenario and kwargs['row'] in row.scenario and kwargs['value'] in row.values:
+                if row.scenario[kwargs['row']] not in graph_rows:
+                    graph_rows[row.scenario[kwargs['row']]] = {}
+                graph_rows[row.scenario[kwargs['row']]][row.scenario[kwargs['column']]] = row.values[kwargs['value']]
+                if row.scenario[kwargs['column']] not in column_keys:
+                    column_keys.append(row.scenario[kwargs['column']])
+        
+        # Hashmaps have no order defined so we'll define one instead
+        graph_row_keys = graph_rows.keys()
+        graph_row_keys.sort(key=str.lower)
+        
+        rendered = render_to_string('graph_histogram_table.html', {
+            'row_title': kwargs['row'],
+            'column_title': kwargs['column'],
+            'column_keys': column_keys,
+            'rows': graph_rows,
+            'row_keys': graph_row_keys,
+        })
+        return [rendered]

@@ -135,7 +135,11 @@ var PipelineEncoder = {
     },
     
     decode_graph_block: function(data) {
-        return {'type': 'graph'};
+        var params_string = data.split(this.GROUP_SEPARATOR);
+        if ( params_string[0] == '0' )
+            return {'type': 'graph', 'params': {'graph-type': 'histogram', 'column': params_string[1], 'row': params_string[2], 'value': params_string[3]}};
+        else
+            return {};
     },
 
     
@@ -177,7 +181,10 @@ var PipelineEncoder = {
     },
     
     encode_graph_block: function(data) {
-        return '';
+        if ( data['params']['graph-type'] == 'histogram' )
+            return ['0', data['params']['column'], data['params']['row'], data['params']['value']].join(this.GROUP_SEPARATOR);
+        else
+            return '';
     }
 }
 
@@ -194,6 +201,7 @@ function addBlock(type) {
 	newBlock.insertBefore('#pipeline-add');
 	
 	updateScenarioColumns();
+	updateValueColumns();
 }
 
 function updateAddRemoveButtons(table) {
@@ -267,7 +275,23 @@ function updateScenarioColumns() {
         else if ( $(this).hasClass('aggregate') ) {
             var value = $('.select-aggregate-column', this).val();
             if ( value != '-1' ) {
+                selected.remove(value);
             }
+        }
+    });
+}
+
+function updateValueColumns() {
+    var selected = $("#select-value-cols").val() || [];
+    
+    $('.value-column').each(function() {
+        var oldValue = $(this).val();
+        this.options.length = 0;
+        this.options.add(new Option("[" + selected.length + " options]", '-1'));
+        for ( var i = 0; i < selected.length; i++ ) {
+            this.options.add(new Option(selected[i], selected[i]));
+            if ( selected[i] == oldValue )
+                this.options.selectedIndex = i+1;
         }
     });
 }
@@ -388,7 +412,21 @@ function serialisePipeline() {
             }
         }
         else if ( $(this).hasClass('graph') ) {
-            blocks.push({'type': 'graph'});
+            var type = $('.select-graph-type', this).val();
+            if ( type == 'histogram' ) {
+                var column = $('.select-graph-column', this).val();
+                var row = $('.select-graph-row', this).val();
+                var value = $('.select-graph-value', this).val();
+                if ( column == '-1' || row == '-1' || value == '-1' ) {
+                    throwInvalid = true;
+                    return false;
+                }
+                blocks.push({'type': 'graph', 'params': {'graph-type': 'histogram', 'column': column, 'row': row, 'value': value}});
+            }
+            else {
+                throwInvalid = true;
+                return false;
+            }
         }
         if ( throwInvalid )
             return false;
@@ -409,11 +447,13 @@ function refreshPipeline() {
         $.get('/results/ajax/pipeline/' + encoded, function(data) {
             $('#output table').remove();
             $('#output').append(data);
-            var numScenarioHeaders = $('#output table th.scenario-header').length;
-            var sortList = [];
-            for ( var i = 0; i < numScenarioHeaders; i++ )
-                sortList.push([i, 0]);
-            $('#output table').tablesorter({sortList: sortList});
+            if ( $('#output table.results').length > 0 ) {
+                var numScenarioHeaders = $('#output table th.scenario-header').length;
+                var sortList = [];
+                for ( var i = 0; i < numScenarioHeaders; i++ )
+                    sortList.push([i, 0]);
+                $('#output table.results').tablesorter({sortList: sortList});
+            }
         });
     }
     else if ( $('#pipeline .pipeline-block').length == 0 ) {
@@ -482,6 +522,7 @@ $(document).ready(function() {
 	    refreshPipeline();
 	});
 	$("#pipeline-values").delegate("#select-value-cols input", 'change', function() {
+	    updateValueColumns();
 	    refreshPipeline();
 	});
 	$("#pipeline").delegate("input:radio", 'change', function() {

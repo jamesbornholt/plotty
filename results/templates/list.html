@@ -1,7 +1,15 @@
+<html>
 <head>
     <link rel="stylesheet" href="/results/static/pipeline.css" type="text/css" />
     <title>Listing</title>
 </head>
 <body>
-{% include "table.html" %}
+{% if graph_outputs|length_is:0 %}
+    {% include "table.html" %}
+{% else %}
+{% for item in graph_outputs %}
+    {{ item }}
+{% endfor %}
+{% endif %}
 </body>
+</html>

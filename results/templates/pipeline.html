@@ -58,9 +58,12 @@
 			<button type="button" class="remove-button">X</button>
 			<div class="pipeline-content">
 				<span class="pipeline-header">Graph</span> <br />
-				Type: <select name="graph[0]['type']"><option>XY Scatter</option><option>Histogram</option></select> <br />
-				x-axis: <select name="graph[0]['xaxis']"><option>hfac</option><option>...</option></select> <br />
-				y-axis: <select name="graph[0]['yaxis']"><option>value</option></select>
+				Type: <select class="select-graph-type"><option value="histogram">Histogram</option></select>
+				<div class="graph-histogram">
+				    Pivot column (series): <select class="select-graph-column scenario-column"><option></option></select> <br />
+				    Category (x-axis): <select class="select-graph-row scenario-column"><option></option></select> <br />
+				    Value (y-axis): <select class="select-graph-value value-column"><option></option></select> <br />
+				</div>
 			</div>
 			<div class="pipeline-footer"></div>
 		</div>

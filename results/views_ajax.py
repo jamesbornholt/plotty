@@ -4,7 +4,7 @@ from django.shortcuts import render_to_response
 from django.template import RequestContext
 from results.DataTypes import *
 from results.Blocks import *
-import json, csv
+import json, csv, logging
 
 def filter_values(request, logs, col):
     """ Given a particular scenario column, find all possible values of that
@@ -40,6 +40,7 @@ def pipeline(request, pipeline):
     dt = DataTable(logs=decoded['logs'])
     dt.selectValueColumns(decoded['value_columns'])
     dt.selectScenarioColumns(decoded['scenario_columns'])
+    graph_outputs = []
     for block in decoded['blocks']:
         if block['type'] == 'aggregate':
             AggregateBlock().process(dt, **block['params'])
@@ -47,12 +48,15 @@ def pipeline(request, pipeline):
             FilterBlock().process(dt, block['filters'])
         elif block['type'] == 'normalise':
             NormaliseBlock().process(dt, **block['params'])
+        elif block['type'] == 'graph':
+            graph_outputs.extend(GraphBlock().process(dt, **block['params']))
     
     scenarios, values = dt.headers()
     
-    return render_to_response('table.html', {
+    return render_to_response('list_ajax.html', {
         'scenario_columns': scenarios,
         'value_columns': values,
         'results': dt,
+        'graph_outputs': graph_outputs
     }, context_instance=RequestContext(request))
     return HttpResponse(str(results.PipelineEncoder.decode_pipeline(pipeline)))
