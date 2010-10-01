@@ -161,7 +161,11 @@ class GraphBlock:
         
         # Hashmaps have no order defined so we'll define one instead
         graph_row_keys = graph_rows.keys()
-        graph_row_keys.sort(key=str.lower)
+        # Try to sort the keys numerically first
+        try:
+            graph_row_keys.sort(key=float)
+        except ValueError:
+            graph_row_keys.sort(key=str.lower)
         
         rendered = render_to_string('graph_histogram_table.html', {
             'row_title': kwargs['row'],
