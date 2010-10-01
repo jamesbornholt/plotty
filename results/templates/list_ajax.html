@@ -1,0 +1,7 @@
+{% if graph_outputs|length_is:0 %}
+    {% include "table.html" %}
+{% else %}
+{% for item in graph_outputs %}
+    {{ item }}
+{% endfor %}
+{% endif %}

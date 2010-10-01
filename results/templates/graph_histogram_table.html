@@ -1,0 +1,28 @@
+{% load value_formatting %}
+<table>
+    <thead>
+    <tr>
+        <th>{{ row_title }}</th>
+{% for key in column_keys %}
+        <th>{{ column_title }} = {{ key }}</th>
+{% endfor %}
+{% for key in value_columns %}
+        <th class="value-header">{{ key }}</th>
+{% endfor %}
+    </tr>
+    </thead>
+    <tbody>
+{% for row in row_keys %}
+    <tr>
+        <td>{{ row }}</td>
+{% for key in column_keys %}
+    {% if key in rows|hash:row %}
+        <td>{{ rows|hash:row|present:key|safe }}</td>
+    {% else %}
+        <td>*</td>
+    {% endif %}
+{% endfor %}
+    </tr>
+{% endfor %}
+    </tbody>
+</table>
