@@ -191,6 +191,15 @@ class DataAggregate:
             self._calculate()
         return self._ciDown, self._ciUp
 
+    def ciPercent(self):
+        if not self._isValid:
+            self._calculate()
+        if math.isnan(self._ciUp):
+            return self._ciDown, self._ciUp
+        ciDown = (self._value - self._ciDown) * 100 / self._value
+        ciUp = (self._ciUp - self._value) * 100 / self._value
+        return ciDown, ciUp
+
     # Overloads
 
     def __unicode__(self):

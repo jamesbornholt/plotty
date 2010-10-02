@@ -124,7 +124,7 @@ class NormaliseBlock:
                 normalisers[schash] = {}
             scenarios[schash].append(row)
             for (key,val) in row.values.items():
-                if val < normalisers[schash].get(key, float('inf')):
+                if val > 0 and val < normalisers[schash].get(key, float('inf')):
                     normalisers[schash][key] = val
         
         newRows = []
@@ -166,6 +166,12 @@ class GraphBlock:
             graph_row_keys.sort(key=float)
         except ValueError:
             graph_row_keys.sort(key=str.lower)
+            
+        # Also sort the column keys
+        try:
+            column_keys.sort(key=float)
+        except ValueError:
+            column_keys.sort(key=str.lower)
         
         rendered = render_to_string('graph_histogram_table.html', {
             'row_title': kwargs['row'],
