@@ -18,7 +18,7 @@ def present(obj, hash):
             return "%.3f" % val.value()
         else:
             if ciDown == ciUp:
-                ci_html = "&plusm;%.2f%%" % ciDown
+                ci_html = "&plusmn;%.2f%%" % ciDown
             else:
                 ci_html = "-%.2f%%, +%.2f%%" % (ciDown, ciUp)
             
