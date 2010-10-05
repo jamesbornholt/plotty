@@ -126,7 +126,7 @@
             if(hash != self._appState) {
                 locationWrapper.put(hash);
                 self._appState = hash;
-                self.callback(hash);
+                //self.callback(hash);
             }
         }
     };
@@ -161,7 +161,7 @@
                 locationWrapper.put(hash);
                 iframeWrapper.put(hash);
                 self._appState = hash;
-                self.callback(hash);
+                //self.callback(hash);
             }
         }
     };

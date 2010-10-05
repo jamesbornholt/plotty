@@ -188,6 +188,105 @@ var PipelineEncoder = {
     }
 }
 
+function hashChange(hash) {
+    if ( $('#pipeline-hash').val() == hash ) return;
+    console.log("hashChange: " + hash);
+    $('#output table').remove();
+    $('#pipeline .pipeline-block').remove();
+    $('.select-log').parents('tr').slice(1).remove();
+    $('.select-log').get(0).selectedIndex = 0;
+    $('.remove-row').attr('disabled', 'disabled');
+    updateAvailableData({scenarioCols: [], valueCols: []});
+    if ( hash != "" ) {
+        var decoded = PipelineEncoder.decode_pipeline(hash);
+        console.log('Reconstructing pipeline: ', decoded);
+        
+        // Load the available scenario and value columns and populate the dropdowns
+        $.ajax({
+            url: '/results/ajax/log-values/' + decoded['logs'].join(',') + '/',
+            dataType: 'json',
+            success: function(data) {
+                updateAvailableData(data, decoded['scenario_columns'], decoded['value_columns']);
+            },
+            async: false
+        });
+        
+        // Populate the log selections
+        var newLogRow = $('#pipeline-log tr:first-child');
+        var logDropdownOptions = jQuery.map($('select', newLogRow).get(0).options, function(a) { return a.value; });
+        $('select', newLogRow).get(0).selectedIndex = jQuery.inArray(decoded['logs'][0], logDropdownOptions);
+        for ( var i = 1; i < decoded['logs'].length; i++ ) {
+            var newRow = newLogRow.clone();
+            $('select', newRow).get(0).selectedIndex = jQuery.inArray(decoded['logs'][i], logDropdownOptions);
+            $('#pipeline-log table').append(newRow);
+        }
+        updateAddRemoveButtons($('#pipeline-log table'));
+        
+        // Create all the blocks and set their selections
+        jQuery.each(decoded['blocks'], function() {
+            var newBlock = addBlock(this['type']);
+            if ( this['type'] == 'filter' ) {
+                var newFilterRow = $('tr:first-child', newBlock);
+                var filterDropdownOptions = jQuery.map($('.select-filter-column', newFilterRow).get(0).options, function(a) { return a.value; });
+                var setRowValues = function(row, filter) {
+                    var selectValueDropdown = $('.select-filter-value', row).get(0);
+                    $('.select-filter-column', row).get(0).selectedIndex = jQuery.inArray(filter['column'], filterDropdownOptions);
+                    $('.select-filter-is', row).get(0).selectedIndex = filter['is'] ? 0 : 1;
+                    $.getJSON('/results/ajax/filter-values/' + decoded['logs'].join(',') + '/' + filter['column'] + '/', function(data) {
+                        updateAvailableValues.call(selectValueDropdown, data, filter['value']);
+                        refreshPipeline();
+                    });
+                }
+                setRowValues(newFilterRow, this['filters'].shift());
+                jQuery.each(this['filters'], function() {
+                    var newRow = newFilterRow.clone();
+                    setRowValues(newRow, this);
+                    $('table', newBlock).append(newRow);
+                });
+                updateAddRemoveButtons($('table', newBlock));
+            }
+            else if ( this['type'] == 'aggregate' ) {
+                var aggTypeOptions = jQuery.map($('.select-aggregate-type', newBlock).get(0).options, function(a) { return a.value; });
+                var aggColumnOptions = jQuery.map($('.select-aggregate-column', newBlock).get(0).options, function(a) { return a.value; });
+                $('.select-aggregate-type', newBlock).get(0).selectedIndex = jQuery.inArray(this['params']['type'], aggTypeOptions);
+                $('.select-aggregate-column', newBlock).get(0).selectedIndex = jQuery.inArray(this['params']['column'], aggColumnOptions);
+            }
+            else if ( this['type'] == 'normalise' ) {
+                if ( this['params']['normaliser'] == 'select' ) {
+                    var params = this['params'];
+                    var normColumnOptions = jQuery.map($('.select-normalise-column', newBlock).get(0).options, function(a) { return a.value; });
+                    $('.select-normalise-column', newBlock).get(0).selectedIndex = jQuery.inArray(params['column'], normColumnOptions);
+                    var selectValueDropdown = $('.select-normalise-value', newBlock).get(0);
+                    $.getJSON('/results/ajax/filter-values/' + decoded['logs'].join(',') + '/' + params['column'] + '/', function(data) {
+                        updateAvailableValues.call(selectValueDropdown, data, params['value']);
+                        refreshPipeline();
+                    });
+                }
+                else {
+                    $('input:radio[value="best"]', newBlock).get(0).checked = true;
+                    $('.normalise-group', newBlock).css('display', 'block');
+                    $('.select-normalise-group', newBlock).val(this['params']['group']);
+                    $('.select-normalise-column, .select-normalise-value', newBlock).attr('disabled', 'disabled');
+                    $('.select-normalise-group', newBlock).toChecklist();
+                    $(newBlock).delegate(".select-normalise-group input", 'change', function() {
+    	                refreshPipeline();
+    	            });
+                }
+            }
+            else if ( this['type'] == 'graph' ) {
+                if ( this['params']['graph-type'] == 'histogram' ) {
+                    var selectScenarioOptions = jQuery.map($('.select-graph-column', newBlock).get(0).options, function(a) { return a.value; });
+                    var selectValueOptions = jQuery.map($('.select-graph-value', newBlock).get(0).options, function(a) { return a.value; });
+                    $('.select-graph-column', newBlock).get(0).selectedIndex = jQuery.inArray(this['params']['column'], selectScenarioOptions);
+                    $('.select-graph-row', newBlock).get(0).selectedIndex = jQuery.inArray(this['params']['row'], selectScenarioOptions);
+                    $('.select-graph-value', newBlock).get(0).selectedIndex = jQuery.inArray(this['params']['value'], selectValueOptions);
+                }
+            }
+        });
+        refreshPipeline();
+    }
+}
+
 function addBlock(type) {
 	var newBlock = $('#pipeline-' + type + '-template').clone();
 	newBlock.attr('id', '');
@@ -202,15 +301,13 @@ function addBlock(type) {
 	
 	updateScenarioColumns();
 	updateValueColumns();
+	
+	return newBlock;
 }
 
 function updateAddRemoveButtons(table) {
     var rows = $('tr', table);
     if ( rows.length > 1 ) {
-        /*rows.each(function(i) {
-            $('.remove-row', this).attr('disabled', '');
-            $('.add-row', this).css('display', 'none');
-        });*/
         $('.remove-row', rows).attr('disabled', '');
         $('.add-row', rows).css('display', 'none');
     }
@@ -231,6 +328,8 @@ function addBlockTableRow(button) {
     $(table).append(newRow);
     
     updateAddRemoveButtons(table);
+    
+    return newRow;
 }
 
 function removeBlockTableRow(button) {
@@ -239,11 +338,11 @@ function removeBlockTableRow(button) {
     updateAddRemoveButtons(table);
 }
 
-function updateAvailableData(data) {
-    updateMultiSelect('#select-scenario-cols, .select-normalise-group', data.scenarioCols, true);
-    updateMultiSelect('#select-value-cols', data.valueCols, false);
+function updateAvailableData(data, selectedScenarioCols, selectedValueCols) {
+    updateMultiSelect('#select-scenario-cols, .select-normalise-group', data.scenarioCols, selectedScenarioCols || true);
+    updateMultiSelect('#select-value-cols', data.valueCols, selectedValueCols || false);
 
-    updateScenarioColumns(data.scenarioCols);
+    updateScenarioColumns();
 }
 
 function updateScenarioColumns() {
@@ -299,12 +398,14 @@ function updateValueColumns() {
 /* It's much easier to throw out the old multi-select and build a new one
  * when we need to update the available values, when we're using the checkbox
  * plugin. */
-function updateMultiSelect(selector, vals, considerSelectAll) {
+function updateMultiSelect(selector, vals, selection) {
     // Get the old selections
+    var considerSelectAll = (selection === true);
+    var useSpecifiedSelection = (typeof selection === 'object');
     $(selector).each(function() {
-        var selection = $(this).val() || [];
+        var selected = useSpecifiedSelection ? selection : ( $(this).val() || [] );
         var selectAll = false;
-        if ( considerSelectAll && (selection.length == $(this).children('input').length || selection.length == 0) )
+        if ( considerSelectAll && (selected.length == $(this).children('input').length || selected.length == 0) )
             selectAll = true;
         
         // Build a new select
@@ -312,9 +413,9 @@ function updateMultiSelect(selector, vals, considerSelectAll) {
         dropdown.multiple = "multiple";
         for ( var i = 0; i < vals.length; i++ )
             dropdown.options.add(new Option(vals[i], vals[i]));
-        if ( selectAll || selection.length > 0 )
+        if ( selectAll || selected.length > 0 )
             for ( var i = 0; i < vals.length; i++ )
-                if ( selectAll || jQuery.inArray(dropdown.options[i].value, selection) > -1 )
+                if ( selectAll || jQuery.inArray(dropdown.options[i].value, selected) > -1 )
                     dropdown.options[i].selected = true;
                     
         dropdown.id = $(this).attr('id');
@@ -331,12 +432,13 @@ function updateMultiSelect(selector, vals, considerSelectAll) {
     $(selector).filter(':visible').toChecklist();
 }
 
-function updateAvailableValues(vals) {
-    console.log('updateAvailableValues: ', vals, ' for dropdown: ', this);
+function updateAvailableValues(vals, selected) {
     this.options.length = 0;
     this.options.add(new Option("[" + vals.length + " options]", '', true));
     for ( var i = 0; i < vals.length; i++ ) {
         this.options.add(new Option(vals[i], vals[i]));
+        if ( vals[i] == selected )
+            this.options.selectedIndex = i+1;
     }
 }
 
@@ -374,7 +476,6 @@ function serialisePipeline() {
                 var column = $('.select-filter-column', this).val();
                 var value = $('.select-filter-value', this).val();
                 if ( column == '-1' || value == '' ) {
-                    console.log(column, ', ', value);
                     throwInvalid = true;
                     return false;
                 }
@@ -438,11 +539,12 @@ function serialisePipeline() {
 }
 
 function refreshPipeline() {
-    console.log('refreshPipeline()');
     var pipeline = serialisePipeline();
     if ( pipeline ) {
         var encoded = PipelineEncoder.encode_pipeline(pipeline);
         console.log('Loading pipeline: ' + encoded);
+        $('#pipeline-hash').val(encoded);
+        $.history.load(encoded);
         $('#pipeline-debug-link').attr('href', 'list/' + encoded + '?debug');
         $.get('/results/ajax/pipeline/' + encoded, function(data) {
             $('#output table').remove();
@@ -497,7 +599,9 @@ $(document).ready(function() {
 	    refreshPipeline();
 	});
 	$("#pipeline-log").delegate(".select-log", 'change', function() {
-	    $.getJSON('/results/ajax/log-values/' + selectedLogFiles().join(',') + '/', updateAvailableData);
+	    $.getJSON('/results/ajax/log-values/' + selectedLogFiles().join(',') + '/', function(data) {
+	        updateAvailableData(data);
+	    });
 	});
 	$("#pipeline").delegate(".select-filter-column", 'change', function() {
 	    var values_select = $('.select-filter-value', $(this).parents('tr')).get(0);
@@ -546,4 +650,6 @@ $(document).ready(function() {
 	$("#select-scenario-cols, #select-value-cols").toChecklist();
 	
 	$("#pipeline").delegate('select', 'change', refreshPipeline);
+	
+	$.history.init(hashChange);
 });

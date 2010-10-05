@@ -527,14 +527,14 @@ jQuery.fn.isChecklist = function() {
 // Override the jQuery val function to handle this fancy new multi-select
 var oldValFunction = jQuery.fn.val;
 
-jQuery.fn.val = function() {
+jQuery.fn.val = function(a) {
     if ( this.isChecklist() ) {
         return $('input:checked', this).map(function() {
             return this.value;
         }).get();
     }
     else {
-        return oldValFunction.apply(this);
+        return oldValFunction.call(this, a);
     }
 }
 
