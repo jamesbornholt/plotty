@@ -42,7 +42,7 @@ class DataTable:
         for line in reader:
             key = line.pop('key')
             value = line.pop('value')
-            line['logfile'] = base_name
+            line['logfile'] = str(base_name) # Unicode!!
             schash = scenario_hash(line)
             if schash not in scenarios:
                 scenarios[schash] = DataRow(line)
