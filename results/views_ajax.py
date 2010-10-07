@@ -4,6 +4,7 @@ from django.shortcuts import render_to_response
 from django.template import RequestContext
 from results.DataTypes import *
 from results.Blocks import *
+from results.models import SavedPipeline
 import json, csv, logging
 
 def filter_values(request, logs, col):
@@ -60,3 +61,10 @@ def pipeline(request, pipeline):
         'graph_outputs': graph_outputs
     }, context_instance=RequestContext(request))
     return HttpResponse(str(results.PipelineEncoder.decode_pipeline(pipeline)))
+
+def save_pipeline(request):
+    if 'name' not in request.POST or 'encoded' not in request.POST:
+        return HttpResponse(json.dumps({'error': True}))
+    new = SavedPipeline(name=request.POST['name'], encoded=request.POST['encoded'])
+    new.save()
+    return HttpResponse(json.dumps({'error': False}))

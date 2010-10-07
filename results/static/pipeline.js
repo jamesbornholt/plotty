@@ -544,6 +544,7 @@ function refreshPipeline() {
         var encoded = PipelineEncoder.encode_pipeline(pipeline);
         console.log('Loading pipeline: ' + encoded);
         $('#pipeline-hash').val(encoded);
+        $('#pipeline-save-name, #pipeline-save-go').attr('disabled', '');
         $.history.load(encoded);
         $('#pipeline-debug-link').attr('href', 'list/' + encoded + '?debug');
         $.get('/results/ajax/pipeline/' + encoded, function(data) {
@@ -558,8 +559,10 @@ function refreshPipeline() {
             }
         });
     }
-    else if ( $('#pipeline .pipeline-block').length == 0 ) {
-        $('#output table').remove();
+    else {
+        if ( $('#pipeline .pipeline-block').length == 0 )
+            $('#output table').remove();
+        $('#pipeline-save-name, #pipeline-save-go').attr('disabled', 'disabled');
     }
 }
 
@@ -646,6 +649,34 @@ $(document).ready(function() {
 	        $('select', $(this).parents(".pipeline")).attr('disabled', 'disabled');
 	        refreshPipeline();
         }
+	});
+	$("#pipeline-load-go").click(function() {
+	    var selected = $('#pipeline-load-select').val();
+        if ( selected != '-1' )
+            $.history.load(selected);
+	});
+	$("#pipeline-save-form").submit(function() {
+	    var name = $('#pipeline-save-name').val();
+	    var encoded = $('#pipeline-hash').val();
+	    if ( name == '' )
+	        return false;
+	    $.post('/results/ajax/save-pipeline/', {
+	        'name': name,
+	        'encoded': encoded
+	    }, function(data) {
+	        console.log('saved: ' + name + ' = ' + encoded);
+	        var load_dropdown = $('#pipeline-load-select');
+	        load_dropdown.get(0).options.add(new Option(name, encoded));
+	        load_dropdown.val(encoded);
+	        $('#pipeline-save-name').val('');
+	        $('#pipeline').animate({scrollTop: $('#pipeline').offset().top}, 500, function() {
+                $('#pipeline-load').css('background-color', '#C5FFBF').animate({'background-color': 'white'}, 3000);
+	        });
+	    });
+	    return false;
+	});
+	$('#pipeline-save-go').click(function() {
+	    $('#pipeline-save-form').submit();
 	});
 	$("#select-scenario-cols, #select-value-cols").toChecklist();
 	

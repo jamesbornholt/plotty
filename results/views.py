@@ -6,6 +6,7 @@ from django.shortcuts import render_to_response
 from django.template import RequestContext
 from results.DataTypes import *
 from results.Blocks import *
+from results.models import SavedPipeline
 import results.PipelineEncoder
 from plotty import settings
 
@@ -38,6 +39,8 @@ def list(request, pipeline):
 def pipeline(request):
     logs = os.listdir(settings.BM_LOG_DIR)
     logs.sort(key=str.lower)
+    pipelines = SavedPipeline.objects.all().order_by('name')
     return render_to_response('pipeline.html', {
         'logs': logs,
+        'pipelines': pipelines
     }, context_instance=RequestContext(request))

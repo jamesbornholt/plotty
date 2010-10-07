@@ -17,9 +17,16 @@ else:
 
 CACHE_TIMEOUT = 24*60*60 # 24 hours
 CACHE_BACKEND = 'memcached://127.0.0.1:11211/?timeout=%d' % CACHE_TIMEOUT
-memcache.SERVER_MAX_VALUE_LENGTH = 5*1024*1024
+memcache.SERVER_MAX_VALUE_LENGTH = 20*1024*1024
 
 sys.path.insert(0, ROOT_DIR)
+
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': os.path.join(ROOT_DIR, 'database.sqlite3'),
+    }
+}
 
 DEBUG_TOOLBAR_PANELS = (
     'debug_toolbar.panels.version.VersionDebugPanel',
@@ -33,6 +40,9 @@ DEBUG_TOOLBAR_PANELS = (
     'debug_toolbar.panels.signals.SignalDebugPanel',
     'debug_toolbar.panels.logger.LoggingPanel',
 )
+DEBUG_TOOLBAR_CONFIG = {
+    'INTERCEPT_REDIRECTS': False
+}
 
 ADMINS = (
     # ('Your Name', 'your_email@domain.com'),
@@ -116,7 +126,7 @@ MIDDLEWARE_CLASSES = (
     'django.middleware.common.CommonMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
 #    'django.middleware.csrf.CsrfViewMiddleware',
-#    'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'django.contrib.auth.middleware.AuthenticationMiddleware',
 #    'django.contrib.messages.middleware.MessageMiddleware',
     'debug_toolbar.middleware.DebugToolbarMiddleware',
 #    'plotty.middleware.ProfileMiddleware'
@@ -132,13 +142,13 @@ TEMPLATE_DIRS = (
 )
 
 INSTALLED_APPS = (
-#    'django.contrib.auth',
+    'django.contrib.auth',
     'django.contrib.contenttypes',
-#    'django.contrib.sessions',
-    'django.contrib.sites',
+    'django.contrib.sessions',
+#    'django.contrib.sites',
 #    'django.contrib.messages',
     # Uncomment the next line to enable the admin:
-#    'django.contrib.admin',
+    'django.contrib.admin',
     'debug_toolbar',
     'plotty.results',
 )

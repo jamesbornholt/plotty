@@ -73,7 +73,12 @@
 		<div id="pipeline-load" class="pipeline">
 			<div class="pipeline-content">
 				<span class="pipeline-header">Load Saved Pipeline</span> <br />
-				<select name="saved"><option>NYI</option></select> <br />
+				<select id="pipeline-load-select">
+				    <option value="-1" selected></option>
+				    {% for pipeline in pipelines %}
+				    <option value="{{ pipeline.encoded }}">{{ pipeline.name }}</option>
+				    {% endfor %}
+				</select> <button type="button" id="pipeline-load-go">Load</button><br />
 				<a href="list/" id="pipeline-debug-link">Debug</a>
 			</div>
 		</div>
@@ -117,8 +122,10 @@
 		<div id="pipeline-save" class="pipeline">
 		    <div class="pipeline-content">
 		        <span class="pipeline-header">Save Pipeline</span> <br />
-		        <input type="text" id="pipeline-save-name" /> <button type="button">Save</button>
-		        <input type="hidden" id="pipeline-hash" />
+		        <form id="pipeline-save-form">
+		            <input type="text" id="pipeline-save-name" /> <button type="button" id="pipeline-save-go">Save</button>
+		            <input type="hidden" id="pipeline-hash" />
+		        </form>
 		    </div>
 		</div>
 	</div>
