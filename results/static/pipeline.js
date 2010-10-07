@@ -462,8 +462,8 @@ function serialisePipeline() {
     
     var blocks = [];
     var throwInvalid = false;
-    if ( $('#pipeline .pipeline-block').length == 0 )
-        return false;
+    //if ( $('#pipeline .pipeline-block').length == 0 )
+    //    return false;
     $('#pipeline .pipeline-block').each(function() {
         if ( $(this).hasClass('filter') ) {
             var filters = []
