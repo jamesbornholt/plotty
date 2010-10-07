@@ -1,14 +1,10 @@
 from django.core.cache import cache
 import logging, sys, csv, os, math
 from plotty import settings
+from results.Utilities import present_value, scenario_hash
 from scipy import stats
+import Image, ImageDraw, StringIO, urllib
 
-def scenario_hash(scenario, exclude=[]):
-    hashstr = ""
-    for (key,val) in scenario.items():
-        if key not in exclude:
-            hashstr += key + val
-    return hashstr
 
 class DataTable:
     def __init__(self, logs):
@@ -48,6 +44,7 @@ class DataTable:
                 scenarios[schash] = DataRow(line)
             scenarios[schash].values[key] = float(value)
         
+        logging.debug('Parsed %d rows from CSV' % len(scenarios))
         return scenarios.values(), lastModified
 
     def headers(self):
@@ -73,6 +70,30 @@ class DataTable:
                 if key not in cols:
                     del row.scenario[key]
 
+    def renderToTable(self):
+        scenarios, values = self.headers()
+        output = '<table class="results"><thead>'
+        for name in scenarios:
+            output += '<th class="scenario-header">' + name + '</th>'
+        for name in values:
+            output += '<th class="value-header">' + name + '</th>'
+        output += '</thead><tbody>'
+        
+        for row in self.rows:
+            output += '<tr>'
+            for key in scenarios:
+                if key in row.scenario:
+                    output += '<td>' + row.scenario[key] + '</td>'
+                else:
+                    output += '<td>*</td>'
+            for key in values:
+                if key in row.values:
+                    output += '<td>' + present_value(row.values[key]) + '</td>'
+                else:
+                    output += '<td>*</td>'
+            output += '</tr>'
+        output += '</tbody></table>'
+        return output
 
 class DataRow:
     def __init__(self, scenario=None):
@@ -244,3 +265,33 @@ class DataAggregate:
             res = copy.copy(self)
             res.map(lambda d: d / other)
             return res
+
+    # Sparkline
+    
+    def sparkline(self):
+        """ From http://bitworking.org/news/Sparklines_in_data_URIs_in_Python """
+        if not self._isValid:
+            self._calculate()
+        im = Image.new("RGB", (len(self._values)*2 + 2, 20), 'white')
+        draw = ImageDraw.Draw(im)
+        min_val = float(self._min)
+        max_val = float(self._max)
+        
+        # Generate the set of coordinates
+        if max_val == min_val:
+            coords = map(lambda x: (x, 10), range(0, len(self._values)*2, 10))
+        else:
+            coords = zip(range(0, len(self._values)*2, 2), [15 - 10*(float(y)-min_val)/(max_val-min_val) for y in self._values])
+        draw.line(coords, fill="#888888")
+        
+        # Draw the min and max points
+        min_pt = coords[self._values.index(min_val)]
+        draw.rectangle([min_pt[0]-1, min_pt[1]-1, min_pt[0]+1, min_pt[1]+1], fill="#00FF00")
+        max_pt = coords[self._values.index(max_val)]
+        draw.rectangle([max_pt[0]-1, max_pt[1]-1, max_pt[0]+1, max_pt[1]+1], fill="#FF0000")
+        del draw
+
+        # Write out as a data: URI
+        f = StringIO.StringIO()
+        im.save(f, "PNG")
+        return '<img class="sparkline" src="data:image/png,%s" title="%s" />' % (urllib.quote(f.getvalue()), ", ".join(map(lambda v: str(float(v)), self._values)))

@@ -52,15 +52,15 @@ def pipeline(request, pipeline):
         elif block['type'] == 'graph':
             graph_outputs.extend(GraphBlock().process(dt, **block['params']))
     
-    scenarios, values = dt.headers()
+    output = ''
+    if len(graph_outputs) > 0:
+        for i, graph in enumerate(graph_outputs, start=1):
+            output += '<div class="foldable"><h1>Graph ' + str(i) + '<a href="">[hide]</a></h1><div class="foldable-content">' + graph + '</div></div>'
+        output += '<div class="foldable"><h1>Table<a href="">[show]</a></h1><div class="foldable-content hidden">' + dt.renderToTable() + '</div></div>'
+    else:
+        output += dt.renderToTable()
     
-    return render_to_response('list_ajax.html', {
-        'scenario_columns': scenarios,
-        'value_columns': values,
-        'results': dt,
-        'graph_outputs': graph_outputs
-    }, context_instance=RequestContext(request))
-    return HttpResponse(str(results.PipelineEncoder.decode_pipeline(pipeline)))
+    return HttpResponse(output)
 
 def save_pipeline(request):
     if 'name' not in request.POST or 'encoded' not in request.POST:

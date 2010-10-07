@@ -3,6 +3,7 @@
 import os, datetime, math, logging
 #from scipy import stats
 from django.shortcuts import render_to_response
+from django.http import HttpResponse
 from django.template import RequestContext
 from results.DataTypes import *
 from results.Blocks import *
@@ -26,15 +27,17 @@ def list(request, pipeline):
             NormaliseBlock().process(dt, **block['params'])
         elif block['type'] == 'graph':
             graph_outputs.extend(GraphBlock().process(dt, **block['params']))
-
-    scenarios, values = dt.headers()
     
-    return render_to_response('list.html', {
-        'scenario_columns': scenarios,
-        'value_columns': values,
-        'results': dt,
-        'graph_outputs': graph_outputs
-    }, context_instance=RequestContext(request))
+    output = '<html><head><title>Listing</title></head><body>'
+    if len(graph_outputs) > 0:
+        for i, graph in enumerate(graph_outputs, start=1):
+            output += '<div class="foldable"><h1>Graph ' + str(i) + '<a href="">[hide]</a></h1><div class="foldable-content">' + graph + '</div></div>'
+        output += '<div class="foldable"><h1>Table</h1><a href="">[show]</a><div class="foldable-content hidden">' + dt.renderToTable() + '</div></div>'
+    else:
+        output += dt.renderToTable()
+    output += '</body></html>'
+    
+    return HttpResponse(output)
 
 def pipeline(request):
     logs = os.listdir(settings.BM_LOG_DIR)

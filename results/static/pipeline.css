@@ -150,3 +150,31 @@ th.headerSortDown {
     background-image: url(desc.gif); 
     background-color: #eee; 
 }
+
+.foldable {
+    border: 1px solid black;
+    margin-bottom: 10px;
+    display: block;
+}
+
+.foldable h1 {
+    display: block;
+    margin: 0;
+    padding: 0.2em;
+    font-size: 110%;
+    background-color: #abcdef;
+}
+
+.foldable h1 a {
+    float: right;
+    font-weight: normal;
+    color: blue;
+}
+
+.foldable-content {
+    padding: 1em;
+}
+
+.foldable-content.hidden {
+    display: none;
+}

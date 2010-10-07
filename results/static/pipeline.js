@@ -548,20 +548,20 @@ function refreshPipeline() {
         $.history.load(encoded);
         $('#pipeline-debug-link').attr('href', 'list/' + encoded + '?debug');
         $.get('/results/ajax/pipeline/' + encoded, function(data) {
-            $('#output table').remove();
+            $('#output').children().not('#loading-indicator').remove();
             $('#output').append(data);
             if ( $('#output table.results').length > 0 ) {
-                var numScenarioHeaders = $('#output table th.scenario-header').length;
-                var sortList = [];
-                for ( var i = 0; i < numScenarioHeaders; i++ )
-                    sortList.push([i, 0]);
-                $('#output table.results').tablesorter({sortList: sortList});
+                $('#output table.results').each(function() {
+                    var numScenarioHeaders = $(this).find('th.scenario-header').length;
+                    var sortList = [];
+                    for ( var i = 0; i < numScenarioHeaders; i++ )
+                        sortList.push([i, 0]);
+                    $(this).tablesorter({sortList: sortList});
+                });
             }
         });
     }
     else {
-        if ( $('#pipeline .pipeline-block').length == 0 )
-            $('#output table').remove();
         $('#pipeline-save-name, #pipeline-save-go').attr('disabled', 'disabled');
     }
 }
@@ -650,6 +650,18 @@ $(document).ready(function() {
 	        refreshPipeline();
         }
 	});
+	$("#output").delegate('.foldable h1 a', 'click', function() {
+        var foldable_content = $(this).parents('.foldable').children('.foldable-content');
+        if ( foldable_content.hasClass('hidden') ) {
+            foldable_content.removeClass('hidden');
+            $(this).html('[hide]');
+        }
+        else {
+            foldable_content.addClass('hidden');
+            $(this).html('[show]');
+        }
+        return false;
+    });
 	$("#pipeline-load-go").click(function() {
 	    var selected = $('#pipeline-load-select').val();
         if ( selected != '-1' )
