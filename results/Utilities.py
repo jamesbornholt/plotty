@@ -1,6 +1,9 @@
 import math
 
 def scenario_hash(scenario, exclude=None, include=None):
+    """ Hashes a scenario dictionary by either including or excluding values
+        based on the specified lists.
+    """
     hashstr = ""
     i = 0
     for (key,val) in scenario.items():
@@ -14,6 +17,9 @@ def scenario_hash(scenario, exclude=None, include=None):
     return hashstr
 
 def present_value(val):
+    """ Turns a value into a state where it can be presented as HTML, including
+        its confidence interval and sparkline if appropriate.
+    """
     from results.DataTypes import DataAggregate
     if isinstance(val, DataAggregate):
         output = "%.3f" % val.value()

@@ -6,6 +6,21 @@ import logging
 
 
 class FilterBlock:
+    """ Filters the datatable by including or excluding particular rows based
+        on criteria. The rows that do not match every filter are thrown out 
+        (that is, the list of filters is ANDed together).
+        
+        datatable: the DataTable object to be filtered, passed by reference.
+        filters:   an array of dictionaries describing the filters to be applied.
+                   Each filter has three properties:
+                    * column -- the scenario column to be checked (string)
+                    * value  -- the value the specified scenario column should
+                                take
+                    * is     -- if true, each row must have the specified scenario
+                                column set to the specified value. If false, each
+                                row must *not* have the specified column set to
+                                the specified value.
+    """
     def process(self, datatable, filters):
         newRows = []
         for row in datatable:
@@ -20,15 +35,33 @@ class FilterBlock:
                         add = False
                         break
             if add:
-                del row.scenario[filt['column']]
+                # Delete each of the `is` columns from the datatable, as they are
+                # now redundant (since every row will have the same value).
+                for filt in filters:
+                    if filt['is']:
+                        del row.scenario[filt['column']]
                 newRows.append(row)
+
         datatable.rows = newRows
 
 
 class AggregateBlock:
+    """ Aggregates the rows in the DataTable by grouping them based on a
+        specified column. Every row that has the same scenario except for
+        the value in the specified column is grouped together and turned into
+        a DataAggregate object. That is, every row whose scenario differs only
+        in the specified column is grouped together.
+        
+        datatable: the DataTable object to be aggregated, passed by reference.
+        Keyword arguments:
+        * column -- the column on which the aggregate is performed (i.e. the
+                    column which is ignored when regrouping rows).
+        * type   -- the type of aggregate to generate, either 'mean' or 'geomean'
+    """
     def process(self, datatable, **kwargs):
         groups = {}
         scenarios = {}
+        # Group the rows based on their scenarios except for the specified column
         for row in datatable:
             if kwargs['column'] not in row.scenario:
                 continue
@@ -39,6 +72,7 @@ class AggregateBlock:
                 del scenarios[schash][kwargs['column']]
             groups[schash].append(row.values)
         
+        # Create the DataAggregate objects for each group
         newRows = []
         for (sc, rows) in groups.items():
             aggregates = {}
@@ -56,6 +90,18 @@ class AggregateBlock:
 
 
 class NormaliseBlock:
+    """ Normalises the rows in the DataTable to a specified value. The
+        normalisation can be performed in two ways - either by specifying a
+        normaliser to be used, or by finding the best value in a group and
+        normalising to that. Before normalising, values are grouped based on
+        the equivalence of their scenarios. The columns compared in doing this
+        grouping can be specified.
+        
+        datatable: the DataTable to be normalised, passed by reference.
+        Keyword arguments:
+        * normaliser -- the type of normalisation to perform.
+          [other arguments determined by this value - see methods below]
+    """
     def process(self, datatable, **kwargs):
         if kwargs['normaliser'] == 'select':
             self.processSelectNormaliser(datatable, **kwargs)
@@ -63,6 +109,21 @@ class NormaliseBlock:
             self.processBestNormaliser(datatable, **kwargs)
         
     def processSelectNormaliser(self, datatable, **kwargs):
+        """ Normalises the rows to a specified normaliser. The normaliser is
+            specified by a column and value in the scenario of each row. Rows
+            in the table are first grouped by every column except the one chosen
+            for normalisation. Then in each group, a normaliser is found with
+            the normaliser column equal to the specified value. Each group is
+            then normalised to the chosen normaliser. Groups for which no
+            normaliser exists are thrown away.
+            
+            datatable: the DataTable to be normalised, passed by reference.
+            Keyword arguments:
+            * column -- the column from which the normaliser will be decided.
+            * value  -- the value which the specified column should be equal to
+                        in order to select that row as a normaliser.
+        """
+        # Build the groups for normalisation and find a normaliser for each one
         scenarios = {}
         normalisers = {}
         for row in datatable:
@@ -77,12 +138,13 @@ class NormaliseBlock:
         
         newRows = []
         
-        logging.debug('%d scenarios' % len(scenarios))
-        logging.debug('%d normalisers' % len(normalisers))
-        
+        # Normalise each group based on the found normaliser and collect the new
+        # rows.
         for (sc, rows) in scenarios.items():
+            # Throw away groups which do not have a normaliser
             if sc not in normalisers:
                 continue
+            # Normalise each value in each row
             for row in rows:
                 for (key,val) in row.values.items():
                     if key not in normalisers[sc]:
@@ -94,15 +156,27 @@ class NormaliseBlock:
         datatable.rows = newRows
     
     def processBestNormaliser(self, datatable, **kwargs):
+        """ Normalises the rows to the best normaliser available. The rows in the
+            table are firstly grouped by comparing their scenarios only on the
+            specified columns. Then the best value in each group is found and
+            used to normalise the other rows in that group.
+            
+            datatable: the DataTable to be normalised, passed by reference.
+            Keyword arguments:
+            * group -- a list of scenario columns which should be used for
+                       grouping the rows before normalisation.
+        """
         scenarios = {}
         normalisers = {}
         
+        # Handle a parsing bug when constructing the dictionary
         if kwargs['group'] == ['']:
             kwargs['group'] = []
         
-        #import pdb; pdb.set_trace();
-        
+        # Build the groups to be used and find a normaliser for each one
         for row in datatable:
+            # If the row does not have values for each scenario column to be used
+            # for grouping, it is discarded
             throw = False
             for key in kwargs['group']:
                 if key not in row.scenario:
@@ -115,16 +189,22 @@ class NormaliseBlock:
             if schash not in scenarios:
                 scenarios[schash] = []
                 normalisers[schash] = {}
+            # Add the row to its group
             scenarios[schash].append(row)
+            # Check if it is the best normaliser
             for (key,val) in row.values.items():
                 if val > 0 and val < normalisers[schash].get(key, float('inf')):
                     normalisers[schash][key] = val
         
         newRows = []
         
+        # Normalise each group based on the found normaliser and collect the new
+        # rows.
         for (sc, rows) in scenarios.items():
+            # Throw away groups which do not have a normaliser
             if sc not in normalisers:
                 continue
+            # Normalise each value in each row
             for row in rows:
                 for (key,val) in row.values.items():
                     if key not in normalisers[sc]:
@@ -137,6 +217,8 @@ class NormaliseBlock:
 
 
 class GraphBlock:
+    """ Generate graphs based on the data in the DataTable. """
+    
     def process(self, datatable, **kwargs):
         if kwargs['graph-type'] == 'histogram':
             return self.processHistogram(datatable, **kwargs)
@@ -145,7 +227,13 @@ class GraphBlock:
         """ Pivots the datatable into a histogram-style row vs column table and
             returns the resulting HTML. We return a list of HTML strings, one per
             table, to provide the possibility that a graph generates more than
-            one table. """
+            one table.
+            
+            Keyword arguments:
+            * row    -- the scenario column to be used as the row discriminator
+            * column -- the scenario column to be used as the column discriminator
+            * value  -- the value to be plotted
+        """
         graph_rows = {}
         column_keys = []
         for row in datatable:
@@ -160,7 +248,17 @@ class GraphBlock:
     
     def renderTable(self, rows, column_keys, row_title, column_title):
         """ Renders a pivoted table (e.g. generated by processHistogram) 
-            into HTML. """
+            into HTML. 
+            
+            rows:         the set of rows, a dictionary which mapes a row value
+                          to a dictionary of column values 
+            column_keys:  the keys which appear in each dictionary in the rows
+                          array, used as the headers for each column
+            row_title:    the title of the scenario column used as a row
+                          discriminator
+            column_title: the title of the scenario column used as a column
+                          discriminator
+        """
         row_keys = rows.keys()
         # Try to sort keys numerically first, if they're not floats, sort as lowercase strings
         try:
@@ -188,5 +286,3 @@ class GraphBlock:
         output += '</tbody></table>'
         
         return output
-            
-        

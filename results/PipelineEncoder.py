@@ -1,3 +1,6 @@
+""" Encodes and decodes pipelines into string representations which are
+    easily portable. """
+
 import string
 
 BLOCK_SEPARATOR = '|'

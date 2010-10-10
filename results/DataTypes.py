@@ -7,7 +7,25 @@ import Image, ImageDraw, StringIO, urllib
 
 
 class DataTable:
+    """ The core data structure. DataTable has one property, DataTable.rows.
+        This is an array of DataRow objects, one per scenario in the file(s)
+        being used. 
+        
+        A DataTable is constructed by parsing the given list of CSV files. 
+        Django's caching settings are used to try to cache the parsed CSV
+        data.
+    """
+    
     def __init__(self, logs):
+        """ Creates a new DataTable by reading each CSV file provided, or
+            loading them from cache if they are present. This routine will
+            also check whether the log files specified have been modified
+            since they were cached (based on last modified date), and if so,
+            will expire the cache.
+            
+            logs: an array of paths to CSV files, relative to 
+                  settings.BM_LOG_DIR.
+        """
         self.rows = []
         for log in logs:
             file_path = os.path.join(settings.BM_LOG_DIR, log)
@@ -25,9 +43,16 @@ class DataTable:
             self.rows.extend(rows)
 
     def __iter__(self):
+        """ Lets us do `for row in datatable` instead of 
+            `for row in datatable.rows`.
+        """
         return iter(self.rows)
 
     def loadCSV(self, log_path):
+        """ Parses the CSV file at log_path into an array of DataRow objects.
+            
+            log_path: an absolute path to the log file to be parsed.
+        """
         scenarios = {}
 
         # Store the log's last modified date
@@ -38,7 +63,7 @@ class DataTable:
         for line in reader:
             key = line.pop('key')
             value = line.pop('value')
-            line['logfile'] = str(base_name) # Unicode!!
+            line['logfile'] = str(base_name)
             schash = scenario_hash(line)
             if schash not in scenarios:
                 scenarios[schash] = DataRow(line)
@@ -48,6 +73,9 @@ class DataTable:
         return scenarios.values(), lastModified
 
     def headers(self):
+        """ Returns the headers that would be used to output a table of
+            this data as two lists - scenario headers and value headers.
+        """
         scenarios = list()
         values = list()
         for row in self.rows:
@@ -60,17 +88,29 @@ class DataTable:
         return scenarios, values
     
     def selectValueColumns(self, vals):
+        """ Selects the specified set of value columns and throws away all
+            others from each row in the table.
+            
+            vals: a list of value columns to keep.
+        """
         for row in self.rows:
             for (key,val) in row.values.items():
                 if key not in vals:
                     del row.values[key]
+
     def selectScenarioColumns(self, cols):
+        """ Selects the specified set of scenario columns and throws away all
+            others from each row in the table.
+            
+            cols: a list of scenario columns to keep.
+        """
         for row in self.rows:
             for (key,val) in row.scenario.items():
                 if key not in cols:
                     del row.scenario[key]
 
     def renderToTable(self):
+        """ Renders the values in this data table into a HTML table. """
         scenarios, values = self.headers()
         output = '<table class="results"><thead>'
         for name in scenarios:
@@ -95,8 +135,18 @@ class DataTable:
         output += '</tbody></table>'
         return output
 
+
 class DataRow:
+    """ A simple object that holds a row of data. The data is stored in two
+        dictionaries - DataRow.scenario for the scenario columns, and
+        DataRow.values for the value columns. 
+    """
     def __init__(self, scenario=None):
+        """ Creates a new DataRow, optionally using a specified scenario
+            dictionary.
+            
+            scenario: (optional) the initial scenario dictionary for this row.
+        """
         if scenario == None:
             scenario = {}
         self.values = {}
@@ -104,7 +154,21 @@ class DataRow:
 
 
 class DataAggregate:
+    """ Holds an aggregate of values that were mutliple rows but have been
+        condensed into one as part of an Aggregate block. This object can
+        report the mean or geomean of those values, as well as their minimum
+        and maximum, and standard deviation and a confidence interval (with
+        confidence decided by settings.CONFIDENCE_LEVEL). It is also
+        possible to divide two DataAggregates (generally for normalisation),
+        in which case relevant statistical techniques are used to determine
+        the new confidence interval and standard deviation.
+    """
     def __init__(self, newType):
+        """ Create a new DataAggregate of the specified type.
+        
+            newType: either 'mean' or 'geomean', the type of aggregate
+                     reported by this object.
+        """
         self.type = newType
         self._isValid = False
         self._values = []
@@ -112,14 +176,20 @@ class DataAggregate:
     # Private methods
     
     def _calculate(self):
-        # Calculates data for a single variable - compounds (A + B, A / B, etc)
-        # are calculated by the appropriate operator overload (__add__, __div__)
+        """ Calculates the summary statistics for data in self._values. This
+            method only does calculations for a single variable - calculations
+            for a compound variable (A + B, A / B, etc, where A and B are
+            DataAggregates) should be handled by the appropriate operator
+            overload below.
+        """
         valSum = 0.0
         valProduct = 1.0
         valSquareSum = 0.0
         valMin = float('+inf')
         valMax = float('-inf')
+        
         for val in self._values:
+            # We can also aggregate sets of DataAggregates
             if isinstance(val, DataAggregate):
                 val = val.value()
             valSum += val
@@ -129,15 +199,17 @@ class DataAggregate:
                 valMin = val
             if val > valMax:
                 valMax = val
+
         self._min = valMin
         self._max = valMax
         if self.type == 'geomean':
             self._value = math.pow(valProduct, 1.0/len(self._values))
         elif self.type == 'mean':
             self._value = valSum / len(self._values)
+        
+        # Confidence intervals/stdev/etc only make sense for more than one value
         if len(self._values) > 1:
             # http://en.wikipedia.org/wiki/Computational_formula_for_the_variance
-            # Note x-bar = sum(x) / n
             n = len(self._values)
             self._stdev = math.sqrt( (1.0/(n-1)) * ( valSquareSum - (valSum * valSum / n) ) )
 
@@ -153,18 +225,27 @@ class DataAggregate:
     # Mutators
     
     def append(self, value):
+        """ Push a new value into this aggregate. """
         self._values.append(value)
         self._isValid = False
     
     def map(self, func):
+        """ Apply a function to every value in this aggregate. """
         self._isValid = False
         self._values = map(func, self._values)
     
     def setType(self, newType):
+        """ Change the type of this aggregate.
+        
+            newType : either 'mean' or 'geomean'.
+        """
         self.type = newType
         self._isValid = False
     
     def manual(self, value, ciUp, ciDown, newMin, newMax):
+        """ Set the values of this DataAggregate manually. Used by operator
+            overloads. 
+        """
         self._value = value
         self._ciUp = ciUp
         self._ciDown = ciDown
@@ -243,9 +324,16 @@ class DataAggregate:
             return 0
     
     def __div__(self, other):
+        """ Divides this DataAggregate by some other value. If the other value
+            is a DataAggregate, statistical techniques are used to compute the
+            new value and standard error. If not, we just divide every value
+            in this DataAggregate by the other value, and force the summary
+            data to be regenerated.
+        """
         if isinstance(other, DataAggregate):
             res = DataAggregate(self.type)
             val = self.value() / other.value()
+            
             # Motulsky, 'Intuitive Biostatistics', pp285-6
             tinv = stats.t.isf((1 - settings.CONFIDENCE_LEVEL) / 2, self.count() + other.count() - 2)
             g = (tinv * (other.sem() / other.value()))**2
@@ -261,15 +349,18 @@ class DataAggregate:
             res.manual(value=val, ciUp=ciUp, ciDown=ciDown, newMin=valMin, newMax=valMax)
             return res
         else:
-            # This is a special case that probably doesn't need to be covered
             res = copy.copy(self)
-            res.map(lambda d: d / other)
+            res.map(lambda d: d / float(other))
             return res
 
-    # Sparkline
+    # Utility
     
     def sparkline(self):
-        """ From http://bitworking.org/news/Sparklines_in_data_URIs_in_Python """
+        """ Creates a HTML IMG tag that contains a sparkline for this
+            DataAggregate's values.
+            
+            From http://bitworking.org/news/Sparklines_in_data_URIs_in_Python
+        """
         if not self._isValid:
             self._calculate()
         im = Image.new("RGB", (len(self._values)*2 + 2, 20), 'white')
