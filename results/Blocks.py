@@ -193,7 +193,7 @@ class NormaliseBlock:
             scenarios[schash].append(row)
             # Check if it is the best normaliser
             for (key,val) in row.values.items():
-                if val > 0 and val < normalisers[schash].get(key, float('inf')):
+                if float(val) <> 0 and val < normalisers[schash].get(key, float('inf')):
                     normalisers[schash][key] = val
         
         newRows = []

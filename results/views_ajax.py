@@ -5,6 +5,7 @@ from django.template import RequestContext
 from results.DataTypes import *
 from results.Blocks import *
 from results.models import SavedPipeline
+from results.Pipeline import *
 import json, csv, logging
 
 def filter_values(request, logs, col):
@@ -37,20 +38,14 @@ def log_values(request, logs):
     return HttpResponse(json.dumps({'scenarioCols': columns, 'valueCols': keys}))
 
 def pipeline(request, pipeline):
-    decoded = results.PipelineEncoder.decode_pipeline(pipeline)
-    dt = DataTable(logs=decoded['logs'])
-    dt.selectValueColumns(decoded['value_columns'])
-    dt.selectScenarioColumns(decoded['scenario_columns'])
-    graph_outputs = []
-    for block in decoded['blocks']:
-        if block['type'] == 'aggregate':
-            AggregateBlock().process(dt, **block['params'])
-        elif block['type'] == 'filter':
-            FilterBlock().process(dt, block['filters'])
-        elif block['type'] == 'normalise':
-            NormaliseBlock().process(dt, **block['params'])
-        elif block['type'] == 'graph':
-            graph_outputs.extend(GraphBlock().process(dt, **block['params']))
+    try:
+        dt, graph_outputs = execute_pipeline(pipeline)
+    except PipelineBlockException as e:
+        output = '<div class="exception"><h1>Exception in executing block ' + str(e.block + 1) + '</h1>' + e.msg + '<div class="foldable"><h1>Traceback<a href="">[show]</a></h1><div class="foldable-content hidden"><pre>' + e.traceback + '</pre></div></div>'
+        return HttpResponse(json.dumps({'error': True, 'index': e.block, 'html': output, 'rows': 1}))
+    except PipelineLoadException as e:
+        output = '<div class="exception"><h1>Exception in loading log files</h1>' + e.msg + '<div class="foldable"><h1>Traceback<a href="">[show]</a></h1><div class="foldable-content hidden">' + e.traceback + '</div></div>'
+        return HttpResponse(json.dumps({'error': True, 'html': output, 'rows': 1}))
     
     output = ''
     if len(graph_outputs) > 0:
@@ -60,7 +55,7 @@ def pipeline(request, pipeline):
     else:
         output += dt.renderToTable()
     
-    return HttpResponse(output)
+    return HttpResponse(json.dumps({'error': False, 'html': output, 'rows': len(dt.rows)}))
 
 def save_pipeline(request):
     if 'name' not in request.POST or 'encoded' not in request.POST:

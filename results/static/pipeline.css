@@ -90,7 +90,7 @@ div {
     margin-bottom: 20px;
 }
 .filter {
-	background: #f5cac2;
+	background: #efd3f2;
 }
 .aggregate {
 	background: #c5f5c1;
@@ -105,6 +105,7 @@ div {
 #output {
     margin-left: 440px;
     padding: 20px 20px;
+    padding-top: 60px;
 }
 
 .ci {
@@ -117,11 +118,35 @@ div {
     height: 100px;
 }
 
-#loading-indicator {
+#header {
+    margin-left: 440px;
+    position: fixed;
+    width: 100%;
+}
+
+#header-config {
+    padding: 0.2em;
+    border: 1px solid #abcdef;
+    background: #D4E9FF;
     height: 20px;
+}
+#header-config label {
+    margin-right: 1em;
+}
+
+#loading-indicator {
+    padding: 0.2em;
     background: #f5f0c1;
     border: 1px solid #e3d554;
-    visibility: hidden;
+    display: none;
+    height: 20px;
+}
+
+#large-table-confirm {
+    padding: 1em;
+    background-color: #FFA6B0;
+    border: 1px solid #E87280;
+    display: none;
 }
 
 .normalise-group {
@@ -177,4 +202,45 @@ th.headerSortDown {
 
 .foldable-content.hidden {
     display: none;
+}
+
+.exception {
+    background-color: #FFA6B0;
+    border: 1px solid #E87280;
+    padding: 1em;
+}
+.exception h1 {
+    font-size: 110%;
+    padding: 0;
+    margin: 0;
+}
+
+.exception .foldable {
+    font-size: 80%;
+    margin: 1em 0;
+}
+.exception .foldable h1 {
+    background: transparent;
+    padding: 0.5em;
+}
+
+.exception .foldable-content pre {
+    margin: 0;
+}
+
+.error-block {
+    background: #FFA6B0;
+}
+
+.error-block .remove-button {
+    margin: 3px;
+}
+
+.error-block .pipeline-content {
+	border: 3px solid red;
+	border-bottom: 0;
+}
+
+.error-block .pipeline-footer {
+	background: transparent url(arrow-error.gif) center top no-repeat;
 }

@@ -539,6 +539,9 @@ function serialisePipeline() {
 }
 
 function refreshPipeline() {
+    if ( $('#pause-loading').get(0).checked === true )
+        return;
+    
     var pipeline = serialisePipeline();
     if ( pipeline ) {
         var encoded = PipelineEncoder.encode_pipeline(pipeline);
@@ -547,17 +550,28 @@ function refreshPipeline() {
         $('#pipeline-save-name, #pipeline-save-go').attr('disabled', '');
         $.history.load(encoded);
         $('#pipeline-debug-link').attr('href', 'list/' + encoded + '?debug');
-        $.get('/results/ajax/pipeline/' + encoded, function(data) {
+        $.getJSON('/results/ajax/pipeline/' + encoded, function(data) {
             $('#output').children().not('#loading-indicator').remove();
-            $('#output').append(data);
-            if ( $('#output table.results').length > 0 ) {
-                $('#output table.results').each(function() {
-                    var numScenarioHeaders = $(this).find('th.scenario-header').length;
-                    var sortList = [];
-                    for ( var i = 0; i < numScenarioHeaders; i++ )
-                        sortList.push([i, 0]);
-                    $(this).tablesorter({sortList: sortList});
-                });
+            // Stop the sparklines from being rendered unless we actually want them
+            $('#output').hide();
+            $('#output').append(data.html);
+            if ( $('#show-sparklines').get(0).checked === false )
+                $('.sparkline').hide();
+            if ( data.rows < 100 ) {
+                $('#output').show();
+                startTableSort();
+            }
+            else {
+                $('#large-table-confirm span').html(data.rows);
+                $('#large-table-confirm').show();
+            }
+            if ( data.error === true ) {
+                // Highlight the erroneous block
+                if ( typeof data.index !== 'undefined' )
+                    $('#pipeline .pipeline-block').eq(data.index).addClass('error-block');
+            }
+            else {
+                $('.error-block').removeClass('error-block');
             }
         });
     }
@@ -566,15 +580,25 @@ function refreshPipeline() {
     }
 }
 
+function startTableSort() {
+    $('#output table.results').each(function() {
+        var numScenarioHeaders = $(this).find('th.scenario-header').length;
+        var sortList = [];
+        for ( var i = 0; i < numScenarioHeaders; i++ )
+            sortList.push([i, 0]);
+        $(this).tablesorter({sortList: sortList});
+    });
+}
+
 $(document).ready(function() {
     $.ajaxSetup({
         cache: false
     });
     $(document).ajaxStart(function() {
-        $('#loading-indicator').css({visibility: 'visible'});
+        $('#loading-indicator').show();
     });
     $(document).ajaxStop(function() {
-        $('#loading-indicator').css({visibility: 'hidden'});
+        $('#loading-indicator').hide();
     });
 	$("#add-filter").click(function() {
 		addBlock('filter');
@@ -689,6 +713,24 @@ $(document).ready(function() {
 	});
 	$('#pipeline-save-go').click(function() {
 	    $('#pipeline-save-form').submit();
+	});
+	$('#pause-loading').change(function() {
+	    if ( this.checked === false ) {
+	        refreshPipeline();
+	    }
+	});
+	$('#show-sparklines').change(function() {
+	    if ( this.checked === true ) {
+	        $('.sparkline').show();
+	    }
+	    else {
+	        $('.sparkline').hide();
+	    }
+	});
+	$('#load-large-table').click(function() {
+	    startTableSort();
+	    $('#output').show();
+	    $('#large-table-confirm').hide();
 	});
 	$("#select-scenario-cols, #select-value-cols").toChecklist();
 	

@@ -304,13 +304,16 @@ class DataAggregate:
 
     # Overloads
 
-    def __unicode__(self):
+    def __repr__(self):
         if not self._isValid:
             self._calculate()
         if math.isnan(self._ciUp):
             return "%.3f" % self._value
         else:
-            return "%.3f (%.3f, %.3f)" % (self._value, self._ciDown, self._ciUp)
+            return "%.3f CI(%.3f, %.3f) min=%.3f max=%.3f vals=%s" % (self._value, self._ciDown, self._ciUp, self._min, self._max, self._values)
+    
+    def __str__(self):
+        return self.__repr__()
 
     def __float__(self):
         return self.value()
@@ -331,20 +334,32 @@ class DataAggregate:
             data to be regenerated.
         """
         if isinstance(other, DataAggregate):
+            logging.debug(other)
             res = DataAggregate(self.type)
-            val = self.value() / other.value()
+            if other.value() <> 0:
+                val = self.value() / other.value()
+            else:
+                val = math.copysign(float('inf'), self.value())
             
             # Motulsky, 'Intuitive Biostatistics', pp285-6
-            tinv = stats.t.isf((1 - settings.CONFIDENCE_LEVEL) / 2, self.count() + other.count() - 2)
-            g = (tinv * (other.sem() / other.value()))**2
-            if g >= 1.0:
-                ciUp = ciDown = float('nan')
+            if self.value() <> 0 and other.value() <> 0:
+                tinv = stats.t.isf((1 - settings.CONFIDENCE_LEVEL) / 2, self.count() + other.count() - 2)
+                g = (tinv * (other.sem() / other.value()))**2
+                if g >= 1.0:
+                    ciUp = ciDown = float('nan')
+                else:
+                    sem = ( val / (1-g) ) * math.sqrt((1-g) * (self.sem() / self.value())**2 + (other.sem() / other.value()) ** 2)
+                    ciUp = ( val / (1-g) ) + tinv*sem
+                    ciDown = ( val / (1-g) ) - tinv*sem
             else:
-                sem = ( val / (1-g) ) * math.sqrt((1-g) * (self.sem() / self.value())**2 + (other.sem() / other.value()) ** 2)
-                ciUp = ( val / (1-g) ) + tinv*sem
-                ciDown = ( val / (1-g) ) - tinv*sem
-            valMin = self.min() / other.max()
-            valMax = self.max() / other.min()
+                ciUp = ciDown = float('nan')
+            
+            if other.max() <> 0 and other.min() <> 0:
+                valMin = self.min() / other.max()
+                valMax = self.max() / other.min()
+            else:
+                valMin = math.copysign(float('inf'), self.min())
+                valMax = math.copysign(float('inf'), self.max())
             
             res.manual(value=val, ciUp=ciUp, ciDown=ciDown, newMin=valMin, newMax=valMax)
             return res
