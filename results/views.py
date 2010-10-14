@@ -8,36 +8,30 @@ from django.template import RequestContext
 from results.DataTypes import *
 from results.Blocks import *
 from results.models import SavedPipeline
+from results.Pipeline import execute_pipeline
 import results.PipelineEncoder
 from plotty import settings
 
 
 def list(request, pipeline):
-    decoded = results.PipelineEncoder.decode_pipeline(pipeline)
-    dt = DataTable(logs=decoded['logs'])
-    dt.selectValueColumns(decoded['value_columns'])
-    dt.selectScenarioColumns(decoded['scenario_columns'])
-    graph_outputs = []
-    for block in decoded['blocks']:
-        if block['type'] == 'aggregate':
-            AggregateBlock().process(dt, **block['params'])
-        elif block['type'] == 'filter':
-            FilterBlock().process(dt, block['filters'])
-        elif block['type'] == 'normalise':
-            NormaliseBlock().process(dt, **block['params'])
-        elif block['type'] == 'graph':
-            graph_outputs.extend(GraphBlock().process(dt, **block['params']))
+    try:
+        dt, graph_outputs = execute_pipeline(pipeline)
+    except PipelineBlockException as e:
+        output = '<div class="exception"><h1>Exception in executing block ' + str(e.block + 1) + '</h1>' + e.msg + '<h1>Traceback</h1><pre>' + e.traceback + '</pre></div>'
+        return HttpResponse(output)
+    except PipelineLoadException as e:
+        output = '<div class="exception"><h1>Exception in loading log files</h1>' + e.msg + '<h1>Traceback</h1><pre>' + e.traceback + '</pre></div>'
+        return HttpResponse(output)
     
-    output = '<html><head><title>Listing</title></head><body>'
+    output = ''
     if len(graph_outputs) > 0:
         for i, graph in enumerate(graph_outputs, start=1):
-            output += '<div class="foldable"><h1>Graph ' + str(i) + '<a href="">[hide]</a></h1><div class="foldable-content">' + graph + '</div></div>'
-        output += '<div class="foldable"><h1>Table</h1><a href="">[show]</a><div class="foldable-content hidden">' + dt.renderToTable() + '</div></div>'
+            output += '<div class="foldable"><h1>Graph ' + str(i) + '</h1>' + graph + '</div>'
+        output += '<div class="foldable"><h1>Table</h1>' + dt.renderToTable() + '</div>'
     else:
         output += dt.renderToTable()
-    output += '</body></html>'
     
-    return HttpResponse(output)
+    return HttpResponse('<html><head><title>Listing</title></head><body>' + output + '</body></html')
 
 def pipeline(request):
     logs = os.listdir(settings.BM_LOG_DIR)

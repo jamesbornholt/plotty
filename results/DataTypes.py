@@ -1,7 +1,7 @@
 from django.core.cache import cache
 import logging, sys, csv, os, math
 from plotty import settings
-from results.Utilities import present_value, scenario_hash
+from results.Utilities import present_value, present_value_csv, scenario_hash
 from scipy import stats
 import Image, ImageDraw, StringIO, urllib
 
@@ -27,6 +27,8 @@ class DataTable:
                   settings.BM_LOG_DIR.
         """
         self.rows = []
+        self.scenarioColumns = set()
+        self.valueColumns = set()
         for log in logs:
             file_path = os.path.join(settings.BM_LOG_DIR, log)
             logging.debug('Attempting to load log %s from cache' % log)
@@ -34,13 +36,17 @@ class DataTable:
             file_last_modified = os.path.getmtime(file_path)
             if cached_vals == None or cached_vals['last_modified'] < file_last_modified:
                 logging.debug('Cache empty or expired, reloading %s from file' % log)
-                rows, lastModified = self.loadCSV(file_path)
-                ret = cache.set(log, {'last_modified': lastModified, 'rows': rows})
+                rows, lastModified, scenarioColumns, valueColumns = self.loadCSV(file_path)
+                ret = cache.set(log, {'last_modified': lastModified, 'rows': rows, 'scenarioColumns': scenarioColumns, 'valueColumns': valueColumns})
                 logging.debug('Storing %d rows to cache for log %s' % (len(rows), log))
             else:
                 rows = cached_vals['rows']
+                scenarioColumns = cached_vals['scenarioColumns']
+                valueColumns = cached_vals['valueColumns']
                 logging.debug('Loaded %d rows from cache' % len(rows))
             self.rows.extend(rows)
+            self.scenarioColumns |= scenarioColumns
+            self.valueColumns |= valueColumns
 
     def __iter__(self):
         """ Lets us do `for row in datatable` instead of 
@@ -54,15 +60,19 @@ class DataTable:
             log_path: an absolute path to the log file to be parsed.
         """
         scenarios = {}
+        value_cols = set()
 
         # Store the log's last modified date
         lastModified = os.path.getmtime(log_path)
         base_name = os.path.basename(log_path)
         
         reader = csv.DictReader(open(log_path, 'rb'))
+        reader.fieldnames = map(str.lower, reader.fieldnames)
         for line in reader:
             key = line.pop('key')
             value = line.pop('value')
+            if key not in value_cols:
+                value_cols.add(key)
             line['logfile'] = str(base_name)
             schash = scenario_hash(line)
             if schash not in scenarios:
@@ -70,7 +80,10 @@ class DataTable:
             scenarios[schash].values[key] = float(value)
         
         logging.debug('Parsed %d rows from CSV' % len(scenarios))
-        return scenarios.values(), lastModified
+        scenario_cols = reader.fieldnames
+        scenario_cols.remove('key')
+        scenario_cols.remove('value')
+        return scenarios.values(), lastModified, set(scenario_cols), value_cols
 
     def headers(self):
         """ Returns the headers that would be used to output a table of
@@ -78,14 +91,19 @@ class DataTable:
         """
         scenarios = list()
         values = list()
+        values_with_ci = list()
+        
         for row in self.rows:
             for key in row.scenario.iterkeys():
                 if key not in scenarios:
                     scenarios.append(key)
-            for val in row.values.iterkeys():
-                if val not in values:
-                    values.append(val)
-        return scenarios, values
+            for key,val in row.values.items():
+                if key not in values:
+                    values.append(key)
+                if isinstance(val, DataAggregate):
+                    values_with_ci.append(key)
+
+        return scenarios, values, values_with_ci
     
     def selectValueColumns(self, vals):
         """ Selects the specified set of value columns and throws away all
@@ -97,6 +115,7 @@ class DataTable:
             for (key,val) in row.values.items():
                 if key not in vals:
                     del row.values[key]
+        self.valueColumns = set(vals)
 
     def selectScenarioColumns(self, cols):
         """ Selects the specified set of scenario columns and throws away all
@@ -108,10 +127,11 @@ class DataTable:
             for (key,val) in row.scenario.items():
                 if key not in cols:
                     del row.scenario[key]
+        self.scenarioColumns = set(cols)
 
     def renderToTable(self):
         """ Renders the values in this data table into a HTML table. """
-        scenarios, values = self.headers()
+        scenarios, values, _ = self.headers()
         output = '<table class="results"><thead>'
         for name in scenarios:
             output += '<th class="scenario-header">' + name + '</th>'
@@ -134,7 +154,42 @@ class DataTable:
             output += '</tr>'
         output += '</tbody></table>'
         return output
-
+    
+    def renderToCSV(self):
+        scenarios, values, values_with_ci = self.headers()
+        scenarios.sort(key=str.lower)
+        values.sort(key=str.lower)
+        output = ''
+        for name in scenarios:
+            output += '"' + name + '",'
+        for name in values:
+            output += '"' + name + '",'
+            if name in values_with_ci:
+                output += '"' + name + '.' + str(settings.CONFIDENCE_LEVEL * 100) + '%-CI.lowerBound",'
+                output += '"' + name + '.' + str(settings.CONFIDENCE_LEVEL * 100) + '%-CI.upperBound",'
+        if output[-1] == ',':
+            output = output[:-1]
+        output += "\r\n"
+        
+        for row in self.rows:
+            for key in scenarios:
+                if key in row.scenario:
+                    output += '"' + row.scenario[key] + '",'
+                else:
+                    output += '"",'
+            for key in values:
+                if key in row.values:
+                    output += present_value_csv(key, row.values[key], values_with_ci) + ','
+                else:
+                    if key in values_with_ci:
+                        output += '"","",""'
+                    else:
+                        output += '"",'
+            if output[-1] == ',':
+                output = output[:-1]
+            output += "\r\n"
+                    
+        return output
 
 class DataRow:
     """ A simple object that holds a row of data. The data is stored in two
@@ -334,7 +389,7 @@ class DataAggregate:
             data to be regenerated.
         """
         if isinstance(other, DataAggregate):
-            logging.debug(other)
+            #logging.debug(other)
             res = DataAggregate(self.type)
             if other.value() <> 0:
                 val = self.value() / other.value()

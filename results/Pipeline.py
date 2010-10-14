@@ -1,7 +1,7 @@
 import results.PipelineEncoder
 from results.DataTypes import *
 from results.Blocks import *
-import sys, traceback
+import sys, traceback, logging
 
 class PipelineLoadException(Exception):
     def __init__(self, excClass, excArgs, excTraceback):
@@ -15,12 +15,13 @@ class PipelineBlockException(Exception):
         self.block = block
 
 
-def execute_pipeline(encoded_string):
+def execute_pipeline(encoded_string, csv_graphs=False):
     decoded = results.PipelineEncoder.decode_pipeline(encoded_string)
     try:
         dt = DataTable(logs=decoded['logs'])
         dt.selectValueColumns(decoded['value_columns'])
         dt.selectScenarioColumns(decoded['scenario_columns'])
+        logging.debug('Initial: %s' % dt.scenarioColumns)
     except:
         raise PipelineLoadException(sys.exc_info())
     
@@ -34,7 +35,8 @@ def execute_pipeline(encoded_string):
             elif block['type'] == 'normalise':
                 NormaliseBlock().process(dt, **block['params'])
             elif block['type'] == 'graph':
-                graph_outputs.extend(GraphBlock().process(dt, **block['params']))
+                graph_outputs.extend(GraphBlock().process(dt, renderCSV=csv_graphs, **block['params']))
+            logging.debug('After block %d (%s): %s' % (i, block['type'], dt.scenarioColumns))
         except:
             raise PipelineBlockException(i, *sys.exc_info())
     

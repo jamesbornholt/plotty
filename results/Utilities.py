@@ -20,7 +20,7 @@ def present_value(val):
     """ Turns a value into a state where it can be presented as HTML, including
         its confidence interval and sparkline if appropriate.
     """
-    from results.DataTypes import DataAggregate
+    from results.DataTypes import DataAggregate  # Avoid a circular import issue in DataTypes
     if isinstance(val, DataAggregate):
         output = "%.3f" % val.value()
         ciDown, ciUp = val.ciPercent()
@@ -34,3 +34,18 @@ def present_value(val):
     else:
         output = str(val)
     return output
+    
+def present_value_csv(key, val, values_with_ci):
+    """ Turns a value into a state where it can be presented in a CSV file,
+        including its confidence interval if the column it appears in has
+        confidence intervals somewhere in it.
+    """
+    from results.DataTypes import DataAggregate  # Avoid a circular import issue in DataTypes
+    if key in values_with_ci:
+        ciDown, ciUp = val.ci()
+        if math.isnan(ciDown):
+            return '%f,"",""' % val.value()
+        else:
+            return '%f,%f,%f' % (val.value(), ciDown, ciUp)
+    else:
+        return str(val)

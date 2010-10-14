@@ -7,6 +7,7 @@ from results.Blocks import *
 from results.models import SavedPipeline
 from results.Pipeline import *
 import json, csv, logging
+from datetime import datetime
 
 def filter_values(request, logs, col):
     """ Given a particular scenario column, find all possible values of that
@@ -26,13 +27,7 @@ def log_values(request, logs):
     columns = []
     keys = []
     dt = DataTable(logs.split(','))
-    for row in dt:
-        for col in row.scenario.iterkeys():
-            if col not in columns:
-                columns.append(col)
-        for key in row.values.iterkeys():
-            if key not in keys:
-                keys.append(key)
+    columns, keys, _ = dt.headers()
     columns.sort()
     keys.sort()
     return HttpResponse(json.dumps({'scenarioCols': columns, 'valueCols': keys}))
@@ -44,7 +39,7 @@ def pipeline(request, pipeline):
         output = '<div class="exception"><h1>Exception in executing block ' + str(e.block + 1) + '</h1>' + e.msg + '<div class="foldable"><h1>Traceback<a href="">[show]</a></h1><div class="foldable-content hidden"><pre>' + e.traceback + '</pre></div></div>'
         return HttpResponse(json.dumps({'error': True, 'index': e.block, 'html': output, 'rows': 1}))
     except PipelineLoadException as e:
-        output = '<div class="exception"><h1>Exception in loading log files</h1>' + e.msg + '<div class="foldable"><h1>Traceback<a href="">[show]</a></h1><div class="foldable-content hidden">' + e.traceback + '</div></div>'
+        output = '<div class="exception"><h1>Exception in loading log files</h1>' + e.msg + '<div class="foldable"><h1>Traceback<a href="">[show]</a></h1><div class="foldable-content hidden"><pre>' + e.traceback + '</pre></div></div>'
         return HttpResponse(json.dumps({'error': True, 'html': output, 'rows': 1}))
     
     output = ''
@@ -63,3 +58,20 @@ def save_pipeline(request):
     new = SavedPipeline(name=request.POST['name'], encoded=request.POST['encoded'])
     new.save()
     return HttpResponse(json.dumps({'error': False}))
+    
+def csv_table(request, pipeline):
+    try:
+        dt, graph_outputs = execute_pipeline(pipeline, csv_graphs=True)
+    except Exception as e:
+        return HttpResponse("The pipeline is invalid: " + e.msg)
+    
+    if len(graph_outputs) > 0:
+        output = graph_outputs[0]
+        filename = 'graph_output_' + datetime.now().replace(microsecond=0).isoformat('_') + '.csv'
+    else:
+        output = dt.renderToCSV()
+        filename = 'table_output_' + datetime.now().replace(microsecond=0).isoformat('_') + '.csv'
+    resp = HttpResponse(output, mimetype='text/csv')
+    resp['Content-Disposition'] = 'attachment; filename=' + filename
+    return resp
+    
