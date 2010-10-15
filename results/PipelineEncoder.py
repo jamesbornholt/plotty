@@ -11,6 +11,8 @@ AGGREGATE_TYPES = { 0: 'mean',
 
 FILTER_PARAM_SEPARATOR = '^'
 
+NORMALISE_PARAM_SEPARATOR = '^'
+
 BLOCK_IDS = { 0: 'filter',
               1: 'aggregate',
               2: 'normalise',
@@ -57,7 +59,16 @@ def decode_aggregate_block(data):
 def decode_normalise_block(data):
     params_string = data.split(GROUP_SEPARATOR)
     if params_string[0] == '0':
-        return {'type': 'normalise', 'params': {'normaliser': 'select', 'column': params_string[1], 'value': params_string[2]}}
+        del params_string[0]
+        selection = []
+        group = []
+        for part in params_string:
+            if NORMALISE_PARAM_SEPARATOR in part:
+                parts = part.split(NORMALISE_PARAM_SEPARATOR)
+                selection.append({'column': parts[0], 'value': parts[1]})
+            else:
+                group.append(part)
+        return {'type': 'normalise', 'params': {'normaliser': 'select', 'selection': selection, 'group': group}}
     elif params_string[0] == '1':
         return {'type': 'normalise', 'params': {'normaliser': 'best', 'group': params_string[1:]}}
     
@@ -99,9 +110,10 @@ def encode_aggregate_block(data):
 
 def encode_normalise_block(data):
     if data['params']['normaliser'] == 'select':
-        return GROUP_SEPARATOR.join(['0', data['params']['column'], data['params']['value']])
+        head = ['0'].extend(map(lambda a: a['column'] + NORMALISE_PARAM_SEPARATOR + a['value'], data['params']['selection']))
     elif data['params']['normaliser'] == 'best':
-        return GROUP_SEPARATOR.join(['1', GROUP_SEPARATOR.join(data['params']['group'])])
+        head = ['1']
+    return GROUP_SEPARATOR.join(head.extend(data['params']['group']))
 
 def encode_graph_block(data):
     if data['params']['graph-type'] == 'histogram':

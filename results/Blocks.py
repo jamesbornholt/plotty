@@ -135,19 +135,35 @@ class NormaliseBlock:
             * value  -- the value which the specified column should be equal to
                         in order to select that row as a normaliser.
         """
+        # Handle a parsing bug when constructing the dictionary
+        if kwargs['group'] == ['']:
+            kwargs['group'] = []
+        
         # Build the groups for normalisation and find a normaliser for each one
         scenarios = {}
         normalisers = {}
         ignored_rows = 0
+
         for row in datatable:
-            if kwargs['column'] not in row.scenario:
-                ignored_rows += 1
+            throw = False
+            for selection in kwargs['selection']:
+                if selection['column'] not in row.scenario:
+                    ignored_rows += 1
+                    throw = True
+                    break
+            if throw:
                 continue
-            schash = scenario_hash(scenario=row.scenario, exclude=[kwargs['column']])
+            
+            schash = scenario_hash(scenario=row.scenario, include=kwargs['group'])
             if schash not in scenarios:
                 scenarios[schash] = []
             scenarios[schash].append(row)
-            if row.scenario[kwargs['column']] == kwargs['value']:
+            match = True
+            for selection in kwargs['selection']:
+                if row.scenario[selection['column']] <> selection['value']:
+                    match = False
+                    break
+            if match:
                 if schash not in normalisers:
                     normalisers[schash] = copy.copy(row.values)
                 else:
@@ -164,7 +180,7 @@ class NormaliseBlock:
                 no_normaliser_rows += len(rows)
                 for row in rows:
                     row.values = {}
-                newRows.extend(rows)
+                trashed_rows.extend(rows)
                 continue
             # Normalise each value in each row
             for row in rows:
@@ -177,9 +193,9 @@ class NormaliseBlock:
         
         datatable.rows = newRows
         if ignored_rows > 0:
-            logging.info('Normalise block (to normaliser %s=%s) ignored %d rows because they did not have a value for %s.' % (kwargs['column'], kwargs['value'], ignored_rows, kwargs['column']))
+            logging.info('Normalise block (to normaliser %s) ignored %d rows because they did not have a value for some column in the normaliser.' % (kwargs['selection'], ignored_rows))
         if no_normaliser_rows > 0:
-            logging.info('Normalise block (to normaliser %s=%s) ignored %d rows because no normaliser existed for them.' % (kwargs['column'], kwargs['value'], no_normaliser_rows))
+            logging.info('Normalise block (to normaliser %s) ignored %d rows because no normaliser existed for them.' % (kwargs['selection'], no_normaliser_rows))
     
     def processBestNormaliser(self, datatable, **kwargs):
         """ Normalises the rows to the best normaliser available. The rows in the

@@ -149,10 +149,6 @@ div {
     display: none;
 }
 
-.normalise-group {
-    display: none;
-}
-
 th.header { 
     background-image: url(bg.gif);     
     cursor: pointer; 

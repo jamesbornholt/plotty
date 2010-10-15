@@ -46,12 +46,25 @@
 			<button type="button" class="remove-button">X</button>
 			<div class="pipeline-content">
 				<span class="pipeline-header">Normalise</span> <br />
-				<label><input type="radio" name="normalise-type" value="select" checked="checked"/> to <select class="select-normalise-column scenario-column"><option></option></select> = <select class="select-normalise-value"><option></option></select></label> <br />
+				<label><input type="radio" name="normalise-type" value="select" checked="checked"/> to specific value</label> <br />
+				<table class="pipeline-normalise-table">
+				    <tr>
+				        <td>
+				            <select class="select-normalise-column scenario-column"><option></option></select>
+				        </td>
+				        <td>
+				            =
+				        </td>
+				        <td>
+				            <select class="select-normalise-value"><option></option></select>
+				        </td>
+				        <td><button type="button" class="remove-row" disabled="disabled">-</button></td>
+				        <td><button type="button" class="add-row">+</button></td>
+				    </tr>
+				</table>
 				<label><input type="radio" name="normalise-type" value="best" /> to best value in group</label> <br />
-                <div class="normalise-group">
-                    <strong>Grouping</strong> <br />
-                    <select name="normalise-group" class="select-normalise-group" multiple="multiple"><option></option></select>
-                </div>
+				<strong>Grouping</strong><br />
+                <select name="normalise-group" class="select-normalise-group" multiple="multiple"><option></option></select>
 			</div>
 			<div class="pipeline-footer"></div>
 		</div>
@@ -79,7 +92,7 @@
 				    <option value="{{ pipeline.encoded }}">{{ pipeline.name }}</option>
 				    {% endfor %}
 				</select> <button type="button" id="pipeline-load-go">Load</button><br />
-				<a href="list/" id="pipeline-debug-link">Debug</a>
+				<a href="list/" id="pipeline-debug-link">Debug</a> <a href="#" id="pipeline-new-link">New pipeline</a>
 			</div>
 		</div>
 		<div id="pipeline-log" class="pipeline">
