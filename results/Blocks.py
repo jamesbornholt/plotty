@@ -285,35 +285,80 @@ class GraphBlock:
             * column -- the scenario column to be used as the column discriminator
             * value  -- the value to be plotted
         """
-        graph_rows = {}
-        column_keys = []
+        if renderCSV:
+            method = self.renderCSV
+        else:
+            method = self.renderTable
+        outputs = {}
+        scenario_keys = {}
+        graph_sets = {}
         for row in datatable:
             if kwargs['column'] in row.scenario and kwargs['row'] in row.scenario and kwargs['value'] in row.values:
+                schash = scenario_hash(row.scenario, exclude=[kwargs['column'], kwargs['row']])
+                if schash not in scenario_keys:
+                    scenario = copy.copy(row.scenario)
+                    del scenario[kwargs['column']]
+                    del scenario[kwargs['row']]
+                    scenario_keys[schash] = scenario
+                if schash not in graph_sets:
+                    graph_sets[schash] = []
+                graph_sets[schash].append(row)
+        
+        logging.debug(graph_sets)
+        logging.debug(scenario_keys)
+        
+        for sc, rows in graph_sets.items():
+            graph_rows = {}
+            column_keys = []
+            for row in rows:
                 if row.scenario[kwargs['row']] not in graph_rows:
                     graph_rows[row.scenario[kwargs['row']]] = {}
                 if row.scenario[kwargs['column']] in graph_rows[row.scenario[kwargs['row']]]:
                     raise PipelineAmbiguityException('More than one value exists for the graph cell (%s=%s, %s=%s)' % (kwargs['row'], row.scenario[kwargs['row']], kwargs['column'], row.scenario[kwargs['column']]))
                 graph_rows[row.scenario[kwargs['row']]][row.scenario[kwargs['column']]] = row.values[kwargs['value']]
                 if row.scenario[kwargs['column']] not in column_keys:
-                    column_keys.append(row.scenario[kwargs['column']])                    
-        
-        row_keys = graph_rows.keys()
-        # Try to sort keys numerically first, if they're not numbers, sort as lowercase strings
-        try:
-            row_keys.sort(key=float)
-        except ValueError:
-            row_keys.sort(key=str.lower)
-        
-        try:
-            column_keys.sort(key=float)
-        except ValueError:
-            column_keys.sort(key=str.lower)
-        
-        if renderCSV:
-            method = self.renderCSV
-        else:
-            method = self.renderTable
-        return [method(graph_rows, row_keys, column_keys, kwargs['row'], kwargs['column'])]
+                    column_keys.append(row.scenario[kwargs['column']])
+                
+            row_keys = graph_rows.keys()
+            # Try to sort keys numerically first, if they're not numbers, sort as lowercase strings
+            try:
+                row_keys.sort(key=float)
+            except ValueError:
+                row_keys.sort(key=str.lower)
+            
+            try:
+                column_keys.sort(key=float)
+            except ValueError:
+                column_keys.sort(key=str.lower)
+            
+            key = ', '.join([k + ' = ' + scenario_keys[sc][k] for k in scenario_keys[sc].keys()])
+            outputs[key] = method(graph_rows, row_keys, column_keys, kwargs['row'], kwargs['column'])
+            
+        #for row in datatable:
+        #    if kwargs['column'] in row.scenario and kwargs['row'] in row.scenario and kwargs['value'] in row.values:
+        #        if row.scenario[kwargs['row']] not in graph_rows:
+        #            graph_rows[row.scenario[kwargs['row']]] = {}
+        #        if row.scenario[kwargs['column']] in graph_rows[row.scenario[kwargs['row']]]:
+        #            raise PipelineAmbiguityException('More than one value exists for the graph cell (%s=%s, %s=%s)' % (kwargs['row'], row.scenario[kwargs['row']], kwargs['column'], row.scenario[kwargs['column']]))
+        #        graph_rows[row.scenario[kwargs['row']]][row.scenario[kwargs['column']]] = row.values[kwargs['value']]
+        #        if row.scenario[kwargs['column']] not in column_keys:
+        #            column_keys.append(row.scenario[kwargs['column']])                    
+        #
+        #row_keys = graph_rows.keys()
+        ## Try to sort keys numerically first, if they're not numbers, sort as lowercase strings
+        #try:
+        #    row_keys.sort(key=float)
+        #except ValueError:
+        #    row_keys.sort(key=str.lower)
+        #
+        #try:
+        #    column_keys.sort(key=float)
+        #except ValueError:
+        #    column_keys.sort(key=str.lower)
+        #
+        #return [method(graph_rows, row_keys, column_keys, kwargs['row'], kwargs['column'])]
+        logging.debug(outputs)
+        return outputs
     
     def renderTable(self, rows, row_keys, column_keys, row_title, column_title):
         """ Renders a pivoted table (e.g. generated by processHistogram) 

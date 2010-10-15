@@ -14,6 +14,8 @@ urlpatterns = patterns('',
     (r'^ajax/pipeline/(?P<pipeline>.*)$', 'results.views_ajax.pipeline'),
     (r'^ajax/save-pipeline/$', 'results.views_ajax.save_pipeline'),
     (r'^ajax/pipeline-csv-table/(?P<pipeline>.*)$', 'results.views_ajax.csv_table'),
+    (r'^ajax/pipeline-csv-graph/(?P<pipeline>.*)/(?P<index>.*)/(?P<graph>.*)/$', 'results.views_ajax.csv_graph'),
+    
     
     (r'^list/(?P<pipeline>.*)$', 'results.views.list'),
     (r'', 'results.views.pipeline'),

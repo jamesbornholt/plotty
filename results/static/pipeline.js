@@ -611,7 +611,7 @@ function refreshPipeline() {
             $('#output').append(data.html);
             if ( $('#show-sparklines').get(0).checked === false )
                 $('.sparkline').hide();
-            if ( data.rows > 100 ) {
+            if ( data.rows > 100 && !data.graph) {
                 $('#output table, #output .foldable.table').hide();
                 $('#large-table-confirm span').html(data.rows);
                 $('#large-table-confirm').show();
@@ -725,7 +725,7 @@ $(document).ready(function() {
 	        table.css('display', 'none');
 	    refreshPipeline();
 	});
-	$("#output").delegate('.foldable h1 a', 'click', function() {
+	$("#output").delegate('.foldable h1 a.toggle', 'click', function() {
         var foldable_content = $(this).parents('.foldable').children('.foldable-content');
         if ( foldable_content.hasClass('hidden') ) {
             foldable_content.removeClass('hidden');

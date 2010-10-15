@@ -54,13 +54,16 @@ def pipeline(request, pipeline):
         ambiguityIndex = -1
     
     if len(graph_outputs) > 0:
-        for i, graph in enumerate(graph_outputs, start=1):
-            output += '<div class="foldable"><h1>Graph ' + str(i) + '<a href="">[hide]</a></h1><div class="foldable-content">' + graph + '</div></div>'
-        output += '<div class="foldable table"><h1>Table<a href="">[show]</a></h1><div class="foldable-content hidden">' + dt.renderToTable() + '</div></div>'
+        for i, graphs in enumerate(graph_outputs, start=1):
+            keys = graphs.keys()
+            keys.sort()
+            for key in keys:
+                output += '<div class="foldable"><h1>' + key + ' (block ' + str(i) + ')<a href="" class="toggle">[hide]</a><a href="ajax/pipeline-csv-graph/' + pipeline + '/' + str(i-1) + '/' + key + '/">[CSV]</a></h1><div class="foldable-content">' + graphs[key] + '</div></div>'
+        output += '<div class="foldable table"><h1>Table<a href="" class="toggle">[show]</a><a href="ajax/pipeline-csv-table/' + pipeline + '/">[CSV]</a></h1><div class="foldable-content hidden">' + dt.renderToTable() + '</div></div>'
     else:
         output += dt.renderToTable()
     
-    return HttpResponse(json.dumps({'error': False, 'ambiguity': ambiguity, 'index': ambiguityIndex, 'html': output, 'rows': len(dt.rows)}))
+    return HttpResponse(json.dumps({'error': False, 'ambiguity': ambiguity, 'index': ambiguityIndex, 'html': output, 'rows': len(dt.rows), 'graph': len(graph_outputs) > 0}))
 
 def save_pipeline(request):
     if 'name' not in request.POST or 'encoded' not in request.POST:
@@ -74,14 +77,25 @@ def csv_table(request, pipeline):
         dt, graph_outputs = execute_pipeline(pipeline, csv_graphs=True)
     except Exception as e:
         return HttpResponse("The pipeline is invalid: " + e.msg)
-    
-    if len(graph_outputs) > 0:
-        output = graph_outputs[0]
-        filename = 'graph_output_' + datetime.now().replace(microsecond=0).isoformat('_') + '.csv'
-    else:
-        output = dt.renderToCSV()
-        filename = 'table_output_' + datetime.now().replace(microsecond=0).isoformat('_') + '.csv'
+
+    output = dt.renderToCSV()
+    filename = 'table_output_' + datetime.now().replace(microsecond=0).isoformat('_') + '.csv'
     resp = HttpResponse(output, mimetype='text/csv')
     resp['Content-Disposition'] = 'attachment; filename=' + filename
     return resp
+
+def csv_graph(request, pipeline, index, graph):
+    try:
+        dt, graph_outputs = execute_pipeline(pipeline, csv_graphs=True)
+    except Exception as e:
+        return HttpResponse("The pipeline is invalid: " + e.msg)
+    index = int(index)
+
+    if len(graph_outputs) < int(index) or graph not in graph_outputs[int(index)]:
+        return HttpResponse("The specified graph doesn't exist.<br />graph = %s<br />graph_outputs = %s<br />index = %d" % (graph, graph_outputs, index))
     
+    output = graph_outputs[int(index)][graph]
+    filename = 'graph_output_' + graph.replace(' ', '') + '_' + datetime.now().replace(microsecond=0).isoformat('_') + '.csv'
+    resp = HttpResponse(output, mimetype='text/csv')
+    resp['Content-Disposition'] = 'attachment; filename=' + filename
+    return resp

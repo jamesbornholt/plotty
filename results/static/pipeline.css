@@ -190,6 +190,7 @@ th.headerSortDown {
     float: right;
     font-weight: normal;
     color: blue;
+    margin-left: 1em;
 }
 
 .foldable-content {
