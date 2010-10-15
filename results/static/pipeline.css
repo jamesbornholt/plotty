@@ -244,3 +244,44 @@ th.headerSortDown {
 .error-block .pipeline-footer {
 	background: transparent url(arrow-error.gif) center top no-repeat;
 }
+
+.ambiguous-block {
+    background: #ffbc80;
+}
+
+.ambiguous-block .remove-button {
+    margin: 3px;
+}
+
+.ambiguous-block .pipeline-content {
+	border: 3px solid #ff8c26;
+	border-bottom: 0;
+}
+
+.ambiguous-block .pipeline-footer {
+	background: transparent url(arrow-ambiguous.gif) center top no-repeat;
+}
+
+.ambiguity {
+    background-color: #ffbc80;
+    border: 1px solid #ff8c26;
+    padding: 1em;
+}
+.ambiguity h1 {
+    font-size: 110%;
+    padding: 0;
+    margin: 0;
+}
+
+.ambiguity .foldable {
+    font-size: 80%;
+    margin: 1em 0;
+}
+.ambiguity .foldable h1 {
+    background: transparent;
+    padding: 0.5em;
+}
+
+.ambiguity .foldable-content pre {
+    margin: 0;
+}

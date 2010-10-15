@@ -1,7 +1,7 @@
 import results.PipelineEncoder
 from results.DataTypes import *
 from results.Blocks import *
-import sys, traceback, logging
+import sys, traceback, logging, copy
 
 class PipelineLoadException(Exception):
     def __init__(self, excClass, excArgs, excTraceback):
@@ -27,6 +27,7 @@ def execute_pipeline(encoded_string, csv_graphs=False):
     
     graph_outputs = []
     for i, block in enumerate(decoded['blocks']):
+        old_dt = copy.deepcopy(dt)
         try:
             if block['type'] == 'aggregate':
                 AggregateBlock().process(dt, **block['params'])
@@ -37,6 +38,11 @@ def execute_pipeline(encoded_string, csv_graphs=False):
             elif block['type'] == 'graph':
                 graph_outputs.extend(GraphBlock().process(dt, renderCSV=csv_graphs, **block['params']))
             logging.debug('After block %d (%s): %s' % (i, block['type'], dt.scenarioColumns))
+        except PipelineAmbiguityException as e:
+            e.block = i
+            e.datatable = old_dt
+            e.graph_outputs = graph_outputs
+            raise e
         except:
             raise PipelineBlockException(i, *sys.exc_info())
     

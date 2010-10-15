@@ -41,16 +41,26 @@ def pipeline(request, pipeline):
     except PipelineLoadException as e:
         output = '<div class="exception"><h1>Exception in loading log files</h1>' + e.msg + '<div class="foldable"><h1>Traceback<a href="">[show]</a></h1><div class="foldable-content hidden"><pre>' + e.traceback + '</pre></div></div>'
         return HttpResponse(json.dumps({'error': True, 'html': output, 'rows': 1}))
+    except PipelineAmbiguityException as e:
+        output = '<div class="ambiguity"><h1>Ambiguity in block ' + str(e.block + 1) + '</h1>' + e.msg + '<div><strong>The data below shows the output of the pipeline up to but not including block ' + str(e.block + 1) + '</strong></div></div>'
+        ambiguity = True
+        ambiguityIndex = e.block
+        dt = e.datatable
+        graph_outputs = e.graph_outputs
+        #return HttpResponse(json.dumps({'error': False, 'ambiguity': True, 'index': e.block, 'html': output, 'rows': 1}))
+    else:
+        output = ''
+        ambiguity = False
+        ambiguityIndex = -1
     
-    output = ''
     if len(graph_outputs) > 0:
         for i, graph in enumerate(graph_outputs, start=1):
             output += '<div class="foldable"><h1>Graph ' + str(i) + '<a href="">[hide]</a></h1><div class="foldable-content">' + graph + '</div></div>'
-        output += '<div class="foldable"><h1>Table<a href="">[show]</a></h1><div class="foldable-content hidden">' + dt.renderToTable() + '</div></div>'
+        output += '<div class="foldable table"><h1>Table<a href="">[show]</a></h1><div class="foldable-content hidden">' + dt.renderToTable() + '</div></div>'
     else:
         output += dt.renderToTable()
     
-    return HttpResponse(json.dumps({'error': False, 'html': output, 'rows': len(dt.rows)}))
+    return HttpResponse(json.dumps({'error': False, 'ambiguity': ambiguity, 'index': ambiguityIndex, 'html': output, 'rows': len(dt.rows)}))
 
 def save_pipeline(request):
     if 'name' not in request.POST or 'encoded' not in request.POST:

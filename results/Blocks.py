@@ -4,6 +4,10 @@ from results.Utilities import present_value, scenario_hash
 from plotty import settings
 import logging
 
+class PipelineAmbiguityException(Exception):
+    def __init__(self, msg, block=-1):
+        self.block = block
+        self.msg = msg
 
 class FilterBlock:
     """ Filters the datatable by including or excluding particular rows based
@@ -64,9 +68,11 @@ class AggregateBlock:
     def process(self, datatable, **kwargs):
         groups = {}
         scenarios = {}
+        ignored_rows = 0
         # Group the rows based on their scenarios except for the specified column
         for row in datatable:
             if kwargs['column'] not in row.scenario:
+                ignored_rows += 1
                 continue
             schash = scenario_hash(scenario=row.scenario, exclude=[kwargs['column']])
             if schash not in scenarios:
@@ -91,6 +97,8 @@ class AggregateBlock:
         
         datatable.rows = newRows
         datatable.scenarioColumns -= set([kwargs['column']])
+        if ignored_rows > 0:
+            logging.info('Aggregate block (%s over %s) ignored %d rows.' % (kwargs['type'], kwargs['column'], ignored_rows))
 
 
 class NormaliseBlock:
@@ -130,23 +138,33 @@ class NormaliseBlock:
         # Build the groups for normalisation and find a normaliser for each one
         scenarios = {}
         normalisers = {}
+        ignored_rows = 0
         for row in datatable:
             if kwargs['column'] not in row.scenario:
+                ignored_rows += 1
                 continue
             schash = scenario_hash(scenario=row.scenario, exclude=[kwargs['column']])
             if schash not in scenarios:
                 scenarios[schash] = []
             scenarios[schash].append(row)
             if row.scenario[kwargs['column']] == kwargs['value']:
-                normalisers[schash] = copy.copy(row.values)
+                if schash not in normalisers:
+                    normalisers[schash] = copy.copy(row.values)
+                else:
+                    raise PipelineAmbiguityException('More than one normaliser was found for the scenario %s.' % row.scenario)
         
         newRows = []
         
         # Normalise each group based on the found normaliser and collect the new
         # rows.
+        no_normaliser_rows = 0
         for (sc, rows) in scenarios.items():
             # Throw away groups which do not have a normaliser
             if sc not in normalisers:
+                no_normaliser_rows += len(rows)
+                for row in rows:
+                    row.values = {}
+                newRows.extend(rows)
                 continue
             # Normalise each value in each row
             for row in rows:
@@ -155,9 +173,13 @@ class NormaliseBlock:
                         del row.values[key]
                         continue
                     row.values[key] = row.values[key] / normalisers[sc][key]
-                newRows.append(row)
+            newRows.extend(rows)
         
         datatable.rows = newRows
+        if ignored_rows > 0:
+            logging.info('Normalise block (to normaliser %s=%s) ignored %d rows because they did not have a value for %s.' % (kwargs['column'], kwargs['value'], ignored_rows, kwargs['column']))
+        if no_normaliser_rows > 0:
+            logging.info('Normalise block (to normaliser %s=%s) ignored %d rows because no normaliser existed for them.' % (kwargs['column'], kwargs['value'], no_normaliser_rows))
     
     def processBestNormaliser(self, datatable, **kwargs):
         """ Normalises the rows to the best normaliser available. The rows in the
@@ -172,6 +194,7 @@ class NormaliseBlock:
         """
         scenarios = {}
         normalisers = {}
+        ignored_rows = 0
         
         # Handle a parsing bug when constructing the dictionary
         if kwargs['group'] == ['']:
@@ -187,6 +210,7 @@ class NormaliseBlock:
                     throw = True
                     break
             if throw:
+                ignored_rows += 1
                 continue
             
             schash = scenario_hash(scenario=row.scenario, include=kwargs['group'])
@@ -204,9 +228,11 @@ class NormaliseBlock:
         
         # Normalise each group based on the found normaliser and collect the new
         # rows.
+        no_normaliser_rows = 0
         for (sc, rows) in scenarios.items():
             # Throw away groups which do not have a normaliser
             if sc not in normalisers:
+                no_normaliser_rows += len(rows)
                 continue
             # Normalise each value in each row
             for row in rows:
@@ -218,6 +244,10 @@ class NormaliseBlock:
                 newRows.append(row)                
         
         datatable.rows = newRows
+        if ignored_rows > 0:
+            logging.info('Normalise block (to best value, grouping by %s) ignored %d rows because they did not have a value for %s.' % (kwargs['group'], ignored_rows, kwargs['column']))
+        if no_normaliser_rows > 0:
+            logging.info('Normalise block (to best value, grouping by %s) ignored %d rows because no normaliser existed for them.' % (kwargs['group'], no_normaliser_rows))
 
 
 class GraphBlock:
@@ -245,9 +275,11 @@ class GraphBlock:
             if kwargs['column'] in row.scenario and kwargs['row'] in row.scenario and kwargs['value'] in row.values:
                 if row.scenario[kwargs['row']] not in graph_rows:
                     graph_rows[row.scenario[kwargs['row']]] = {}
+                if row.scenario[kwargs['column']] in graph_rows[row.scenario[kwargs['row']]]:
+                    raise PipelineAmbiguityException('More than one value exists for the graph cell (%s=%s, %s=%s)' % (kwargs['row'], row.scenario[kwargs['row']], kwargs['column'], row.scenario[kwargs['column']]))
                 graph_rows[row.scenario[kwargs['row']]][row.scenario[kwargs['column']]] = row.values[kwargs['value']]
                 if row.scenario[kwargs['column']] not in column_keys:
-                    column_keys.append(row.scenario[kwargs['column']])
+                    column_keys.append(row.scenario[kwargs['column']])                    
         
         row_keys = graph_rows.keys()
         # Try to sort keys numerically first, if they're not numbers, sort as lowercase strings

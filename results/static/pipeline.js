@@ -557,22 +557,27 @@ function refreshPipeline() {
             $('#output').append(data.html);
             if ( $('#show-sparklines').get(0).checked === false )
                 $('.sparkline').hide();
-            if ( data.rows < 100 ) {
-                $('#output').show();
-                startTableSort();
-            }
-            else {
+            if ( data.rows > 100 ) {
+                $('#output table, #output .foldable.table').hide();
                 $('#large-table-confirm span').html(data.rows);
                 $('#large-table-confirm').show();
             }
-            if ( data.error === true ) {
+            else {
+                $('#large-table-confirm').hide();
+            }
+            $('#output').show();
+            if ( data.rows < 100 )
+                startTableSort();
+            $('.error-block').removeClass('error-block');
+            $('.ambiguous-block').removeClass('error-block');
+            if ( data.error === true )
                 // Highlight the erroneous block
                 if ( typeof data.index !== 'undefined' )
                     $('#pipeline .pipeline-block').eq(data.index).addClass('error-block');
-            }
-            else {
-                $('.error-block').removeClass('error-block');
-            }
+            if ( data.ambiguity === true )
+                // Highlight the ambiguous block
+                if ( typeof data.index !== 'undefined' )
+                    $('#pipeline .pipeline-block').eq(data.index).addClass('ambiguous-block');
         });
     }
     else {
@@ -729,7 +734,7 @@ $(document).ready(function() {
 	});
 	$('#load-large-table').click(function() {
 	    startTableSort();
-	    $('#output').show();
+	    $('#output table, #output .foldable.table').show();
 	    $('#large-table-confirm').hide();
 	});
 	$("#select-scenario-cols, #select-value-cols").toChecklist();

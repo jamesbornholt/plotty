@@ -206,6 +206,9 @@ class DataRow:
             scenario = {}
         self.values = {}
         self.scenario = scenario
+        
+    def __repr__(self):
+        return 'Scenario: %s, Values = %s' % (self.scenario, self.values)
 
 
 class DataAggregate:

@@ -8,7 +8,7 @@ from django.template import RequestContext
 from results.DataTypes import *
 from results.Blocks import *
 from results.models import SavedPipeline
-from results.Pipeline import execute_pipeline
+from results.Pipeline import *
 import results.PipelineEncoder
 from plotty import settings
 
@@ -21,6 +21,9 @@ def list(request, pipeline):
         return HttpResponse(output)
     except PipelineLoadException as e:
         output = '<div class="exception"><h1>Exception in loading log files</h1>' + e.msg + '<h1>Traceback</h1><pre>' + e.traceback + '</pre></div>'
+        return HttpResponse(output)
+    except PipelineAmbiguityException as e:
+        output = 'Ambiguity: ' + e.msg + ' in block ' + str(e.block)
         return HttpResponse(output)
     
     output = ''
