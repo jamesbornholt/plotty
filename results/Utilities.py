@@ -44,7 +44,7 @@ def present_value_csv(key, val, values_with_ci):
     if key in values_with_ci:
         ciDown, ciUp = val.ci()
         if math.isnan(ciDown):
-            return '%f,"",""' % val.value()
+            return '%f,%f,%f' % (val.value(), val.value(), val.value())
         else:
             return '%f,%f,%f' % (val.value(), ciDown, ciUp)
     else:

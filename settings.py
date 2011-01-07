@@ -19,6 +19,9 @@ CACHE_TIMEOUT = 24*60*60 # 24 hours
 CACHE_BACKEND = 'memcached://127.0.0.1:11211/?timeout=%d' % CACHE_TIMEOUT
 memcache.SERVER_MAX_VALUE_LENGTH = 20*1024*1024
 
+GRAPH_CACHE_DIR = ROOT_DIR + '/results/graph-cache'
+GRAPH_FONT_PATH = '/Library/Fonts/Arial Unicode.ttf'
+
 sys.path.insert(0, ROOT_DIR)
 
 DATABASES = {

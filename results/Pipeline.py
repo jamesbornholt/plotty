@@ -36,7 +36,7 @@ def execute_pipeline(encoded_string, csv_graphs=False):
             elif block['type'] == 'normalise':
                 NormaliseBlock().process(dt, **block['params'])
             elif block['type'] == 'graph':
-                graph_outputs.append(GraphBlock().process(dt, renderCSV=csv_graphs, **block['params']))
+                graph_outputs.append(GraphBlock().process(dt, pipeline_hash=encoded_string, renderCSV=csv_graphs, **block['params']))
             logging.debug('After block %d (%s): %s' % (i, block['type'], dt.scenarioColumns))
         except PipelineAmbiguityException as e:
             e.block = i
