@@ -1,5 +1,5 @@
 # Django settings for django_site project.
-import sys, os, memcache
+import sys, os
 
 DEBUG = True
 TEMPLATE_DEBUG = DEBUG
@@ -7,17 +7,12 @@ TEMPLATE_DEBUG = DEBUG
 # Two-tailed confidence level (i.e. this value will be halved for calls to
 # the inverse t function)
 CONFIDENCE_LEVEL = 0.95
-
-if os.uname()[1] == 'raccoon':
-    ROOT_DIR = '/home/james/django/plotty'
-    BM_LOG_DIR = '/home/james/logs'
-else:
-    ROOT_DIR = '/Users/james/socs/asc-2010/plotty'
-    BM_LOG_DIR = '/Users/james/socs/asc-2010/logs'
+ROOT_DIR = os.path.dirname(__file__)
+BM_LOG_DIR = ROOT_DIR + '/log'
 
 CACHE_TIMEOUT = 24*60*60 # 24 hours
-CACHE_BACKEND = 'memcached://127.0.0.1:11211/?timeout=%d' % CACHE_TIMEOUT
-memcache.SERVER_MAX_VALUE_LENGTH = 20*1024*1024
+#CACHE_BACKEND = 'memcached://127.0.0.1:11211/?timeout=%d' % CACHE_TIMEOUT
+#memcache.SERVER_MAX_VALUE_LENGTH = 20*1024*1024
 
 GRAPH_CACHE_DIR = ROOT_DIR + '/results/graph-cache'
 GRAPH_FONT_PATH = '/Library/Fonts/Arial Unicode.ttf'
@@ -27,7 +22,7 @@ sys.path.insert(0, ROOT_DIR)
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join(ROOT_DIR, 'database.sqlite3'),
+        'NAME': os.path.join(ROOT_DIR, 'db/database.sqlite3'),
     }
 }
 

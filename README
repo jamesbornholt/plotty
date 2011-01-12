@@ -1,0 +1,5 @@
+mkdir log
+mkdir db
+chmod a+w db
+python manage.py syncdb
+hooray
