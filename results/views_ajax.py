@@ -36,10 +36,10 @@ def pipeline(request, pipeline):
     try:
         dt, graph_outputs = execute_pipeline(pipeline)
     except PipelineBlockException as e:
-        output = '<div class="exception"><h1>Exception in executing block ' + str(e.block + 1) + '</h1>' + e.msg + '<div class="foldable"><h1>Traceback<a href="">[show]</a></h1><div class="foldable-content hidden"><pre>' + e.traceback + '</pre></div></div>'
+        output = '<div class="exception"><h1>Exception in executing block ' + str(e.block + 1) + '</h1>' + e.msg + '<div class="foldable"><h1>Traceback<a href="" class="toggle">[show]</a></h1><div class="foldable-content hidden"><pre>' + e.traceback + '</pre></div></div>'
         return HttpResponse(json.dumps({'error': True, 'index': e.block, 'html': output, 'rows': 1}))
     except PipelineLoadException as e:
-        output = '<div class="exception"><h1>Exception in loading log files</h1>' + e.msg + '<div class="foldable"><h1>Traceback<a href="">[show]</a></h1><div class="foldable-content hidden"><pre>' + e.traceback + '</pre></div></div>'
+        output = '<div class="exception"><h1>Exception in loading log files</h1>' + e.msg + '<div class="foldable"><h1>Traceback<a href="" class="toggle">[show]</a></h1><div class="foldable-content hidden"><pre>' + e.traceback + '</pre></div></div>'
         return HttpResponse(json.dumps({'error': True, 'html': output, 'rows': 1}))
     except PipelineAmbiguityException as e:
         output = '<div class="ambiguity"><h1>Ambiguity in block ' + str(e.block + 1) + '</h1>' + e.msg + '<div><strong>The data below shows the output of the pipeline up to but not including block ' + str(e.block + 1) + '</strong></div></div>'
