@@ -1,5 +1,5 @@
 from django.core.cache import cache
-import logging, sys, csv, os, math
+import logging, sys, csv, os, math, re, string
 from plotty import settings
 from results.Utilities import present_value, present_value_csv, scenario_hash
 from scipy import stats
@@ -66,18 +66,21 @@ class DataTable:
         lastModified = os.path.getmtime(log_path)
         base_name = os.path.basename(log_path)
         
+        invalid_chars = frozenset("+-/*|&^")
+        
         reader = csv.DictReader(open(log_path, 'rb'))
         reader.fieldnames = map(str.lower, reader.fieldnames)
         for line in reader:
             key = line.pop('key')
+            key_clean = ''.join(('.' if c in invalid_chars else c) for c in key)
             value = line.pop('value')
-            if key not in value_cols:
-                value_cols.add(key)
+            if key_clean not in value_cols:
+                value_cols.add(key_clean)
             line['logfile'] = str(base_name)
             schash = scenario_hash(line)
             if schash not in scenarios:
                 scenarios[schash] = DataRow(line)
-            scenarios[schash].values[key] = float(value)
+            scenarios[schash].values[key_clean] = float(value)
         
         logging.debug('Parsed %d rows from CSV' % len(scenarios))
         scenario_cols = reader.fieldnames
@@ -111,10 +114,74 @@ class DataTable:
             
             vals: a list of value columns to keep.
         """
+        derived_vals = []
+        value_columns_lower = dict([(str.lower(s), s) for s in self.valueColumns])
+        for expr in vals:
+            if expr not in self.valueColumns:
+                logging.debug('Processing "%s"' % expr)
+                # This must be a derived column - try compiling it
+                val = str.lower(str(expr))
+                
+                # Hacky, but check the expression is simple and mathematical.
+                # Also prepare a substitution key
+                statement_whitespace = val
+                statement = val
+                subst_key = {}
+                for i,valid_val in enumerate(value_columns_lower.iterkeys()):
+                    if statement.find(valid_val) > -1:
+                        statement_whitespace = statement_whitespace.replace(valid_val, '')
+                        statement = statement.replace(valid_val, string.ascii_letters[i])
+                        subst_key[string.ascii_letters[i]] = value_columns_lower[valid_val]
+                if re.search('[^ \+\-\\\*\(\)]', statement_whitespace) == None:
+                    continue
+                
+                # It's a clean and reasonable expression, prepare it properly.
+                # This is a hack that lets us be more flexible with value column
+                # names. A number of column names (particularly stats outputs
+                # from MMTk) are invalid python identifiers.
+                try:
+                    # This is safe - compile won't evaluate the code, just parse it
+                    compiled = compile(statement, statement, 'eval')
+                except SyntaxError:
+                    continue
+                except ValueError:
+                    continue
+                
+                logging.debug('Saving "%s" to derived_vals' % val)
+                derived_vals.append((expr, compiled, subst_key.copy()))
+        
         for row in self.rows:
+            # Calculate derived cols first, since they might not be selected
+            # in their own right.
+            for name,code,subst in derived_vals:
+                evaled_subst = {}
+                #logging.debug(subst)
+                invalid = False
+                for token,key in subst.items():
+                    if key not in row.values:
+                        #logging.debug('Invalid row: %s because %s not in dict.' % (row.values, key))
+                        invalid = True
+                        break
+                    else:
+                        evaled_subst[token] = row.values[key]
+                if invalid:
+                    #logging.debug('Invalid row: %s' % repr(row))
+                    continue
+                try:
+                    # Evaluate the code with none of the builtin functions available.
+                    # This means none of the python builtin methods, which include the
+                    # import statement, are available to the code. This is pretty good
+                    # security, but does restrict us somewhat in mathematics.
+                    row.values[name] = eval(code, {'__builtins__': None}, evaled_subst)
+                    logging.debug("eval(%s, {'__builtins__': None}, %s) = %s" % (code, evaled_subst, row.values[name]))
+                except:
+                    continue
+                    
             for (key,val) in row.values.items():
                 if key not in vals:
                     del row.values[key]
+                else:
+                    logging.debug('keeping %s' % key)
         self.valueColumns = set(vals)
 
     def selectScenarioColumns(self, cols):

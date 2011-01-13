@@ -118,6 +118,10 @@ div {
     height: 100px;
 }
 
+#select-value-derived {
+    width: 100%;
+}
+
 #header {
     margin-left: 440px;
     position: fixed;

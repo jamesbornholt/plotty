@@ -364,7 +364,16 @@ function removeBlockTableRow(button) {
 
 function updateAvailableData(data, selectedScenarioCols, selectedValueCols) {
     updateMultiSelect('#select-scenario-cols, .select-normalise-group', data.scenarioCols, selectedScenarioCols || true);
+    
+    derivedValueCols = [];
+    if ( typeof selectedValueCols !== 'undefined' )
+        for ( var i = 0; i < selectedValueCols.length; i++ )
+            if ( !(selectedValueCols[i] in data.valueCols) )
+                derivedValueCols.push(selectedValueCols[i]);
+    
     updateMultiSelect('#select-value-cols', data.valueCols, selectedValueCols || false);
+    if ( derivedValueCols.length > 0 )
+        $('#select-value-derived').val(derivedValueCols[0]);
 
     updateScenarioColumns();
 }
@@ -409,6 +418,8 @@ function updateScenarioColumns() {
 
 function updateValueColumns() {
     var selected = $("#select-value-cols").val() || [];
+    if ( $("#select-value-derived").val() != '' )
+        selected.push($("#select-value-derived").val());
     
     $('.value-column').each(function() {
         var oldValue = $(this).val();
@@ -503,6 +514,8 @@ function serialisePipeline() {
     dict['logs'] = selectedLogFiles();
     dict['scenario_columns'] = $('#select-scenario-cols').val();
     dict['value_columns'] = $('#select-value-cols').val();
+    if ( $('#select-value-derived').val() != '' )
+        dict['value_columns'].push($('#select-value-derived').val());
     
     if ( dict['scenario_columns'].length == 0 || dict['value_columns'].length == 0 )
         return false;

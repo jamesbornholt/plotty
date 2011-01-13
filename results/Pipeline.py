@@ -23,7 +23,7 @@ def execute_pipeline(encoded_string, csv_graphs=False):
         dt.selectScenarioColumns(decoded['scenario_columns'])
         logging.debug('Initial: %s' % dt.scenarioColumns)
     except:
-        raise PipelineLoadException(sys.exc_info())
+        raise PipelineLoadException(*sys.exc_info())
     
     graph_outputs = []
     for i, block in enumerate(decoded['blocks']):
