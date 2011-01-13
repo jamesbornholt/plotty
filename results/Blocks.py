@@ -180,7 +180,7 @@ class NormaliseBlock:
                 no_normaliser_rows += len(rows)
                 for row in rows:
                     row.values = {}
-                trashed_rows.extend(rows)
+                #trashed_rows.extend(rows)
                 continue
             # Normalise each value in each row
             for row in rows:
@@ -413,7 +413,7 @@ class GraphBlock:
         """
         graph_hash = str(abs(hash(pipeline_hash + graph_key)))
         # Here we might check if it already exists in the graph cache...
-        csv = self.renderCSV(rows, row_keys, column_keys, row_title, column_title, graph_key, aggregates, pipeline_hash, for_plotting=True)
+        csv = self.renderCSV(rows, row_keys, column_keys, row_title, column_title, aggregates, graph_key, pipeline_hash, for_plotting=True)
         csv_file = tempfile.NamedTemporaryFile(suffix='.csv', delete=False)
         csv_file.write(csv)
         csv_file.close()
@@ -446,7 +446,7 @@ class GraphBlock:
         
         return output
         
-    def renderCSV(self, rows, row_keys, column_keys, row_title, column_title, graph_key, aggregates, pipeline_hash, for_plotting=False):
+    def renderCSV(self, rows, row_keys, column_keys, row_title, column_title, aggregates, graph_key, pipeline_hash, for_plotting=False):
         # Look for DataAggregates. We can't just check the first one because it
         # may not exist.
         has_cis = for_plotting
@@ -496,7 +496,13 @@ class GraphBlock:
             for key in column_keys:
                 if key in aggregates[agg]:
                     if has_cis:
-                        output += '%f,%f,%f,' % (aggregates[agg][key], aggregates[agg][key], aggregates[agg][key])
+                        # gnuplot expects non-empty data, with error cols containing the absolute val
+                        # of the error (e.g. a val of 1.3 with CI of 1.25-1.35 needs to report
+                        # 1.3,1.25,1.35 to gnuplot)
+                        if for_plotting:
+                            output += '%f,%f,%f,' % (aggregates[agg][key], aggregates[agg][key], aggregates[agg][key])
+                        else:
+                            output += '%f,,,' % aggregates[agg][key]
                     else:
                         output += '%f,' % aggregates[agg][key]
                 else:
