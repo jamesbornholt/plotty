@@ -13,7 +13,7 @@ BM_LOG_DIR = ROOT_DIR + '/log'
 CACHE_TIMEOUT = 24*60*60 # 24 hours
 CACHE_BACKEND = "file://" + os.path.join(ROOT_DIR, 'log-cache/') + ('?timeout=%d' % CACHE_TIMEOUT)
 
-GRAPH_CACHE_DIR = ROOT_DIR + '/results/graph-cache'
+GRAPH_CACHE_DIR = ROOT_DIR + '/graph-cache'
 GRAPH_FONT_PATH = '/Library/Fonts/Arial Unicode.ttf'
 
 sys.path.insert(0, ROOT_DIR)

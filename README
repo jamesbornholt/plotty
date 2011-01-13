@@ -1,5 +1,9 @@
+Temporary deployment:
+
 mkdir log
 mkdir db
-chmod a+w db
+mkdir graph-cache
+mkdir log-cache
+chmod a+rw db graph-cache log-cache
 python manage.py syncdb
 hooray
