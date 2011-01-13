@@ -11,8 +11,7 @@ ROOT_DIR = os.path.dirname(__file__)
 BM_LOG_DIR = ROOT_DIR + '/log'
 
 CACHE_TIMEOUT = 24*60*60 # 24 hours
-#CACHE_BACKEND = 'memcached://127.0.0.1:11211/?timeout=%d' % CACHE_TIMEOUT
-#memcache.SERVER_MAX_VALUE_LENGTH = 20*1024*1024
+CACHE_BACKEND = "file://" + os.path.join(ROOT_DIR, 'log-cache/') + ('?timeout=%d' % CACHE_TIMEOUT)
 
 GRAPH_CACHE_DIR = ROOT_DIR + '/results/graph-cache'
 GRAPH_FONT_PATH = '/Library/Fonts/Arial Unicode.ttf'
