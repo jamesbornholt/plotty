@@ -3,3 +3,4 @@
 database\.sqlite3
 results/graph-cache/*
 log
+log-cache
