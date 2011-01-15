@@ -8,7 +8,7 @@ admin.autodiscover()
 
 urlpatterns = patterns('',
     (r'^static/(?P<path>.*)$', serve, {'document_root': settings.ROOT_DIR + '/results/static'}),
-    (r'^graph/(?P<path>.*)$', serve, {'document_root': settings.ROOT_DIR + '/results/graph-cache'}),
+    (r'^graph/(?P<path>.*)$', serve, {'document_root': settings.GRAPH_CACHE_DIR}),
 
     (r'^ajax/log-values/(?P<logs>.*)/$', 'results.views_ajax.log_values'),    
     (r'^ajax/filter-values/(?P<logs>.*)/(?P<col>.*)/$', 'results.views_ajax.filter_values'),

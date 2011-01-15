@@ -1,6 +1,6 @@
 .*\.pyc$
 \.DS_Store
 database\.sqlite3
-results/graph-cache/*
+graph-cache
 log
 log-cache
