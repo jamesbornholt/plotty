@@ -118,7 +118,6 @@ class DataTable:
         value_columns_lower = dict([(str.lower(s), s) for s in self.valueColumns])
         for expr in vals:
             if expr not in self.valueColumns:
-                logging.debug('Processing "%s"' % expr)
                 # This must be a derived column - try compiling it
                 val = str.lower(str(expr))
                 
@@ -147,7 +146,6 @@ class DataTable:
                 except ValueError:
                     continue
                 
-                logging.debug('Saving "%s" to derived_vals' % val)
                 derived_vals.append((expr, compiled, subst_key.copy()))
         
         for row in self.rows:
@@ -173,15 +171,12 @@ class DataTable:
                     # import statement, are available to the code. This is pretty good
                     # security, but does restrict us somewhat in mathematics.
                     row.values[name] = eval(code, {'__builtins__': None}, evaled_subst)
-                    logging.debug("eval(%s, {'__builtins__': None}, %s) = %s" % (code, evaled_subst, row.values[name]))
                 except:
                     continue
                     
             for (key,val) in row.values.items():
                 if key not in vals:
                     del row.values[key]
-                else:
-                    logging.debug('keeping %s' % key)
         self.valueColumns = set(vals)
 
     def selectScenarioColumns(self, cols):

@@ -304,9 +304,6 @@ class GraphBlock:
                     graph_sets[schash] = []
                 graph_sets[schash].append(row)
         
-        logging.debug(graph_sets)
-        logging.debug(scenario_keys)
-        
         for sc, rows in graph_sets.items():
             graph_rows = {}
             column_keys = []
@@ -393,7 +390,6 @@ class GraphBlock:
         #    column_keys.sort(key=str.lower)
         #
         #return [method(graph_rows, row_keys, column_keys, kwargs['row'], kwargs['column'])]
-        logging.debug(outputs)
         return outputs
     
     def renderTable(self, rows, row_keys, column_keys, row_title, column_title, value_title, aggregates, graph_key, pipeline_hash):
