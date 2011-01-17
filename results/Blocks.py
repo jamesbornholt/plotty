@@ -523,7 +523,7 @@ class GraphBlock:
         num_cols = 3*num_cols - 1
         
         gnuplot = """
-set terminal png truecolor notransparent enhanced font "{font_path}" 10 size 960,360 xFFFFFF
+set terminal png truecolor notransparent font "{font_path}" 10 size 960,420 xFFFFFF
 set output '{graph_path}'
 set datafile separator ","
 set ylabel "{yaxis_title}"
@@ -531,6 +531,7 @@ set xtics out
 set ytics out
 set xtics nomirror
 set ytics nomirror
+set key bottom left outside horizontal
 
 set nobox
 set auto x
