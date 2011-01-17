@@ -16,7 +16,8 @@ CACHE_BACKEND = "file://" + os.path.join(ROOT_DIR, 'log-cache/') + ('?timeout=%d
 GRAPH_CACHE_DIR = ROOT_DIR + '/graph-cache'
 GRAPH_FONT_PATH = '/Library/Fonts/Arial Unicode.ttf'
 
-sys.path.insert(0, ROOT_DIR)
+if ROOT_DIR not in sys.path:
+    sys.path.insert(0, ROOT_DIR)
 
 DATABASES = {
     'default': {
