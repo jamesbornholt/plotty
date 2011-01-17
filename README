@@ -1,9 +1,13 @@
-Temporary deployment:
+Before using the configuration script, create the /etc/apache2/sites-plotty/
+directory and then add:
+    Include /etc/apache2/sites-plotty
+to the VirtualHost (probably in /etc/apache2/sites-enabled/000-default).
 
-mkdir log
-mkdir db
-mkdir graph-cache
-mkdir log-cache
-chmod a+rw db graph-cache log-cache
-python manage.py syncdb
-hooray
+Then to install plotty for a user, mark init-plotty as executable and run
+    ./init-plotty [username]
+
+This will create a new plotty directory in username's home, with everything
+contained below that. It will also dump the config into apache, and reload
+apache config. In theory, then, once this script runs the url:
+    http://server/plotty/username/
+should load the pipeline.

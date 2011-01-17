@@ -1,0 +1,64 @@
+#!/bin/bash
+
+APACHE_PATH="/etc/apache2/sites-plotty"
+
+if [ -z "$1" ]; then
+    echo "usage: init-plotty username"
+    exit
+fi
+USER=$1
+USER_HOME="/home/$USER"
+if [[ !( -d $USER_HOME ) ]]; then
+    echo "ERROR: invalid user $USER"
+    exit
+fi
+
+if [[ -d $USER_HOME/plotty ]]; then
+    echo "ERROR: $USER_HOME/plotty already exists - delete it to reinitialise (make sure to delete $APACHE_PATH/$USER too)"
+    exit
+fi
+
+sudo echo 1 > /dev/null 2>&1
+if [[ $? -ne 0 ]]; then
+    echo "ERROR: you aren't a sudoer, won't be able to write what we need!"
+    exit
+fi
+
+# This is a hack to make sure we catch the executing user's ssh credentials
+# instead of root's
+
+echo "---> Checking out source code to /tmp/plotty"
+hg clone ssh://squirrel.moma//home/mercurial/all/shared/plotty /tmp/plotty > /dev/null
+if [[ $? -ne 0 ]]; then
+    echo "ERROR: failed to check code out from mercurial; do you have ssh to squirrel?"
+exit
+fi
+
+echo "---> Creating directory structure $USER_HOME/plotty"
+sudo mkdir $USER_HOME/plotty
+sudo mkdir $USER_HOME/plotty/app
+sudo mv /tmp/plotty $USER_HOME/plotty/app/plotty
+sudo cp $USER_HOME/plotty/app/plotty/server.wsgi $USER_HOME/plotty/app/server.wsgi
+sudo mkdir $USER_HOME/plotty/logs
+sudo mkdir $USER_HOME/plotty/cache
+sudo mkdir $USER_HOME/plotty/cache/logs
+sudo mkdir $USER_HOME/plotty/cache/graphs
+sudo cp $USER_HOME/plotty/app/plotty/database.sqlite3.default $USER_HOME/plotty/cache/database.sqlite3
+
+echo "---> Fixing permissions for apache"
+sudo chmod -R a+r $USER_HOME/plotty
+sudo chmod -R a+rw $USER_HOME/plotty/cache
+
+echo "---> Changing ownership "
+sudo chown -R $USER:$USER $USER_HOME/plotty
+
+APACHE_PATH="/etc/apache2/sites-plotty"
+echo "---> Writing new config file to $APACHE_PATH/$USER"
+sudo sh -c "echo 'WSGIScriptAlias /plotty/$USER $USER_HOME/plotty/app/server.wsgi' > $APACHE_PATH/$USER"
+
+echo "---> Reloading apache config"
+sudo /etc/init.d/apache2 reload
+
+echo ""
+echo "Done!"
+
