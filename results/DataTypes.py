@@ -1,7 +1,7 @@
 from django.core.cache import cache
 import logging, sys, csv, os, math, re, string
 from plotty import settings
-from results.Utilities import present_value, present_value_csv, scenario_hash
+from plotty.results.Utilities import present_value, present_value_csv, scenario_hash
 from scipy import stats
 import Image, ImageDraw, StringIO, urllib
 

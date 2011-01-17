@@ -219,7 +219,7 @@ function hashChange(hash) {
         
         // Load the available scenario and value columns and populate the dropdowns
         $.ajax({
-            url: '/results/ajax/log-values/' + decoded['logs'].join(',') + '/',
+            url: 'ajax/log-values/' + decoded['logs'].join(',') + '/',
             dataType: 'json',
             success: function(data) {
                 updateAvailableData(data, decoded['scenario_columns'], decoded['value_columns']);
@@ -248,7 +248,7 @@ function hashChange(hash) {
                     var selectValueDropdown = $('.select-filter-value', row).get(0);
                     $('.select-filter-column', row).get(0).selectedIndex = jQuery.inArray(filter['column'], filterDropdownOptions);
                     $('.select-filter-is', row).get(0).selectedIndex = filter['is'] ? 0 : 1;
-                    $.getJSON('/results/ajax/filter-values/' + decoded['logs'].join(',') + '/' + filter['column'] + '/', function(data) {
+                    $.getJSON('ajax/filter-values/' + decoded['logs'].join(',') + '/' + filter['column'] + '/', function(data) {
                         updateAvailableValues.call(selectValueDropdown, data, filter['value']);
                         refreshPipeline();
                     });
@@ -278,7 +278,7 @@ function hashChange(hash) {
                     var setRowValues = function(row, selection) {
                         var selectValueDropdown = $('.select-normalise-value', row).get(0);
                         $('.select-normalise-column', row).get(0).selectedIndex = jQuery.inArray(selection['column'], normDropdownOptions);
-                        $.getJSON('/results/ajax/filter-values/' + decoded['logs'].join(',') + '/' + selection['column'] + '/', function(data) {
+                        $.getJSON('ajax/filter-values/' + decoded['logs'].join(',') + '/' + selection['column'] + '/', function(data) {
                             updateAvailableValues.call(selectValueDropdown, data, selection['value']);
                             refreshPipeline();
                         });
@@ -617,7 +617,7 @@ function refreshPipeline() {
         $('#pipeline-save-name, #pipeline-save-go').attr('disabled', '');
         $.history.load(encoded);
         $('#pipeline-debug-link').attr('href', 'list/' + encoded + '?debug');
-        $.getJSON('/results/ajax/pipeline/' + encoded, function(data) {
+        $.getJSON('ajax/pipeline/' + encoded, function(data) {
             $('#output').children().not('#loading-indicator').remove();
             // Stop the sparklines from being rendered unless we actually want them
             $('#output').hide();
@@ -698,7 +698,7 @@ $(document).ready(function() {
 	    refreshPipeline();
 	});
 	$("#pipeline-log").delegate(".select-log", 'change', function() {
-	    $.getJSON('/results/ajax/log-values/' + selectedLogFiles().join(',') + '/', function(data) {
+	    $.getJSON('ajax/log-values/' + selectedLogFiles().join(',') + '/', function(data) {
 	        updateAvailableData(data);
 	        refreshPipeline();
 	    });
@@ -708,7 +708,7 @@ $(document).ready(function() {
 	    $.ajax({
 	        context: values_select,
 	        dataType: 'json',
-	        url: '/results/ajax/filter-values/' + selectedLogFiles().join(',') + '/' + $(this).val() + '/',
+	        url: 'ajax/filter-values/' + selectedLogFiles().join(',') + '/' + $(this).val() + '/',
 	        success: updateAvailableValues
 	    });
 	});
@@ -717,7 +717,7 @@ $(document).ready(function() {
 	    $.ajax({
 	        context: values_select,
 	        dataType: 'json',
-	        url: '/results/ajax/filter-values/' + selectedLogFiles().join(',') + '/' + $(this).val() + '/',
+	        url: 'ajax/filter-values/' + selectedLogFiles().join(',') + '/' + $(this).val() + '/',
 	        success: updateAvailableValues
 	    });
 	    updateNormaliseColumns($(this).parents('.normalise'));
@@ -760,7 +760,7 @@ $(document).ready(function() {
 	    var encoded = $('#pipeline-hash').val();
 	    if ( name == '' )
 	        return false;
-	    $.post('/results/ajax/save-pipeline/', {
+	    $.post('ajax/save-pipeline/', {
 	        'name': name,
 	        'encoded': encoded
 	    }, function(data) {

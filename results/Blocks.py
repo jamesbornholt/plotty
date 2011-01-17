@@ -1,6 +1,6 @@
 import math, copy, tempfile, os
-from results.DataTypes import *
-from results.Utilities import present_value, scenario_hash
+from plotty.results.DataTypes import DataTable, DataRow, DataAggregate
+from plotty.results.Utilities import present_value, scenario_hash, present_value_csv
 from plotty import settings
 import logging
 
@@ -416,7 +416,7 @@ class GraphBlock:
         graph_path = os.path.join(settings.GRAPH_CACHE_DIR, graph_hash + '.png')
         self.plotHistogram(csv_file.name, len(column_keys), graph_path, value_title)
         os.remove(csv_file.name)
-        output = '<img src="/results/graph/' + graph_hash + '.png" />'
+        output = '<img src="graph/' + graph_hash + '.png" />'
         output += '<table><thead><tr><th>' + row_title + '</th>'
         for key in column_keys:
             output += '<th>' + column_title + '=' + key + '</th>'

@@ -2,10 +2,10 @@ import results.PipelineEncoder
 from django.http import HttpResponse
 from django.shortcuts import render_to_response
 from django.template import RequestContext
-from results.DataTypes import *
-from results.Blocks import *
-from results.models import SavedPipeline
-from results.Pipeline import *
+from plotty.results.DataTypes import *
+from plotty.results.Blocks import *
+from plotty.results.models import SavedPipeline
+from plotty.results.Pipeline import *
 import json, csv, logging
 from datetime import datetime
 

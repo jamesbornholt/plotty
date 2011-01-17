@@ -1,15 +1,14 @@
 # Create your views here.
 
 import os, datetime, math, logging
-#from scipy import stats
 from django.shortcuts import render_to_response
 from django.http import HttpResponse
 from django.template import RequestContext
-from results.DataTypes import *
-from results.Blocks import *
-from results.models import SavedPipeline
-from results.Pipeline import *
-import results.PipelineEncoder
+from plotty.results.DataTypes import *
+from plotty.results.Blocks import *
+from plotty.results.models import SavedPipeline
+from plotty.results.Pipeline import *
+import plotty.results.PipelineEncoder
 from plotty import settings
 
 

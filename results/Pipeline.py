@@ -1,6 +1,6 @@
-import results.PipelineEncoder
-from results.DataTypes import *
-from results.Blocks import *
+import plotty.results.PipelineEncoder
+from plotty.results.DataTypes import DataTable, DataRow, DataAggregate
+from plotty.results.Blocks import *
 import sys, traceback, logging, copy
 
 class PipelineLoadException(Exception):
@@ -16,7 +16,7 @@ class PipelineBlockException(Exception):
 
 
 def execute_pipeline(encoded_string, csv_graphs=False):
-    decoded = results.PipelineEncoder.decode_pipeline(encoded_string)
+    decoded = plotty.results.PipelineEncoder.decode_pipeline(encoded_string)
     try:
         dt = DataTable(logs=decoded['logs'])
         dt.selectValueColumns(decoded['value_columns'])
