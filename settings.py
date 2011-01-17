@@ -23,6 +23,8 @@ GRAPH_FONT_PATH = '/Library/Fonts/Arial Unicode.ttf'
 if ROOT_DIR not in sys.path:
     sys.path.insert(0, ROOT_DIR)
 
+sys.path.insert(0, os.path.dirname(__file__))
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
