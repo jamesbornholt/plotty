@@ -15,9 +15,9 @@ else:
 BM_LOG_DIR = ROOT_DIR + '/logs'
 
 CACHE_TIMEOUT = 24*60*60 # 24 hours
-CACHE_BACKEND = "file://" + os.path.join(ROOT_DIR, 'cache/logs') + ('?timeout=%d' % CACHE_TIMEOUT)
+CACHE_BACKEND = "file://" + os.path.join(ROOT_DIR, '/cache/logs') + ('?timeout=%d' % CACHE_TIMEOUT)
 
-GRAPH_CACHE_DIR = ROOT_DIR + '/cache/graphs'
+GRAPH_CACHE_DIR = os.path.join(ROOT_DIR, '/cache/graphs')
 GRAPH_FONT_PATH = '/Library/Fonts/Arial Unicode.ttf'
 
 if ROOT_DIR not in sys.path:
@@ -28,7 +28,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join(ROOT_DIR, 'cache/database.sqlite3'),
+        'NAME': os.path.join(ROOT_DIR, '/cache/database.sqlite3'),
     }
 }
 
