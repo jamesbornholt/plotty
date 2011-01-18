@@ -330,10 +330,15 @@ class DataAggregate:
         # Confidence intervals/stdev/etc only make sense for more than one value
         if len(self._values) > 1:
             # http://en.wikipedia.org/wiki/Computational_formula_for_the_variance
+            # s^2 = (n/n-1)( (1/n)(sum[x_i^2]) - x_bar^2 )
+            #     = (1/n-1)(sum[x_i^2]) - (n/n-1)(x_bar^2 )
+            #     = (1/n-1)( sum[x_i^2] - n(sum[x]/n)^2 )
+            #     = (1/n-1)( sum[x_i^2] - (sum[x]^2 / n) )
+            #     = (1/n-1)( valSquareSum - (valSum * valSum / n) )
             n = len(self._values)
             self._stdev = math.sqrt( (1.0/(n-1)) * ( valSquareSum - (valSum * valSum / n) ) )
 
-            ciDelta = stats.t.isf((1 - settings.CONFIDENCE_LEVEL) / 2, n) * self._stdev / math.sqrt(n)
+            ciDelta = stats.t.isf((1 - settings.CONFIDENCE_LEVEL) / 2, n-1) * self._stdev / math.sqrt(n)
             self._ciUp = self._value + ciDelta
             self._ciDown = self._value - ciDelta
         else:
