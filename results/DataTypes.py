@@ -2,6 +2,7 @@ from django.core.cache import cache
 import logging, sys, csv, os, math, re, string
 from plotty import settings
 from plotty.results.Utilities import present_value, present_value_csv, scenario_hash
+from plotty.results.Tabulate import extract_csv
 from scipy import stats
 import Image, ImageDraw, StringIO, urllib
 
@@ -30,13 +31,13 @@ class DataTable:
         self.scenarioColumns = set()
         self.valueColumns = set()
         for log in logs:
-            file_path = os.path.join(settings.BM_LOG_DIR, log)
+            dir_path = os.path.join(settings.BM_LOG_DIR, log)
             logging.debug('Attempting to load log %s from cache' % log)
             cached_vals = cache.get(log)
-            file_last_modified = os.path.getmtime(file_path)
+            file_last_modified = os.path.getmtime(dir_path)
             if cached_vals == None or cached_vals['last_modified'] < file_last_modified:
                 logging.debug('Cache empty or expired, reloading %s from file' % log)
-                rows, lastModified, scenarioColumns, valueColumns = self.loadCSV(file_path)
+                rows, lastModified, scenarioColumns, valueColumns = self.loadCSV(log)
                 ret = cache.set(log, {'last_modified': lastModified, 'rows': rows, 'scenarioColumns': scenarioColumns, 'valueColumns': valueColumns})
                 logging.debug('Storing %d rows to cache for log %s' % (len(rows), log))
             else:
@@ -54,21 +55,22 @@ class DataTable:
         """
         return iter(self.rows)
 
-    def loadCSV(self, log_path):
-        """ Parses the CSV file at log_path into an array of DataRow objects.
+    def loadCSV(self, log):
+        """ Parses the CSV file at log into an array of DataRow objects.
             
-            log_path: an absolute path to the log file to be parsed.
+            log: a relative path to the log file to be parsed.
         """
         scenarios = {}
         value_cols = set()
 
+        dir_path = os.path.join(settings.BM_LOG_DIR, log)
         # Store the log's last modified date
-        lastModified = os.path.getmtime(log_path)
-        base_name = os.path.basename(log_path)
+        lastModified = os.path.getmtime(dir_path)
         
         invalid_chars = frozenset("+-/*|&^")
         
-        reader = csv.DictReader(open(log_path, 'rb'))
+        extract_csv(dir_path)
+        reader = csv.DictReader(open(dir_path + '.csv', 'rb'))
         reader.fieldnames = map(str.lower, reader.fieldnames)
         for line in reader:
             key = line.pop('key')
@@ -76,7 +78,7 @@ class DataTable:
             value = line.pop('value')
             if key_clean not in value_cols:
                 value_cols.add(key_clean)
-            line['logfile'] = str(base_name)
+            line['logfile'] = str(log)
             schash = scenario_hash(line)
             if schash not in scenarios:
                 scenarios[schash] = DataRow(line)
