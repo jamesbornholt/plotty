@@ -39,7 +39,7 @@ def list(request, pipeline):
     return HttpResponse('<html><head><title>Listing</title></head><body>' + output + '</body></html')
 
 def pipeline(request):
-    logs = os.listdir(settings.BM_LOG_DIR)
+    logs = [ f for f in os.listdir(settings.BM_LOG_DIR) if os.path.isdir(os.path.join(settings.BM_LOG_DIR,f)) ] 
     logs.sort(key=str.lower)
     pipelines = SavedPipeline.objects.all().order_by('name')
     return render_to_response('pipeline.html', {
