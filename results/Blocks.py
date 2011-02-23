@@ -408,15 +408,21 @@ class GraphBlock:
                           discriminator
         """
         graph_hash = str(abs(hash(pipeline_hash + graph_key)))
+        graph_path = os.path.join(settings.GRAPH_CACHE_DIR, graph_hash)
         # Here we might check if it already exists in the graph cache...
         csv = self.renderCSV(rows, row_keys, column_keys, row_title, column_title, value_title, aggregates, graph_key, pipeline_hash, for_plotting=True)
-        csv_file = tempfile.NamedTemporaryFile(suffix='.csv', delete=False)
+        csv_file = open(graph_path + '.csv', "w")
         csv_file.write(csv)
         csv_file.close()
-        graph_path = os.path.join(settings.GRAPH_CACHE_DIR, graph_hash + '.png')
-        self.plotHistogram(csv_file.name, len(column_keys), graph_path, value_title)
-        os.remove(csv_file.name)
-        output = '<img src="graph/' + graph_hash + '.png" />'
+        self.plotHistogram(len(column_keys), graph_path, value_title)
+        output = '<img src="graph/' + graph_hash + '.svg" />'
+        output += '<p>'
+        output += '<a href="graph/' + graph_hash + '.csv">csv</a> '
+        output += '<a href="graph/' + graph_hash + '.gpt">gpt</a> '
+        output += '<a href="graph/' + graph_hash + '.svg">svg</a> '
+        output += '<a href="graph/' + graph_hash + '.pdf">pdf</a> '
+        output += '<a href="graph/' + graph_hash + '.wide.pdf">wide pdf</a>'
+        output += '</p>'
         output += '<table><thead><tr><th>' + row_title + '</th>'
         for key in column_keys:
             output += '<th>' + column_title + '=' + key + '</th>'
@@ -512,19 +518,17 @@ class GraphBlock:
         
         return output
     
-    def plotHistogram(self, csv_filename, num_cols, graph_path, yaxis_title):
+    def plotHistogram(self, num_cols, graph_path, yaxis_title):
         """ Plot a histogram csv file with gnuplot.
         
         csv_filename: the csv file where the graph data has been temporarily
                       stored.
         num_cols:     the number of columns of data (not including error bars)
         """
-        
-        num_cols = 3*num_cols - 1
-        
+        num_cols = num_cols * 3 - 1
         gnuplot = """
-set terminal png truecolor notransparent font "{font_path}" 10 size 960,420 xFFFFFF
-set output '{graph_path}'
+set terminal svg enhanced fname "Arial" fsize 10 size 960,420
+set output '{graph_path}.svg'
 set datafile separator ","
 set ylabel "{yaxis_title}"
 set xtics out
@@ -550,10 +554,19 @@ set style line 1 lt 1 pt 0 lc rgb '#82CAFA' lw 1
 set style line 2 lt 1 pt 0 lc rgb '#4CC417' lw 1
 set style line 3 lt 1 pt 0 lc rgb '#ADDFFF' lw 1
 
-plot for [COL=2:{num_cols}:3] "{csv_filename}" u COL:COL+1:COL+2:xtic(1) title col(COL)
+plot for [COL=2:{num_cols}:3] "{graph_path}.csv" u COL:COL+1:COL+2:xtic(1) title col(COL)
+
+set terminal postscript eps enhanced "Helvetica" 18 size 5, 2.5
+set output '{graph_path}.eps'
+replot
+
+set terminal postscript eps enhanced "Helvetica" 18 size 10, 2.2
+set output '{graph_path}.wide.eps'
+replot
 """
-        gp_file = tempfile.NamedTemporaryFile(suffix='.gp', delete=False)
-        gp_file.write(gnuplot.format(graph_path=graph_path, num_cols=num_cols, csv_filename=csv_filename, yaxis_title=yaxis_title, font_path=settings.GRAPH_FONT_PATH))
+        gp_file = open(graph_path + ".gpt", "w")
+        gp_file.write(gnuplot.format(graph_path=graph_path, num_cols=num_cols, yaxis_title=yaxis_title, font_path=settings.GRAPH_FONT_PATH))
         gp_file.close()
-        os.system("gnuplot " + gp_file.name)
-        os.remove(gp_file.name)
+        os.system(settings.GNUPLOT_EXECUTABLE + ' ' + gp_file.name)
+        os.system("ps2pdf -dEPSCrop " + graph_path + ".wide.eps " + graph_path + ".wide.pdf");
+        os.system("ps2pdf -dEPSCrop " + graph_path + ".eps " + graph_path + ".pdf");

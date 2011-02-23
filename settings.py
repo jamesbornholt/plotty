@@ -17,8 +17,9 @@ BM_LOG_DIR = os.path.join(ROOT_DIR, 'logs')
 CACHE_TIMEOUT = 24*60*60 # 24 hours
 CACHE_BACKEND = "file://" + os.path.join(ROOT_DIR, 'cache/logs') + ('?timeout=%d' % CACHE_TIMEOUT)
 
+GNUPLOT_EXECUTABLE = '/home/web-scripts/plotty-gnuplot/bin/gnuplot'
 GRAPH_CACHE_DIR = os.path.join(ROOT_DIR, 'cache/graphs')
-GRAPH_FONT_PATH = '/Library/Fonts/Arial Unicode.ttf'
+GRAPH_FONT_PATH = '/usr/share/fonts/truetype/msttcorefonts'
 
 if ROOT_DIR not in sys.path:
     sys.path.insert(0, ROOT_DIR)
