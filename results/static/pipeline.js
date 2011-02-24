@@ -302,7 +302,8 @@ function hashChange(hash) {
                 }
             }
             else if ( this['type'] == 'graph' ) {
-                if ( this['params']['graph-type'] == 'histogram' ) {
+                $('.select-graph-type', newBlock).get(0).selectedIndex = this['params']['graph-type'] == 'histogram' ? 0 : 1;
+                if ( this['params']['graph-type'] == 'histogram' || this['params']['graph-type'] == 'xy') {
                     var selectScenarioOptions = jQuery.map($('.select-graph-column', newBlock).get(0).options, function(a) { return a.value; });
                     var selectValueOptions = jQuery.map($('.select-graph-value', newBlock).get(0).options, function(a) { return a.value; });
                     $('.select-graph-column', newBlock).get(0).selectedIndex = jQuery.inArray(this['params']['column'], selectScenarioOptions);
