@@ -12,7 +12,7 @@ def extract_csv(log):
       if k in scenario:
          r = r + str(scenario[k])
       r = r + ','
-    r = r + key + ',' + value + '\n'
+    r = r + key + ',' + str(value) + '\n'
     return r
 
   # Build the set of unique scenario keys
@@ -80,9 +80,9 @@ def extract_csv(log):
               for key in keys:
                 val = vals.pop(0)
                 if key == 'time.mu' or key == 'time.gc':
-                  totaltime = totaltime + val
-                print 'result! ' + key + ' ' + val
-              print 'result! totaltime ' + totaltime 
+                  totaltime = float(totaltime) + float(val)
+                results.append(build_result(scenariokeys, scenario, key, val))
+              results.append(build_result(scenariokeys, scenario, 'time', totaltime))
             else:
               error = 1
           else:
@@ -100,7 +100,7 @@ def extract_csv(log):
               else:
                 m = re.search("Finished in (\S+) secs",l)
                 if m and not re.search("_997_|_998_",l):
-                  msec = re.group(1)*1000
+                  msec = float(m.group(1)) * 1000.0
                   results.append(build_result(scenariokeys, scenario, "bmtime", msec))
                   iteration = iteration + 1
                   scenario["iteration"] = iteration
