@@ -664,7 +664,10 @@ function startTableSort() {
 
 $(document).ready(function() {
     $.ajaxSetup({
-        cache: false
+        cache: false,
+        error: function(xhr, textStatus, errorThrown) {
+            $("#output").html(xhr.response);
+        }
     });
     $(document).ajaxStart(function() {
         $('#loading-indicator').show();
