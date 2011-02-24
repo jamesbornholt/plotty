@@ -76,6 +76,8 @@ def decode_graph_block(data):
     params_string = data.split(GROUP_SEPARATOR)
     if params_string[0] == '0':
         return {'type': 'graph', 'params': {'graph-type': 'histogram', 'column': params_string[1], 'row': params_string[2], 'value': params_string[3]}}
+    if params_string[0] == '1':
+        return {'type': 'graph', 'params': {'graph-type': 'xy', 'column': params_string[1], 'row': params_string[2], 'value': params_string[3]}}
     
 
 BLOCK_DECODES = { 0: decode_filter_block,
@@ -118,6 +120,8 @@ def encode_normalise_block(data):
 def encode_graph_block(data):
     if data['params']['graph-type'] == 'histogram':
         return GROUP_SEPARATOR.join(['0', data['params']['column'], data['params']['row'], data['params']['value']])
+    if data['params']['graph-type'] == 'xy':
+        return GROUP_SEPARATOR.join(['1', data['params']['column'], data['params']['row'], data['params']['value']])
 
  
 BLOCK_ENCODES = { 'filter': encode_filter_block,

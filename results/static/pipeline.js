@@ -152,6 +152,8 @@ var PipelineEncoder = {
         var params_string = data.split(this.GROUP_SEPARATOR);
         if ( params_string[0] == '0' )
             return {'type': 'graph', 'params': {'graph-type': 'histogram', 'column': params_string[1], 'row': params_string[2], 'value': params_string[3]}};
+        else if ( params_string[0] == '1' )
+            return {'type': 'graph', 'params': {'graph-type': 'xy', 'column': params_string[1], 'row': params_string[2], 'value': params_string[3]}};
         else
             return {};
     },
@@ -199,6 +201,8 @@ var PipelineEncoder = {
     encode_graph_block: function(data) {
         if ( data['params']['graph-type'] == 'histogram' )
             return ['0', data['params']['column'], data['params']['row'], data['params']['value']].join(this.GROUP_SEPARATOR);
+        else if ( data['params']['graph-type'] == 'xy' )
+            return ['1', data['params']['column'], data['params']['row'], data['params']['value']].join(this.GROUP_SEPARATOR);
         else
             return '';
     }
@@ -590,6 +594,16 @@ function serialisePipeline() {
                     return false;
                 }
                 blocks.push({'type': 'graph', 'params': {'graph-type': 'histogram', 'column': column, 'row': row, 'value': value}});
+            }
+            else if ( type == 'xy' ) {
+                var column = $('.select-graph-column', this).val();
+                var row = $('.select-graph-row', this).val();
+                var value = $('.select-graph-value', this).val();
+                if ( column == '-1' || row == '-1' || value == '-1' ) {
+                    throwInvalid = true;
+                    return false;
+                }
+                blocks.push({'type': 'graph', 'params': {'graph-type': 'xy', 'column': column, 'row': row, 'value': value}});
             }
             else {
                 throwInvalid = true;
