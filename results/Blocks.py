@@ -409,8 +409,10 @@ class GraphBlock:
         graph_hash = str(abs(hash(pipeline_hash + graph_key)))
         graph_path = os.path.join(settings.GRAPH_CACHE_DIR, graph_hash)
         # Here we might check if it already exists in the graph cache...
-        csv_last_modified = os.path.getmtime(graph_path + '.csv')
-        if csv_last_modified > lastModified:
+        csv_last_modified = 0 
+        if os.path.exists(graph_path + '.csv'):
+          csv_last_modified = os.path.getmtime(graph_path + '.csv')
+        if csv_last_modified <= lastModified:
           csv = self.renderCSV(isHistogram, lastModified, rows, row_keys, column_keys, row_title, column_title, value_title, aggregates, graph_key, pipeline_hash, for_plotting=True)
           csv_file = open(graph_path + '.csv', "w")
           csv_file.write(csv)
