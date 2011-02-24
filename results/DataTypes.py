@@ -30,6 +30,7 @@ class DataTable:
         self.rows = []
         self.scenarioColumns = set()
         self.valueColumns = set()
+        self.lastModified = 0
         for log in logs:
             dir_path = os.path.join(settings.BM_LOG_DIR, log)
             logging.debug('Attempting to load log %s from cache' % log)
@@ -41,6 +42,7 @@ class DataTable:
                 ret = cache.set(log, {'last_modified': lastModified, 'rows': rows, 'scenarioColumns': scenarioColumns, 'valueColumns': valueColumns})
                 logging.debug('Storing %d rows to cache for log %s' % (len(rows), log))
             else:
+                lastModified = cached_vals['last_modified']
                 rows = cached_vals['rows']
                 scenarioColumns = cached_vals['scenarioColumns']
                 valueColumns = cached_vals['valueColumns']
@@ -48,6 +50,8 @@ class DataTable:
             self.rows.extend(rows)
             self.scenarioColumns |= scenarioColumns
             self.valueColumns |= valueColumns
+            if self.lastModified < lastModified: 
+                self.lastModified = lastModified
 
     def __iter__(self):
         """ Lets us do `for row in datatable` instead of 
