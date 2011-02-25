@@ -1,8 +1,8 @@
 /**
- * toChecklist plugin (works with jQuery 1.3.x)
+ * toChecklist plugin (works with jQuery 1.3.x and 1.4.x)
  * @author Scott Horlbeck <me@scotthorlbeck.com>
  * @url http://www.scotthorlbeck.com/code/tochecklist/
- * @version 1.4.2
+ * @version 1.4.3
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -40,11 +40,11 @@ jQuery.fn.toChecklist = function(o) { // "o" stands for options
 				showSelectedItemsSetting = $(checklistElem).attr('showSelectedItems');
 				$(checklistElem).attr('showSelectedItems', 'false');
 			}
-		}
+		};
 		
 		var enableDynamicList = function() {
 			$(checklistElem).attr('showSelectedItems', showSelectedItemsSetting);
-		}
+		};
 
 		switch(action) {
 
@@ -95,46 +95,51 @@ jQuery.fn.toChecklist = function(o) { // "o" stands for options
 	// Provide default settings, which may be overridden if necessary.
 	o = jQuery.extend({
 
-		addScrollBar : true,
-		addSearchBox : false,
-		searchBoxText : 'Type here to search list...',
-		showCheckboxes : true,
-		showSelectedItems : false,
-		submitDataAsArray : true, // This one allows compatibility with languages that use arrays
-		                          // to process the form data, such as PHP. Set to false if using
-		                          // ColdFusion or anything else with a list-based approach.
-		preferIdOverName : true, // When this is true (default) the ID of the select box is
-		                         // submitted to the server as the variable containing the checked
-		                         // items. Set to false to use the "name" attribute instead (this makes
-		                         // it compatible with Drupal's Views module, among other things.)
-		maxNumOfSelections : -1, // If you want to limit the number of items a user can select in a
-		                         // checklist, set this to a positive integer.
+		"addScrollBar" : true,
+		"addSearchBox" : false,
+		"searchBoxText" : 'Type here to search list...',
+		"showCheckboxes" : true,
+		"showSelectedItems" : false,
+		/*
+		"overwriteName"     : false, // Use false when you need to use original name attribute, or use
+		                             // true if you want to overwrite original name attribute with id; Very
+		                             // important for Ruby on Rails support to use original name attribute!
+		*/
+		"submitDataAsArray" : true, // This one allows compatibility with languages that use arrays
+		                            // to process the form data, such as PHP. Set to false if using
+		                            // ColdFusion or anything else with a list-based approach.
+		"preferIdOverName" : true,  // When this is true (default) the ID of the select box is
+		                            // submitted to the server as the variable containing the checked
+		                            // items. Set to false to use the "name" attribute instead (this makes
+		                            // it compatible with Drupal's Views module and Ruby on Rails.)
+		"maxNumOfSelections" : -1,  // If you want to limit the number of items a user can select in a
+		                            // checklist, set this to a positive integer.
 		                         
 		// This function gets executed whenever you go over the max number of allowable selections.
-		onMaxNumExceeded : function() { 
+		"onMaxNumExceeded" : function() { 
 			alert('You cannot select more than '+this.maxNumOfSelections+' items in this list.');
 		},
 
 
 		// In case of name conflicts, you can change the class names to whatever you want to use.
-		cssChecklist : 'checklist',
-		cssChecklistHighlighted : 'checklistHighlighted',
-		cssLeaveRoomForCheckbox : 'leaveRoomForCheckbox', // For label elements
-		cssEven : 'even',
-		cssOdd : 'odd',
-		cssChecked : 'checked',
-		cssDisabled : 'disabled',
-		cssShowSelectedItems : 'showSelectedItems',
-		cssFocused : 'focused', // This cssFocused is for the li's in the checklist
-		cssFindInList : 'findInList',
-		cssBlurred : 'blurred', // This cssBlurred is for the findInList divs.
-		cssOptgroup : 'optgroup'
+		"cssChecklist" : 'checklist',
+		"cssChecklistHighlighted" : 'checklistHighlighted',
+		"cssLeaveRoomForCheckbox" : 'leaveRoomForCheckbox', // For label elements
+		"cssEven" : 'even',
+		"cssOdd" : 'odd',
+		"cssChecked" : 'checked',
+		"cssDisabled" : 'disabled',
+		"cssShowSelectedItems" : 'showSelectedItems',
+		"cssFocused" : 'focused', // This cssFocused is for the li's in the checklist
+		"cssFindInList" : 'findInList',
+		"cssBlurred" : 'blurred', // This cssBlurred is for the findInList divs.
+		"cssOptgroup" : 'optgroup'
 
 	}, o);
 
 	var error = function(msg) {
 		alert("jQuery Plugin Error (Plugin: toChecklist)\n\n"+msg);
-	}
+	};
 	
 	var overflowProperty = (o.addScrollBar)? 'overflow-y: auto; overflow-x: hidden;' : '';
 	var leaveRoomForCheckbox = (o.showCheckboxes)? 'padding-left: 25px' : 'padding-left: 3px';
@@ -148,11 +153,12 @@ jQuery.fn.toChecklist = function(o) { // "o" stands for options
 		// Hang on to the important information about this <select> element.
 		var jSelectElem = $(this);
 		var jSelectElemId = jSelectElem.attr('id');
+		var jSelectElemName = jSelectElem.attr('name');
 		var jSelectElemClass = jSelectElem.attr('class');
 		if (jSelectElemId == '' || !o.preferIdOverName) {
 			// Regardless of whether this is a PHP environment, we need an id
 			// for the element, and it shouldn't have brackets [] in it.
-			jSelectElemId = jSelectElem.attr('name').replace(/\[\]/,'');
+			jSelectElemId = jSelectElemName.replace(/\[|\]/g,'');
 			if (jSelectElemId == '') {
 				error('Can\'t convert element to checklist.\nYour SELECT element must'
 					+' have a "name" attribute and/or an "id" attribute specified.');
@@ -160,8 +166,8 @@ jQuery.fn.toChecklist = function(o) { // "o" stands for options
 			}
 		}
 
-		var h = jSelectElem.height(); /* : '100%'; */
-		var w = jSelectElem.width();
+		var h = jSelectElem.outerHeight(); /* : '100%'; */
+		var w = jSelectElem.outerWidth();
 		// We have to account for the extra thick left border.
 		//w -= 4;
 
@@ -186,6 +192,9 @@ jQuery.fn.toChecklist = function(o) { // "o" stands for options
 			checkboxValue = checkboxValue.replace(/ /g,'_');
 			
 			var checkboxId = jSelectElemId+'_'+checkboxValue;
+			// escape bad values for checkboxId
+			checkboxId = checkboxId.replace(/(\.|\/|\,|\%|\<|\>)/g, '\\$1');
+			
 			var labelText = $(this).attr('innerHTML');
 			var selected = '';
 			if ($(this).attr('disabled')) {
@@ -206,9 +215,10 @@ jQuery.fn.toChecklist = function(o) { // "o" stands for options
 			}
 			
 			var arrayBrackets = (o.submitDataAsArray)? '[]' : '';
+			var checkboxName = (o.preferIdOverName)? jSelectElemId+arrayBrackets : jSelectElemName+arrayBrackets;
 
 			$(this).replaceWith('<li tabindex="0"><input type="checkbox" value="'+checkboxValue
-				+'" name="'+jSelectElemId+arrayBrackets+'" id="'+checkboxId+'" ' + selected + disabled
+ 				+'" name="'+(o.preferIdOverName ? jSelectElemId:jSelectElemName) + arrayBrackets+'" id="'+checkboxId+'" ' + selected + disabled
 				+' /><label for="'+checkboxId+'"'+disabledClass+'>'+labelText+'</label></li>');
 			// Hide the checkboxes.
 			if (o.showCheckboxes === false) {
@@ -268,12 +278,12 @@ jQuery.fn.toChecklist = function(o) { // "o" stands for options
 				// Remove "type to find..." when focusing.
 				this.value = "";
 				$(this).removeClass(o.cssBlurred);
-			}
+			};
 			var blurSearchBox =function() {
 				// Restore default text on blur.
 				this.value = this.defaultValue;
 				$(this).addClass(o.cssBlurred);
-			}
+			};
 
 			$(checklistDivId).before('<div class="findInList" id="'+jSelectElemId+'_findInListDiv">'
 				+'<input type="text" value="'+o.searchBoxText+'" id="'
@@ -384,7 +394,7 @@ jQuery.fn.toChecklist = function(o) { // "o" stands for options
 			} else {
 				$(checklistDivId).removeClass(o.cssChecklistHighlighted);
 			}
-		}
+		};
 
 		var moveToNextLi = function() {
 			// Make sure that the next LI has a checkbox (some LIs don't, because
@@ -395,7 +405,7 @@ jQuery.fn.toChecklist = function(o) { // "o" stands for options
 				$(this).focus();
 			else
 				$(this).next().each(moveToNextLi);
-		}
+		};
 
 		// Check/uncheck boxes
 		var check = function(event) {
@@ -460,7 +470,7 @@ jQuery.fn.toChecklist = function(o) { // "o" stands for options
 				$(checkbox).parent().removeClass(o.cssChecked);
 			}
 			toggleDivGlow();
-		}
+		};
 		
 		// Accessibility, primarily for IE
 		var handFocusToLI = function() {
@@ -482,7 +492,7 @@ jQuery.fn.toChecklist = function(o) { // "o" stands for options
 				updateLIStyleToMatchCheckedStatus(this);
 				if (o.showSelectedItems) showSelectedItems();
 			}).parent();
-		}
+		};
 		$('form:has(div.'+o.cssChecklist+')').bind('reset.fixFormElems',fixFormElems);
 		
 		// ================== List the selected items in a UL ==========================
@@ -497,9 +507,13 @@ jQuery.fn.toChecklist = function(o) { // "o" stands for options
 			// that is highlighted in the checklist.
 			$(selectedItemsListId).html('');
 			$('label',checklistDivId).each(function() {
+        var vcontext = $(this).parent();
 				if ($(this).parent().hasClass(o.cssChecked)) {
 					var labelText = jQuery.trim(this.innerHTML);
-					$(selectedItemsListId).append('<li>'+labelText+'</li>');
+					$('<li class="">'+labelText+'</li>')
+            .bind('click.remove', function() {
+              vcontext.trigger('click');
+            }).appendTo(selectedItemsListId);
 				}
 			});
 		};
@@ -523,19 +537,5 @@ jQuery.fn.isChecklist = function() {
 	// and we want to specifically return true or false.
 	return (isChecklist)? true : false;
 };
-
-// Override the jQuery val function to handle this fancy new multi-select
-var oldValFunction = jQuery.fn.val;
-
-jQuery.fn.val = function(a) {
-    if ( this.isChecklist() ) {
-        return $('input:checked', this).map(function() {
-            return this.value;
-        }).get();
-    }
-    else {
-        return oldValFunction.call(this, a);
-    }
-}
 
 })(jQuery);
