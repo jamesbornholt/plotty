@@ -16,7 +16,7 @@ def filter_values(request, logs, col):
     # The log files are almost certainly cached by now, so this is quick
     dt = DataTable(logs.split(','))
     for row in dt:
-        if row.scenario[col] not in values:
+        if col in row.scenario and row.scenario[col] not in values:
             values.append(row.scenario[col])
     values.sort()
     return HttpResponse(json.dumps(values))
