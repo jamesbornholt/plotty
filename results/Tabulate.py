@@ -67,7 +67,6 @@ def extract_csv(log):
               vals = re.split("\s+", dataline)
               for key in keys:
                 val = vals.pop(0)
-                print 'result! ' + key + ' ' + val
             else:
               error = 1
           elif re.match("============================ MMTk Statistics Totals ============================", l):
@@ -110,3 +109,11 @@ def extract_csv(log):
         csv.write(r)
 
   csv.close()
+
+if __name__ == "__main__":
+    if ( len(sys.argv) < 2 ):
+        print "Usage: python Tabulate.py log-folder"
+        sys.exit(1)
+    
+    print "Tabulating %s" % (sys.argv[1])
+    extract_csv(sys.argv[1])
