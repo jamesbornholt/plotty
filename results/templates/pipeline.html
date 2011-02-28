@@ -4,11 +4,13 @@
     <title>Pipeline</title>
     <link rel="stylesheet" href="static/pipeline.css" type="text/css" />
     <link rel="stylesheet" href="static/jquery.toChecklist.css" type="text/css" />
-    <script type="text/javascript" charset="utf-8" src="static/jquery.js"></script>
+    <script type="text/javascript" charset="utf-8" src="static/jquery-1.5.1.js"></script>
     <script type="text/javascript" charset="utf-8" src="static/jquery.toChecklist.js"></script>
     <script type="text/javascript" charset="utf-8" src="static/jquery.tablesorter.js"></script>
     <script type="text/javascript" charset="utf-8" src="static/jquery.history.js"></script>
-    <script type="text/javascript" charset="utf-8" src="static/pipeline.js"></script>
+    <script type="text/javascript" charset="utf-8" src="static/base.js"></script>
+    <!--<script type="text/javascript" charset="utf-8" src="static/pipeline.js"></script>-->
+    <script type="text/javascript" charset="utf-8" src="static/pipeline-new.js"></script>
 </head>
 <body>
 	<div id="pipeline-templates">
@@ -19,13 +21,13 @@
 				<table class="pipeline-filter-table">
 				    <tr>
 				        <td>
-				            <select class="select-filter-column scenario-column"><option></option></select>
+				            <select class="select-filter-column scenario-column scenario-column-values-select"><option></option></select>
 				        </td>
 				        <td>
 				            <select class="select-filter-is"><option value="is" selected="selected">is</option><option value="not">is not</option></select>
 				        </td>
 				        <td>
-				            <select class="select-filter-value"><option></option></select>
+				            <select class="select-filter-value scenario-column-values"><option></option></select>
 				        </td>
 				        <td><button type="button" class="remove-row" disabled="disabled">-</button></td>
 				        <td><button type="button" class="add-row">+</button></td>
@@ -38,7 +40,7 @@
 			<button type="button" class="remove-button">X</button>
 			<div class="pipeline-content">
 				<span class="pipeline-header">Aggregate</span> <br />
-				<select class="select-aggregate-type" name="aggregate[0]['type']"><option>mean</option><option>geomean</option></select> over <select class="select-aggregate-column scenario-column" name="aggregate[0]['col']"><option></option></select>
+				<select class="select-aggregate-type" name="aggregate[0]['type']"><option value="1">mean</option><option value="2">geomean</option></select> over <select class="select-aggregate-column scenario-column" name="aggregate[0]['col']"><option></option></select>
 			</div>
 			<div class="pipeline-footer"></div>
 		</div>
@@ -46,25 +48,25 @@
 			<button type="button" class="remove-button">X</button>
 			<div class="pipeline-content">
 				<span class="pipeline-header">Normalise</span> <br />
-				<label><input type="radio" name="normalise-type" value="select" checked="checked"/> to specific value</label> <br />
+				<label><input type="radio" name="normalise-type" value="1" checked="checked"/> to specific value</label> <br />
 				<table class="pipeline-normalise-table">
 				    <tr>
 				        <td>
-				            <select class="select-normalise-column scenario-column"><option></option></select>
+				            <select class="select-normalise-column scenario-column scenario-column-values-select"><option></option></select>
 				        </td>
 				        <td>
 				            =
 				        </td>
 				        <td>
-				            <select class="select-normalise-value"><option></option></select>
+				            <select class="select-normalise-value scenario-column-values"><option></option></select>
 				        </td>
 				        <td><button type="button" class="remove-row" disabled="disabled">-</button></td>
 				        <td><button type="button" class="add-row">+</button></td>
 				    </tr>
 				</table>
-				<label><input type="radio" name="normalise-type" value="best" /> to best value in group</label> <br />
+				<label><input type="radio" name="normalise-type" value="2" /> to best value in group</label> <br />
 				<strong>Grouping</strong><br />
-                <select name="normalise-group" class="select-normalise-group" multiple="multiple"><option></option></select>
+                <select name="select-normalise-group" class="select-normalise-group" multiple="multiple"><option></option></select>
 			</div>
 			<div class="pipeline-footer"></div>
 		</div>
