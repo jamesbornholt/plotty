@@ -24,13 +24,26 @@ def filter_values(request, logs, col):
 def log_values(request, logs):
     """ Given a set of log files, find all possible scenario variables in those
         logs, and all possible value keys """
-    columns = []
-    keys = []
     dt = DataTable(logs.split(','))
-    columns, keys, _ = dt.headers()
-    columns.sort()
-    keys.sort()
-    return HttpResponse(json.dumps({'scenarioCols': columns, 'valueCols': keys}))
+
+    # Grab and sort scenario and value columns
+    scenarioCols = list(dt.scenarioColumns)
+    valueCols = list(dt.valueColumns)
+    scenarioCols.sort()
+    valueCols.sort()
+    
+    # Grab and sort possible values for scenario columns
+    scenarioValues = {}
+    for row in dt:
+        for col in row.scenario:
+            if col not in scenarioValues:
+                scenarioValues[col] = set()
+            scenarioValues[col].add(row.scenario[col])
+    for k in scenarioValues.iterkeys():
+        scenarioValues[k] = list(scenarioValues[k])
+        scenarioValues[k].sort()
+    
+    return HttpResponse(json.dumps({'scenarioCols': scenarioCols, 'valueCols': valueCols, 'scenarioValues': scenarioValues}))
 
 def pipeline(request, pipeline):
     try:

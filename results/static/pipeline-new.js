@@ -195,12 +195,30 @@ var Block = Base.extend({
     encode: function() {
         
     },
+
+    /**
+     * Take this block's HTML, and use those values to update the local
+     * configurations.
+     */
+    readState: function() {
+        
+    },
+
+    /**
+     * Take this block's local configurations, and use them to update the
+     * HTML for this block.
+     */
+    loadState: function() {
+        
+    },
     
     /**
      * The available scenario or value columns have changed, so we need to
      * cascade those changes through the pipeline. If these changes have 
      * forced a change in our configuration (e.g. if a scenario column we were
      * using has disappeared), warn the user somehow.
+     * This function should validate the block's local configuration, and,
+     * if something has changed, call loadState to update the block.
      *
      * @param scenarioCols array The scenario columns available
      * @param valueCols array the value columns now available
@@ -260,6 +278,7 @@ var Blocks = {
                 thisBlock.removeFilter.call(thisBlock, row); 
             };
             var addClosure = function(row) {
+                thisBlock.filters.push({scenario: -1, is: 1, value: -1});
                 Pipeline.refresh(Pipeline.constants.CASCADE_REASON_SELECTION_CHANGED);
             };
             
@@ -267,8 +286,88 @@ var Blocks = {
             this.optionsTable = new OptionsTable($('.pipeline-filter-table', this.element), removeClosure, Pipeline.refresh, addClosure);
             
             // Hook the dropdowns
-            $(this.element).delegate('.select-filter-value, .select-filter-is', 'change', function() {
+            $(this.element).delegate('select', 'change', function() {
+                thisBlock.readState();
                 Pipeline.refresh(Pipeline.constants.CASCADE_REASON_SELECTION_CHANGED);
+            });
+        },
+        
+        /**
+        * Decode a parameter string and set this block's configuration according
+        * to those parameters.
+         */
+        decode: function(params) {
+            var filts = params.split(Pipeline.encoder.GROUP_SEPARATOR);
+            var thisBlock = this;
+            jQuery.each(filts, function(i ,filter) {
+                var parts = filter.split(Pipeline.encoder.PARAM_SEPARATOR);
+                thisBlock.filters.push({scenario: parts[0], is: (parts[0] == Pipeline.constants.filter.IS), value: parts[2]});
+            });
+        },
+        
+        /**
+         * Encode this block into a parameter string based on its configuration.
+         */
+        encode: function() {
+            var strs = []
+            jQuery.each(this.filters, function(i, filter) {
+                if ( filter.scenario != -1 && filter.value != -1 ) {
+                    strs.push(filter.scenario + Pipeline.encoder.PARAM_SEPARATOR
+                              + (filter.is ? Pipeline.constants.filter.IS : Pipeline.constants.filter.IS_NOT)
+                              + Pipeline.encoder.PARAM_SEPARATOR + filter.value);
+                }
+            });
+            return strs.join(Pipeline.encoder.GROUP_SEPARATOR);
+        },
+
+        /**
+         * Take this block's HTML values and load them into local
+         * configuration.
+         */
+        readState: function() {
+            this.filters = [];
+            var thisBlock = this;
+            $('tr', this.element).each(function() {
+                var scenarioSelect = $('.select-filter-column', this);
+                var isSelect = $('.select-filter-is', this);
+                var valueSelect = $('.select-filter-value', this);
+
+                thisBlock.filters.push({
+                    scenario: scenarioSelect.val(),
+                    is: (isSelect.val() == Pipeline.constants.filter.IS),
+                    value: valueSelect.val()
+                });
+            });
+        },
+
+        /**
+         * Take this block's local configuration and load it into the
+         * HTML.
+         */
+        loadState: function() {
+            // Get rid of all but the first row
+            this.optionsTable.reset();
+            
+            // Create new rows for each filter
+            var thisBlock = this;
+            jQuery.each(this.filters, function(i, filter) {
+                var row = thisBlock.optionsTable.addRow();
+                var scenarioSelect = $('.select-filter-column', row);
+                var isSelect = $('.select-filter-is', row);
+                var valueSelect = $('.select-filter-value', row);
+                
+                // Note here we assume the scenario dropdown has already been
+                // updated, and the value cache is also up to date with new
+                // logs.
+                scenarioSelect.val(filter.scenario);
+                isSelect.val( (filter.is ? Pipeline.constants.filter.IS : Pipeline.constants.filter.IS_NOT) );
+                if ( filter.scenario != -1 ) {
+                    Utilities.updateSelect(valueSelect, Pipeline.valueCache[filter.scenario]);
+                }
+                else {
+                    Utilities.updateSelect(valueSelect, []);
+                }
+                valueSelect.val(filter.value);
             });
         },
         
@@ -277,52 +376,49 @@ var Blocks = {
          * columns. See Block.cascade for parameters and return.
          */
         cascade: function(scenarioCols, valueCols, reason) {
-            var block = this;
-            this.filters = [];
-            var valid = true;
-            $('tr', this.element).each(function() {
-                var scenarioSelect = $('.select-filter-column', this);
-                var valueSelect = $('.select-filter-value', this);
-                
-                // Update the scenario column dropdown. If its old value is
-                // no longer available, blank the values column and we're done
-                // (this can't possibly be a valid filter).
-                if ( !Utilities.updateSelect(scenarioSelect, scenarioCols) ) {
-                    Utilities.updateSelect(valueSelect, []);
-                    valid = false;
+            var thisBlock = this;
+            var changed = false;
+            
+            // Update the scenario columns
+            $('.select-filter-column', this.element).each(function() {
+                Utilities.updateSelect(this, scenarioCols, true);
+            });
+            
+            jQuery.each(this.filters, function(i, filter) {
+                // If the selected scenario isn't in the new available ones,
+                // reset this row
+                if ( jQuery.inArray(filter.scenario, scenarioCols) == -1 ) {
+                    filter.scenario = -1;
+                    filter.value = -1;
+                    changed = true;
                     return;
                 }
                 
-                // If there's no selected scenario, we're done.
-                if ( scenarioSelect.val() == '-1' ) {
-                    valid = false;
+                // Check that the value is still in the valueCache
+                if ( jQuery.inArray(filter.value, Pipeline.valueCache[filter.scenario]) == -1 ) {
+                    filter.value = -1;
+                    changed = true;
                     return;
                 }
                 
-                // At this point we have a valid selected scenario column.
-                // If the log files available have changed, we need to update
-                // the available values for this block.
-                if ( reason == Pipeline.constants.CASCADE_REASON_LOGS_CHANGED ) {
-                    Pipeline.loadValuesForScenarioColumn(scenarioSelect.val(), function(list) {
-                        Utilities.updateSelect(valueSelect, list);
-                    });
-                }
-                
-                var value = block.filterValue(this);
-                if ( valueSelect.val() == '-1' ) {
-                    valid = false;
-                    return;
-                }
-                block.filters.push(value);
-                if ( $('.select-filter-is', this).val() == 'is' ) {
-                    scenarioCols.remove(value.scenario);
+                // We now have valid scenario and value. Remove the scenario
+                // from scenarioCols
+                if ( filter.is ) {
+                    scenarioCols.remove(filter.scenario);
                 }
             });
-            if ( valid ) {
-                return [scenarioCols, valueCols];
+            
+            // If the values have changed, or the logs have changed (and thus
+            // the valueCache), we have to reload the HTML.
+            if ( changed || reason == Pipeline.constants.CASCADE_REASON_LOGS_CHANGED ) {
+                this.loadState();
+            }
+            
+            if ( changed ) {
+                return false;
             }
             else {
-                return false;
+                return [scenarioCols, valueCols];
             }
         },
         
@@ -341,7 +437,7 @@ var Blocks = {
                 if ( this.filters[i].scenario == value.scenario
                      && this.filters[i].is == value.is
                      && this.filters[i].value == value.value ) {
-                    this.filters.remove(i);
+                    this.filters.splice(i, 1);
                     break;
                 }
             }
@@ -358,11 +454,11 @@ var Blocks = {
             var scenario = $('.select-filter-column', row).val();
             var is       = $('.select-filter-is', row).val();
             var value    = $('.select-filter-value', row).val();
-            if ( scenario === '-1' || value === '-1' ) {
+            if ( scenario == -1 || value == -1 ) {
                 return false;
             }
             else {
-                return {scenario: scenario, is: (is == 'is'), value: value};
+                return {scenario: scenario, is: (is == Pipeline.constants.filter.IS), value: value};
             }
         }
     }),
@@ -700,6 +796,11 @@ var OptionsTable = Base.extend({
      * The callback to call after a row is removed.
      */
     postRemoveCallback: null,
+
+    /**
+     * The number of rows in the table currently.
+     */
+    numRows: 0,
     
     /**
      * Initialise the table's event handlers and the like.
@@ -740,6 +841,34 @@ var OptionsTable = Base.extend({
         
         this._clearSelects(element);
     },
+
+    /**
+     * Reset the table to a blank state
+     */
+    reset: function() {
+        $('tr', this.element).not(':first').remove();
+        this.numRows = 0;
+    },
+
+    /**
+     * Create a new row and return it for use programatically
+     * (as opposed to being created by the user clicking +)
+     */
+    addRow: function() {
+        var row = $('tr', this.element).eq(0);
+        this.numRows += 1;
+
+        // If the table is blank, we should return the first row.
+        // Otherwise, create a new one.
+        if ( this.numRows > 1 ) {
+            row = row.clone();
+            this.element.append(row);
+        }
+        
+        this._updateAddRemoveButtons();
+
+        return row;
+    },
     
     /**
      * Update the add/remove buttons on a table of option rows
@@ -761,6 +890,8 @@ var OptionsTable = Base.extend({
      */
     _addBlockTableRow: function() {
         var newRow = $('tr:first-child', this.element).clone();
+
+        this.numRows += 1;
 
         this._clearSelects(newRow);
 
@@ -824,6 +955,12 @@ var Pipeline = {
      * Some constants
      */
     constants: {
+        // Type of filter
+        filter: {
+            IS: 1,
+            IS_NOT: 2
+        },
+        
         // Type of aggregate
         aggregate: {
             MEAN: 1,    // Arithmetic mean
@@ -842,6 +979,15 @@ var Pipeline = {
         CASCADE_REASON_BLOCK_REMOVED: 3,     // A block was removed
         CASCADE_REASON_SELECTION_CHANGED: 4, // A selection changed 
         CASCADE_REASON_SELECTION_CHANGED_NORMALISER: 5    // Scenario selection changed
+    },
+    
+    /**
+     * Some special strings for pipeline encoding
+     */
+    encoder: {
+        BLOCK_SEPARATOR: "|",
+        GROUP_SEPARATOR: "&",
+        PARAM_SEPARATOR: "^"
     },
     
     /**
@@ -890,20 +1036,6 @@ var Pipeline = {
         
         // Hook the log selection dropdowns
         $("#pipeline-log").delegate(".select-log", 'change', Pipeline.refreshAvailableColumns);
-        
-        // Hook the scenario column value selectors to update appropriately
-        $("#pipeline").delegate(".scenario-column-values-select", 'change', function() {
-            var valuesSelect = $('.scenario-column-values', $(this).parents('tr'));
-            if ( $(this).val() == '-1' ) {
-                Utilities.updateSelect(valuesSelect, []);
-            }
-            else {            
-                var callback = function(list) {
-                    Utilities.updateSelect(valuesSelect, list);
-                };
-                Pipeline.loadValuesForScenarioColumn($(this).val(), callback);
-            }
-        });
         
         // Turn the scenario and value column selects into multiselects
         $("#select-scenario-cols, #select-value-cols").toChecklist();
@@ -1024,6 +1156,7 @@ var Pipeline = {
         var url = 'ajax/log-values/' + Pipeline._selectedLogFiles().join(',') + '/';
         $.getJSON(url, function(data, textStatus, xhr) {
             Pipeline.updateAvailableColumns(data.scenarioCols, data.valueCols);
+            Pipeline.valueCache = data.scenarioValues;
             Pipeline.refresh(Pipeline.constants.CASCADE_REASON_LOGS_CHANGED);
         });
     },
