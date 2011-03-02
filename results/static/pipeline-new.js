@@ -478,7 +478,7 @@ var Blocks = {
         /**
          * The scenario column to aggregate over
          */
-        column: null,
+        column: -1,
         
         /**
          * The type of aggregate to use. This should be a value from
@@ -493,10 +493,56 @@ var Blocks = {
             this.base(insertIndex, params);
             this.type = Pipeline.constants.aggregate.MEAN;
             
-            // Hook the dropdown
+            // Hook the dropdowns
+            var thisBlock = this;
             $(this.element).delegate('select', 'change', function() {
+                thisBlock.readState();
                 Pipeline.refresh(Pipeline.constants.CASCADE_REASON_SELECTION_CHANGED);
             });
+        },
+        
+        /**
+         * Decode a parameter string and set this block's configuration according
+         * to those parameters.
+         */
+        decode: function(params) {
+            var parts = params.split(Pipeline.encoder.GROUP_SEPARATOR);
+            this.type = parts[0];
+            this.column = parts[1];
+        },
+        
+        /**
+         * Encode this block into a parameter string based on its configuration.
+         */
+        encode: function() {
+            return this.type + Pipeline.encoder.GROUP_SEPARATOR + this.column;
+        },
+
+        /**
+         * Take this block's HTML values and load them into local
+         * configuration.
+         */
+        readState: function() {
+            var typeSelect = $('.select-aggregate-type', this.element);
+            var scenarioSelect = $('.select-aggregate-column', this.element);
+            
+            this.type = typeSelect.val();
+            this.column = scenarioSelect.val();
+        },
+        
+        /**
+         * Take this block's local configuration and load it into the
+         * HTML.
+         */
+        loadState: function() {
+            // By the time this function is called, the scenario dropdown
+            // should already have been updated with available scenario
+            // columns
+            var typeSelect = $('.select-aggregate-type', this.element);
+            var scenarioSelect = $('.select-aggregate-column', this.element);
+            
+            typeSelect.val(this.type);
+            scenarioSelect.val(this.column);
         },
         
         /**
@@ -508,15 +554,13 @@ var Blocks = {
             // kept, the block is invalid.
             var scenarioSelect = $('.select-aggregate-column', this.element);
             if ( !Utilities.updateSelect(scenarioSelect, scenarioCols) ) {
+                this.column = -1;
                 return false;
             }
-            
-            this.column = scenarioSelect.val();
-            this.type = $('.select-aggregate-type', this.element).val();
-            
-            scenarioCols.remove(scenarioSelect.val());
-            
-            return [scenarioCols, valueCols];
+            else {
+                scenarioCols.remove(this.column);
+                return [scenarioCols, valueCols];
+            }
         }
     }),
     
