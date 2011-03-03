@@ -258,7 +258,7 @@ var Blocks = {
         /**
          * The currently valid filters
          */
-        filters: [],
+        filters: [{scenario: -1, is: 1, value: -1}],
         
         /**
          * The options table for selecting filters
@@ -430,9 +430,7 @@ var Blocks = {
          */
         removeFilter: function(row) {
             var value = this.filterValue(row);
-            if ( value === false ) {
-                return;
-            }
+            
             for ( var i = 0; i < this.filters.length; i++ ) {
                 if ( this.filters[i].scenario == value.scenario
                      && this.filters[i].is == value.is
@@ -454,12 +452,8 @@ var Blocks = {
             var scenario = $('.select-filter-column', row).val();
             var is       = $('.select-filter-is', row).val();
             var value    = $('.select-filter-value', row).val();
-            if ( scenario == -1 || value == -1 ) {
-                return false;
-            }
-            else {
-                return {scenario: scenario, is: (is == Pipeline.constants.filter.IS), value: value};
-            }
+            
+            return {scenario: scenario, is: (is == Pipeline.constants.filter.IS), value: value};
         }
     }),
     
@@ -586,7 +580,7 @@ var Blocks = {
          * The scenario that selects the normaliser. This only exists if
          * the type of normaliser is SELECT.
          */
-        normaliser: [],
+        normaliser: [{scenario: -1, value: -1}],
         
         /**
          * The scenario columns used to group the rows before normalising.
@@ -608,6 +602,7 @@ var Blocks = {
                 thisBlock.removeNormaliser.call(thisBlock, row); 
             };
             var addClosure = function(row) {
+                thisBlock.normaliser.push({scenario: -1, value: -1});
                 Pipeline.refresh(Pipeline.constants.CASCADE_REASON_SELECTION_CHANGED);
             };
             
@@ -615,19 +610,19 @@ var Blocks = {
             this.optionsTable = new OptionsTable($('.pipeline-normalise-table', this.element), removeClosure, Pipeline.refresh, addClosure);
             
             // Hook the dropdowns
-            $(this.element).delegate('.select-normaliser-column, .select-normalise-value', 'change', function() {
+            $(this.element).delegate('select, .select-normalise-group input', 'change', function() {
+		        thisBlock.readState();
                 Pipeline.refresh(Pipeline.constants.CASCADE_REASON_SELECTION_CHANGED_NORMALISER);
             });
-            
-            // Hook the checkboxes in the group select
-            $(this.element).delegate(".select-normalise-group input", 'change', Pipeline.refresh);
             
             // We need to give the radio buttons a unique name to make sure
             // they toggle correctly.
             var radios = $('input:radio', this.element);
             radios.attr('name', 'normalise-type-' + parseInt(Math.random() * 1E7));
-            // Select the first radio button in the group
+            
+            // By default we are selecting a specific normaliser
             radios.first().attr('checked', 'checked');
+            this.type = Pipeline.constants.normaliser.SELECT;
             
             // Hook the radio buttons to show/hide the table
             radios.change(function() {
@@ -640,129 +635,196 @@ var Blocks = {
                 else if ( this.value == Pipeline.constants.normaliser.BEST ) {
                     thisBlock.optionsTable.element.hide();
                 }
+                thisBlock.readState();
                 Pipeline.refresh(Pipeline.constants.CASCADE_REASON_SELECTION_CHANGED)
             });
         },
+        
+        /**
+        * Decode a parameter string and set this block's configuration according
+        * to those parameters.
+         */
+        decode: function(params) {
+            var parts = params.split(Pipeline.encoder.GROUP_SEPARATOR);
+            this.type = parts[0];
+            this.normaliser = [];
+            this.group = [];
+            
+            if ( this.type == Pipeline.constants.normaliser.SELECT ) {
+                for ( var i = 1; i < parts.length; i++ ) {
+                    if ( parts[i].indexOf(Pipeline.encoder.PARAM_SEPARATOR) > -1 ) {
+                        var opts = parts[i].split(Pipeline.encoder.PARAM_SEPARATOR);
+                        this.normaliser.push({scenario: opts[0], value: opts[1]});
+                    }
+                    else {
+                        this.group.push(parts[i]);
+                    }
+                }
+            }
+            else {
+                this.group = parts.slice(1);
+            }
+        },
+        
+        /**
+         * Encode this block into a parameter string based on its configuration.
+         */
+        encode: function() {
+            var strs = []
+            strs.push(this.type);
+            if ( this.type == Pipeline.constants.normaliser.SELECT ) {
+                jQuery.each(this.normaliser, function(i, norm) {
+                    if ( norm.scenario != -1 && norm.value != -1 ) {
+                        strs.push(norm.scenario + Pipeline.encoder.PARAM_SEPARATOR + norm.value);
+                    }
+                });
+            }
+            strs.push(this.group.join(Pipeline.encoder.PARAM_SEPARATOR));
+            
+            return strs.join(Pipeline.encoder.GROUP_SEPARATOR);
+        },
+				 
+        /**
+         * Take this block's HTML values and load them into local
+         * configuration.
+         */
+        readState: function() {
+	        this.group = [];
+	        this.normaliser = [];
+	    
+	        // Read the type
+	        this.type = $('input:radio:checked', this.element).val();
+	    
+	        // If needed, read the normaliser
+	        if ( this.type == Pipeline.constants.normaliser.SELECT ) {
+	            var thisBlock = this;
+		        $('tr', this.element).each(function() {
+		            var scenarioSelect = $('.select-normalise-column', this);
+		            var valueSelect = $('.select-normalise-value', this);
+		            
+		            thisBlock.normaliser.push({
+			            scenario: scenarioSelect.val(),
+			            value: valueSelect.val()
+		            });
+		        });
+	        }
+	    
+	        // Read the grouping
+	        this.group = Utilities.multiSelectValue($('.select-normalise-group', this.element));
+	    },
+	
+	    /**
+         * Take this block's local configuration and load it into the
+         * HTML.
+         */
+        loadState: function() {
+	        if ( this.type == Pipeline.constants.normaliser.SELECT ) {
+		        // Show and reset the table
+		        this.optionsTable.element.show();
+		        this.optionsTable.reset();
+		        
+		        var thisBlock = this;
+		        jQuery.each(this.normaliser, function(i, norm) {
+		            var row = thisBlock.optionsTable.addRow();
+		            var scenarioSelect = $('.select-normalise-column', row);
+		            var valueSelect = $('.select-normalise-value', row);
+		            
+		            // Note here we assume the scenario dropdown has already been updated
+		            scenarioSelect.val(norm.scenario);
+		            if ( norm.scenario == -1 ) {
+		        	    Utilities.updateSelect(valueSelect, []);
+		            }
+		            else {
+		        	    Utilities.updateSelect(valueSelect, Pipeline.valueCache[norm.scenario]);
+		            }
+		            valueSelect.val(norm.value);
+		        });
+	        }
+	        else {
+		        // Hide the table, and reset it anyway
+		        this.optionsTable.element.hide();
+	        }
+
+		    // Update the grouping
+		    var thisBlock = this;
+		    $('.select-normalise-group input:checkbox', this.element).each(function() {
+		        if ( jQuery.inArray($(this).val(), thisBlock.group) > -1 ) {
+		            $(this).attr('checked', 'checked');
+		        }
+		        else {
+		            $(this).attr('checked', '');
+		        }
+		    });
+	    },
         
         /**
          * Visit this block and cascade the available scenario and value 
          * columns. See Block.cascade for parameters and return.
          */
         cascade: function(scenarioCols, valueCols, reason) {
-            var block = this;
-            this.normaliser = [];
-            this.group = [];
-            this.type = $('input:radio:checked', this.element).val();
-
+            var thisBlock = this;
+            var changed = false;
+            
+            // We don't want to remove scenario cols prematurely
             var returnScenarioCols = scenarioCols.slice();
             
-            // Even if we catch an invalid reason, we still need to go all
-            // the way through so we can update the scenario columns.
-            var valid = true;
-            
-            // To ensure options that are selected in the normaliser are not
-            // available in the grouping select, we update the multiSelect
-            // twice if type = SELECT.
-            Utilities.updateMultiSelect($('.select-normalise-group', this.element), scenarioCols, true);
-            this.group = Utilities.multiSelectValue($('.select-normalise-group', this.element));
-            console.debug("Removing [" + this.group + "] from returnScenarioCols");
-            for ( var i = 0; i < this.group.length; i++ ) {
-                returnScenarioCols.remove(this.group[i]);
-            }
-            
-            // If we want to select a specific normaliser, we need to gather
-            // its specifiers from the OptionTable.
-            var selectedNormaliserScenarios = [];
+            // If we are selecting a normaliser, we need to update the 
+            // options table.
             if ( this.type == Pipeline.constants.normaliser.SELECT ) {
-                $('tr', this.optionsTable.element).each(function() {
-                    var scenarioSelect = $('.select-normalise-column', this);
-                    var valueSelect = $('.select-normalise-value', this);
-                    
-                    // Update the scenario column dropdown. If its old value is
-                    // no longer available, blank the values column and we're done
-                    // (this can't possibly be a valid normaliser).
-                    // Note: we use scenarioCols, which has had the selected
-                    //   grouping columns removed already.
-                    if ( !Utilities.updateSelect(scenarioSelect, scenarioCols) ) {
-                        Utilities.updateSelect(valueSelect, []);
-                        valid = false;
-                        return;
-                    }
-                    
-                    // If there's no selected scenario, we're done.
-                    if ( scenarioSelect.val() == '-1' ) {
-                        valid = false;
-                        return;
-                    }
-                    
-                    // At this point we have a valid selected scenario column.
-                    // If the log files available have changed, we need to update
-                    // the available values for this block.
-                    if ( reason == Pipeline.constants.CASCADE_REASON_LOGS_CHANGED ) {
-                        Pipeline.loadValuesForScenarioColumn(scenarioSelect.val(), function(list) {
-                            Utilities.updateSelect(valueSelect, list);
-                        });
-                    }
-
-                    selectedNormaliserScenarios.push(scenarioSelect.val());
-                    
-                    // Make sure a value has been selected
-                    if ( valueSelect.val() == '-1' ) {
-                        valid = false;
-                        return;
-                    }
-                    
-                    block.normaliser.push({scenario: scenarioSelect.val(), value: valueSelect.val()});
-                    returnScenarioCols.remove(scenarioSelect.val());
-                });
-
-                // Update the grouping select with a new list that doesn't
-                // contain the scenario columns selected in the normaliser
-                Utilities.updateMultiSelect($('.select-normalise-group', this.element), scenarioCols, true);
-                this.group = Utilities.multiSelectValue($('.select-normalise-group', this.element));
-            }
-            // If we are here because a scenario was changed in the
-            // select normaliser section, we can't possibly be valid.
-            // We also need to deselect scenario columns that are
-            // selected in both sections.
-            if ( reason == Pipeline.constants.CASCADE_REASON_SELECTION_CHANGED_NORMALISER ) {
-                console.debug("reason = SSELECTION_CHANGED_NORMALISER");
-                //valid = false;
-                // Uncheck any selected grouping scenario cols that
-                // are also used as normaliser scenario cols.
-                var thisBlock = this;
-                $('input:checkbox:checked', this.element).each(function() {
-                    for ( var i = 0; i < thisBlock.normaliser.length; i++ ) {
-                        if ( thisBlock.normaliser[i].scenario == this.value ) {
-                            $(this).attr('checked', '');
-                            thisBlock.normaliser.splice(i, 1);
-                            return;
-                        }
-                    }
-                });
-            }
-            else if ( this.type == Pipeline.constants.normaliser.SELECT ) {
-                // Unselect any selected normaliser scenario cols that
-                // are also used as grouping scenario cols
-                console.debug("Removing [" + this.group + "] from normalisers");
-                var thisBlock = this;
+                // Update all the scenario columns
                 $('.select-normalise-column', this.optionsTable.element).each(function() {
-                    var index = jQuery.inArray(this.value, thisBlock.group);
-                    if ( index > -1 ) {
-                        this.selectedIndex = 0;
-                        valid = false;
-                        Utilities.updateSelect($('.select-normalise-value', $(this).parents("tr")), []);
-                        thisBlock.group.splice(index, 1);
+                    Utilities.updateSelect(this, scenarioCols, true);
+                });
+                
+                jQuery.each(this.normaliser, function(i, norm) {
+                    // If the selected scenario isn't in the new available ones,
+                    // reset this row
+                    if ( jQuery.inArray(norm.scenario, scenarioCols) == -1 ) {
+                        norm.scenario = -1;
+                        norm.value = -1;
+                        changed = true;
                         return;
                     }
+                    
+                    // Check that the value is still in the value cache
+                    if ( jQuery.inArray(norm.value, Pipeline.valueCache[norm.scenario]) == -1 ) {
+                        norm.value = -1;
+                        changed = true;
+                        return;
+                    }
+                    
+                    // We now have a valid scenario and value. Remove this scenario
+                    // from returnScenarioCols
+                    returnScenarioCols.remove(norm.scenario);
                 });
             }
             
-            if ( valid ) {
-                return [returnScenarioCols, valueCols];
+            // Update the groups
+            Utilities.updateMultiSelect($('.select-normalise-group', this.element), scenarioCols, true);
+            
+            // Check that all the groups are in the new scenario cols
+            jQuery.each(this.group, function(i, grp) {
+                if ( jQuery.inArray(grp, scenarioCols) == -1 ) {
+                    // This is safe due to the way jQuery.each iterates.
+                    thisBlock.group.splice(i, 1);
+                    changed = true;
+                }
+                else {
+                    returnScenarioCols.remove(grp);
+                }
+            });
+            
+            // If the values have changed, or the logs have changed (and thus
+            // the valueCache), we have to reload the HTML.
+            if ( changed || reason == Pipeline.constants.CASCADE_REASON_LOGS_CHANGED ) {
+                this.loadState();
+            }
+            
+            if ( changed ) {
+                return false;
             }
             else {
-                return false;
+                return [returnScenarioCols, valueCols];
             }
         },
         
@@ -774,12 +836,10 @@ var Blocks = {
          */
         removeNormaliser: function(row) {
             var value = this.normaliserValue(row);
-            if ( value === false ) {
-                return;
-            }
+
             for ( var i = 0; i < this.normaliser.length; i++ ) {
                 if ( this.normaliser[i].scenario == value.scenario && this.normaliser[i].value == value.value ) {
-                    this.normaliser.remove(i);
+                    this.normaliser.splice(i, 1);
                     break;
                 }
             }
@@ -793,14 +853,9 @@ var Blocks = {
          *   the selection is incomplete
          */
         normaliserValue: function(row) {
-            var scenario = $('.select-normaliser-column', row).val();
-            var value    = $('.select-normaliser-value', row).val();
-            if ( scenario === '-1' || value === '-1' ) {
-                return false;
-            }
-            else {
-                return {scenario: scenario, value: value};
-            }
+            var scenario = $('.select-normalise-column', row).val();
+            var value    = $('.select-normalise-value', row).val();
+            return {scenario: scenario, value: value};
         }
     }),
     
