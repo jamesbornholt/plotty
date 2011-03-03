@@ -864,9 +864,226 @@ var Blocks = {
      *
      */
     GraphBlock: Block.extend({
+        /**
+         * The ID of the template for this filter
+         */
         templateID: "#pipeline-graph-template",
+        
+        /**
+         * The type of graph. Should be a value from Pipeline.constants.graph
+         */
+        type: null,
+        
+        /**
+         * The options for the specified graph
+         */
+        options: {},
+        
+        /**
+         * Creates a new block. See Block.constructor for parameters.
+         */
         constructor: function(insertIndex, params) {
             this.base(insertIndex, params);
+            this.type = Pipeline.constants.graph.HISTOGRAM;
+            
+            // Hook the dropdowns
+            var thisBlock = this;
+            $(this.element).delegate('select', 'change', function() {
+                thisBlock.readState();
+                Pipeline.refresh(Pipeline.constants.CASCADE_REASON_SELECTION_CHANGED);
+            });
+            
+            // Hide all blocks except our default one
+            $('.pipeline-graph-type-options', this.element).hide();
+            $('.graph-histogram', this.element).show();
+            $('.select-graph-type').val(this.type);
+        },
+        
+        /**
+         * Decode a parameter string and set this block's configuration according
+         * to those parameters.
+         */
+        decode: function(params) {
+            var parts = params.split(Pipeline.encoder.GROUP_SEPARATOR);
+            this.type = parts[0];
+            if ( this.type == Pipeline.constants.graph.HISTOGRAM || this.type == Pipeline.constants.graph.XY ) {
+                this.options = {
+                    column: parts[1],
+                    row: parts[2],
+                    value: parts[3]
+                };
+            }
+        },
+        
+        /**
+         * Encode this block into a parameter string based on its configuration.
+         */
+        encode: function() {
+            var strs = [];
+            strs.push(this.type);
+            if ( this.type == Pipeline.constants.graph.HISTOGRAM || this.type == Pipeline.constants.graph.XY ) {
+                strs.push(this.options.column);
+                strs.push(this.options.row);
+                strs.push(this.options.value);
+            }
+            
+            return strs.join(Pipeline.encoder.GROUP_SEPARATOR);
+        },
+        
+        /**
+         * Take this block's HTML values and load them into local
+         * configuration.
+         */
+        readState: function() {
+            this.options = {};
+            
+            // Read the type
+            this.type = $('.select-graph-type', this.element).val();
+            
+            // These could be consolidated, but are left split as an example
+            // of how to do more complicated graphs with different options.
+            if ( this.type == Pipeline.constants.graph.HISTOGRAM ) {
+                var blockOptions = $('.graph-histogram', this.element);
+
+                var columnSelect = $('.select-graph-column', blockOptions);
+                var rowSelect = $('.select-graph-row', blockOptions);
+                var valueSelect = $('.select-graph-value', blockOptions);
+                
+                this.options.column = columnSelect.val();
+                this.options.row = rowSelect.val();
+                this.options.value = valueSelect.val();
+            }
+            else if ( this.type == Pipeline.constants.graph.XY ) {
+                var blockOptions = $('.graph-xy', this.element);
+
+                var columnSelect = $('.select-graph-column', blockOptions);
+                var rowSelect = $('.select-graph-row', blockOptions);
+                var valueSelect = $('.select-graph-value', blockOptions);
+                
+                this.options.column = columnSelect.val();
+                this.options.row = rowSelect.val();
+                this.options.value = valueSelect.val();
+            }
+        },
+        
+        /**
+         * Take this block's local configuration and load it into the
+         * HTML.
+         */
+        loadState: function() {
+            // Hide all the blocks (we'll show one soon)
+            $('.pipeline-graph-type-options', this.element).hide();
+            
+            // Set the type dropdown
+            $('.select-graph-type').val(this.type);
+            
+            // These could be consolidated, but are left split as an example
+            // of how to do more complicated graphs with different options.
+            if ( this.type == Pipeline.constants.graph.HISTOGRAM ) {
+                var blockOptions = $('.graph-histogram', this.element);
+                
+                // Show this block
+                blockOptions.show();
+
+                var columnSelect = $('.select-graph-column', blockOptions);
+                var rowSelect = $('.select-graph-row', blockOptions);
+                var valueSelect = $('.select-graph-value', blockOptions);
+                
+                columnSelect.val(this.options.column);
+                rowSelect.val(this.options.row);
+                valueSelect.val(this.options.value);
+            }
+            else if ( this.type == Pipeline.constants.graph.XY ) {
+                var blockOptions = $('.graph-xy', this.element);
+                
+                // Show this block
+                blockOptions.show();
+
+                var columnSelect = $('.select-graph-column', blockOptions);
+                var rowSelect = $('.select-graph-row', blockOptions);
+                var valueSelect = $('.select-graph-value', blockOptions);
+                
+                columnSelect.val(this.options.column);
+                rowSelect.val(this.options.row);
+                valueSelect.val(this.options.value);
+            }
+        },
+        
+        /**
+         * Visit this block and cascade the available scenario and value 
+         * columns. See Block.cascade for parameters and return.
+         */
+        cascade: function(scenarioCols, valueCols, reason) {
+            var valid = true;
+            
+            $('.pipeline-graph-type-options', this.element).hide();
+            
+            // These could be consolidated, but are left split as an example
+            // of how to do more complicated graphs with different options.
+            if ( this.type == Pipeline.constants.graph.HISTOGRAM ) {
+                var blockOptions = $('.graph-histogram', this.element);
+                
+                // Show this block
+                blockOptions.show();
+
+                var columnSelect = $('.select-graph-column', blockOptions);
+                var rowSelect = $('.select-graph-row', blockOptions);
+                var valueSelect = $('.select-graph-value', blockOptions);
+                
+                if ( !Utilities.updateSelect(columnSelect, scenarioCols) ) {
+                    this.options.column = -1;
+                    valid = false;
+                }
+                if ( !Utilities.updateSelect(rowSelect, scenarioCols) ) {
+                    this.options.row = -1;
+                    valid = false;
+                }
+                if ( !Utilities.updateSelect(valueSelect, valueCols) ) {
+                    this.options.value = -1;
+                    valid = false;
+                }
+                
+                if ( valid ) {
+                    scenarioCols.remove(this.options.column);
+                    scenarioCols.remove(this.options.row);
+                }
+                
+            }
+            else if ( this.type == Pipeline.constants.graph.XY ) {
+                var blockOptions = $('.graph-xy', this.element);
+                
+                // Show this block
+                blockOptions.show();
+
+                var columnSelect = $('.select-graph-column', blockOptions);
+                var rowSelect = $('.select-graph-row', blockOptions);
+                var valueSelect = $('.select-graph-value', blockOptions);
+                
+                if ( !Utilities.updateSelect(columnSelect, scenarioCols) ) {
+                    this.options.column = -1;
+                    valid = false;
+                }
+                if ( !Utilities.updateSelect(rowSelect, scenarioCols) ) {
+                    this.options.row = -1;
+                    valid = false;
+                }
+                if ( !Utilities.updateSelect(valueSelect, valueCols) ) {
+                    this.options.value = -1;
+                    valid = false;
+                }
+                
+                if ( valid ) {
+                    scenarioCols.remove(this.options.column);
+                    scenarioCols.remove(this.options.row);
+                }
+            }
+            
+            if ( valid ) {
+                return [scenarioCols, valueCols];
+            }
+            else {
+                return false;
+            }
         }
     })
 };
@@ -1070,6 +1287,12 @@ var Pipeline = {
         normaliser: {
             SELECT: 1,  // A specific scenario is the normaliser
             BEST: 2     // The best value in the group is the normaliser
+        },
+        
+        // Type of graph
+        graph: {
+            HISTOGRAM: 1, // Bar chart
+            XY: 2         // XY scatter plot
         },
         
         // Reasons for cascade being called
