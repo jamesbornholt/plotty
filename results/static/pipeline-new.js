@@ -4,7 +4,8 @@
 if ( typeof console === 'undefined' ) {
     var console = {
         log:   function() {},
-        error: function() {}
+        error: function() {},
+        debug: function() {}
     }
 }
 
@@ -123,14 +124,32 @@ var Utilities = {
  */
 var Block = Base.extend({
     /**
+     ** Static fields
+     **/
+
+    /**
+     * Where to find the template for this block
+     */
+    TEMPLATE_ID: null,
+
+    /**
+     * The ID of this block for encoding (the inverse of the mapping in
+     * Pipeline.encoder.MAPPINGS)
+     */
+    ID: null,
+
+    /**
+     ** Object fields
+     **/
+    
+    /**
      * The HTML div that contains this block.
      */
     element: null,
     
     /**
-     * Where to find the template for this block
-     */
-    templateID: null,
+     ** Object methods
+     **/
     
     /**
      * Construct a new block. The block will be inserted into the pipeline
@@ -140,12 +159,10 @@ var Block = Base.extend({
      *
      * @param insertIndex int The index to insert the block at, where 0 is
      *   before the first block so n is after the n-th block.
-     * @param params string (optional) A parameter string that this block
-     *   should be set to
      */
-    constructor: function(insertIndex, params) {
+    constructor: function(insertIndex) {
         // Spawn the new block and clear its ID
-        var newBlock = $(this.templateID).clone();
+        var newBlock = $(this.TEMPLATE_ID).clone();
         newBlock.attr('id', '');
         
         // Insert the block.
@@ -168,11 +185,6 @@ var Block = Base.extend({
         });
         
         this.element = newBlock;
-        
-        // Decode the parameter string if it's there
-        if ( typeof params !== 'undefined' ) {
-            this.decode(params);
-        }
     },
     
     /**
@@ -251,10 +263,32 @@ var Blocks = {
      */
     FilterBlock: Block.extend({
         /**
+         ** Static fields
+         **/
+
+        /**
          * The ID of the template for this filter
          */
-        templateID: "#pipeline-filter-template",
+        TEMPLATE_ID: "#pipeline-filter-template",
+
+        /**
+         * The ID of this block for encoding (the inverse of the mapping in
+         * Pipeline.encoder.MAPPINGS)
+         */
+        ID: 1,
+
+        /**
+         * The type of filter
+         */
+        TYPE: {
+            IS: 1,
+            IS_NOT: 2
+        },
         
+        /**
+         ** Object fields
+         **/
+
         /**
          * The currently valid filters
          */
@@ -266,10 +300,14 @@ var Blocks = {
         optionsTable: null,
         
         /**
+         ** Object methods
+         **/
+
+        /**
          * Creates a new block. See Block.constructor for parameters.
          */
-        constructor: function(insertIndex, params) {
-            this.base(insertIndex, params);
+        constructor: function(insertIndex) {
+            this.base(insertIndex);
             
             // Create a closure to use as the callback for removing objects.
             // This way, the scope of this block is maintained.
@@ -297,11 +335,12 @@ var Blocks = {
         * to those parameters.
          */
         decode: function(params) {
+            this.filters = [];
             var filts = params.split(Pipeline.encoder.GROUP_SEPARATOR);
             var thisBlock = this;
             jQuery.each(filts, function(i ,filter) {
                 var parts = filter.split(Pipeline.encoder.PARAM_SEPARATOR);
-                thisBlock.filters.push({scenario: parts[0], is: (parts[0] == Pipeline.constants.filter.IS), value: parts[2]});
+                thisBlock.filters.push({scenario: parts[0], is: thisBlock.TYPE.IS, value: parts[2]});
             });
         },
         
@@ -313,8 +352,7 @@ var Blocks = {
             jQuery.each(this.filters, function(i, filter) {
                 if ( filter.scenario != -1 && filter.value != -1 ) {
                     strs.push(filter.scenario + Pipeline.encoder.PARAM_SEPARATOR
-                              + (filter.is ? Pipeline.constants.filter.IS : Pipeline.constants.filter.IS_NOT)
-                              + Pipeline.encoder.PARAM_SEPARATOR + filter.value);
+                              + filter.is + Pipeline.encoder.PARAM_SEPARATOR + filter.value);
                 }
             });
             return strs.join(Pipeline.encoder.GROUP_SEPARATOR);
@@ -334,7 +372,7 @@ var Blocks = {
 
                 thisBlock.filters.push({
                     scenario: scenarioSelect.val(),
-                    is: (isSelect.val() == Pipeline.constants.filter.IS),
+                    is: isSelect.val(),
                     value: valueSelect.val()
                 });
             });
@@ -360,7 +398,7 @@ var Blocks = {
                 // updated, and the value cache is also up to date with new
                 // logs.
                 scenarioSelect.val(filter.scenario);
-                isSelect.val( (filter.is ? Pipeline.constants.filter.IS : Pipeline.constants.filter.IS_NOT) );
+                isSelect.val(filter.is);
                 if ( filter.scenario != -1 ) {
                     Utilities.updateSelect(valueSelect, Pipeline.valueCache[filter.scenario]);
                 }
@@ -403,7 +441,7 @@ var Blocks = {
                 
                 // We now have valid scenario and value. Remove the scenario
                 // from scenarioCols
-                if ( filter.is ) {
+                if ( filter.is == thisBlock.TYPE.IS ) {
                     scenarioCols.remove(filter.scenario);
                 }
             });
@@ -453,7 +491,7 @@ var Blocks = {
             var is       = $('.select-filter-is', row).val();
             var value    = $('.select-filter-value', row).val();
             
-            return {scenario: scenario, is: (is == Pipeline.constants.filter.IS), value: value};
+            return {scenario: scenario, is: is, value: value};
         }
     }),
     
@@ -465,9 +503,31 @@ var Blocks = {
      */
     AggregateBlock: Block.extend({
         /**
-         * The ID of the template for this filter
+         ** Static fields
+         **/
+
+        /**
+         * The ID of the template for this block
          */
-        templateID: "#pipeline-aggregate-template",
+        TEMPLATE_ID: "#pipeline-aggregate-template",
+
+        /**
+         * The ID of this block for encoding (the inverse of the mapping in
+         * Pipeline.encoder.MAPPINGS)
+         */
+        ID: 2,
+
+        /**
+         * The type of aggregate
+         */
+        TYPE: {
+            MEAN: 1,
+            GEOMEAN: 2
+        },
+        
+        /**
+         ** Object fields
+         **/
         
         /**
          * The scenario column to aggregate over
@@ -479,13 +539,17 @@ var Blocks = {
          * Pipeline.constants.aggregate
          */
         type: null,
+
+        /**
+         ** Object methods
+         **/
         
         /**
          * Creates a new block. See Block.constructor for parameters.
          */
-        constructor: function(insertIndex, params) {
-            this.base(insertIndex, params);
-            this.type = Pipeline.constants.aggregate.MEAN;
+        constructor: function(insertIndex) {
+            this.base(insertIndex);
+            this.type = this.TYPE.MEAN;
             
             // Hook the dropdowns
             var thisBlock = this;
@@ -566,9 +630,31 @@ var Blocks = {
      */
     NormaliseBlock: Block.extend({
         /**
+         ** Static fields
+         **/
+        
+        /**
          * The ID of the template for this filter
          */
-        templateID: "#pipeline-normalise-template",
+        TEMPLATE_ID: "#pipeline-normalise-template",
+
+        /**
+         * The ID of this block for encoding (the inverse of the mapping in
+         * Pipeline.encoder.MAPPINGS)
+         */
+        ID: 3,
+
+        /**
+         * The type of normalisation
+         */
+        TYPE: {
+            SELECT: 1,
+            BEST: 2
+        },
+
+        /**
+         ** Object fields
+         **/
         
         /**
          * The type of normaliser. This should be a value from
@@ -590,10 +676,14 @@ var Blocks = {
         group: [],
         
         /**
+         ** Object methods
+         **/
+
+        /**
          * Creates a new block. See Block.constructor for parameters.
          */
-        constructor: function(insertIndex, params) {
-            this.base(insertIndex, params);
+        constructor: function(insertIndex) {
+            this.base(insertIndex);
             
             // Create a closure to use as the callback for removing objects.
             // This way, the scope of this block is maintained.
@@ -622,17 +712,17 @@ var Blocks = {
             
             // By default we are selecting a specific normaliser
             radios.first().attr('checked', 'checked');
-            this.type = Pipeline.constants.normaliser.SELECT;
+            this.type = this.TYPE.SELECT;
             
             // Hook the radio buttons to show/hide the table
             radios.change(function() {
                 if ( !this.checked ) {
                     return;
                 }
-                if ( this.value == Pipeline.constants.normaliser.SELECT ) {
+                if ( this.value == thisBlock.TYPE.SELECT ) {
                     thisBlock.optionsTable.element.show();
                 }
-                else if ( this.value == Pipeline.constants.normaliser.BEST ) {
+                else if ( this.value == thisBlock.TYPE.BEST ) {
                     thisBlock.optionsTable.element.hide();
                 }
                 thisBlock.readState();
@@ -650,7 +740,7 @@ var Blocks = {
             this.normaliser = [];
             this.group = [];
             
-            if ( this.type == Pipeline.constants.normaliser.SELECT ) {
+            if ( this.type == this.TYPE.SELECT ) {
                 for ( var i = 1; i < parts.length; i++ ) {
                     if ( parts[i].indexOf(Pipeline.encoder.PARAM_SEPARATOR) > -1 ) {
                         var opts = parts[i].split(Pipeline.encoder.PARAM_SEPARATOR);
@@ -672,7 +762,7 @@ var Blocks = {
         encode: function() {
             var strs = []
             strs.push(this.type);
-            if ( this.type == Pipeline.constants.normaliser.SELECT ) {
+            if ( this.type == this.TYPE.SELECT ) {
                 jQuery.each(this.normaliser, function(i, norm) {
                     if ( norm.scenario != -1 && norm.value != -1 ) {
                         strs.push(norm.scenario + Pipeline.encoder.PARAM_SEPARATOR + norm.value);
@@ -696,7 +786,7 @@ var Blocks = {
 	        this.type = $('input:radio:checked', this.element).val();
 	    
 	        // If needed, read the normaliser
-	        if ( this.type == Pipeline.constants.normaliser.SELECT ) {
+	        if ( this.type == this.TYPE.SELECT ) {
 	            var thisBlock = this;
 		        $('tr', this.element).each(function() {
 		            var scenarioSelect = $('.select-normalise-column', this);
@@ -718,7 +808,7 @@ var Blocks = {
          * HTML.
          */
         loadState: function() {
-	        if ( this.type == Pipeline.constants.normaliser.SELECT ) {
+	        if ( this.type == this.TYPE.SELECT ) {
 		        // Show and reset the table
 		        this.optionsTable.element.show();
 		        this.optionsTable.reset();
@@ -768,14 +858,14 @@ var Blocks = {
             // We don't want to remove scenario cols prematurely
             var returnScenarioCols = scenarioCols.slice();
             
+            // Update all the scenario columns
+            $('.select-normalise-column', this.optionsTable.element).each(function() {
+                Utilities.updateSelect(this, scenarioCols, true);
+            });
+
             // If we are selecting a normaliser, we need to update the 
             // options table.
-            if ( this.type == Pipeline.constants.normaliser.SELECT ) {
-                // Update all the scenario columns
-                $('.select-normalise-column', this.optionsTable.element).each(function() {
-                    Utilities.updateSelect(this, scenarioCols, true);
-                });
-                
+            if ( this.type == this.TYPE.SELECT ) {                
                 jQuery.each(this.normaliser, function(i, norm) {
                     // If the selected scenario isn't in the new available ones,
                     // reset this row
@@ -865,9 +955,31 @@ var Blocks = {
      */
     GraphBlock: Block.extend({
         /**
+         ** Static fields
+         **/
+        
+        /**
          * The ID of the template for this filter
          */
-        templateID: "#pipeline-graph-template",
+        TEMPLATE_ID: "#pipeline-graph-template",
+
+        /**
+         * The ID of this block for encoding (the inverse of the mapping in
+         * Pipeline.encoder.MAPPINGS)
+         */
+        ID: 4,
+
+        /**
+         * The type of graph
+         */
+        TYPE: {
+            HISTOGRAM: 1,
+            XY: 2
+        },
+
+        /**
+         ** Object fields
+         **/
         
         /**
          * The type of graph. Should be a value from Pipeline.constants.graph
@@ -880,11 +992,15 @@ var Blocks = {
         options: {},
         
         /**
+         ** Object methods
+         **/
+
+        /**
          * Creates a new block. See Block.constructor for parameters.
          */
-        constructor: function(insertIndex, params) {
-            this.base(insertIndex, params);
-            this.type = Pipeline.constants.graph.HISTOGRAM;
+        constructor: function(insertIndex) {
+            this.base(insertIndex);
+            this.type = this.TYPE.HISTOGRAM;
             
             // Hook the dropdowns
             var thisBlock = this;
@@ -906,7 +1022,7 @@ var Blocks = {
         decode: function(params) {
             var parts = params.split(Pipeline.encoder.GROUP_SEPARATOR);
             this.type = parts[0];
-            if ( this.type == Pipeline.constants.graph.HISTOGRAM || this.type == Pipeline.constants.graph.XY ) {
+            if ( this.type == this.TYPE.HISTOGRAM || this.type == this.TYPE.XY ) {
                 this.options = {
                     column: parts[1],
                     row: parts[2],
@@ -921,7 +1037,7 @@ var Blocks = {
         encode: function() {
             var strs = [];
             strs.push(this.type);
-            if ( this.type == Pipeline.constants.graph.HISTOGRAM || this.type == Pipeline.constants.graph.XY ) {
+            if ( this.type == this.TYPE.HISTOGRAM || this.type == this.TYPE.XY ) {
                 strs.push(this.options.column);
                 strs.push(this.options.row);
                 strs.push(this.options.value);
@@ -942,7 +1058,7 @@ var Blocks = {
             
             // These could be consolidated, but are left split as an example
             // of how to do more complicated graphs with different options.
-            if ( this.type == Pipeline.constants.graph.HISTOGRAM ) {
+            if ( this.type == this.TYPE.HISTOGRAM ) {
                 var blockOptions = $('.graph-histogram', this.element);
 
                 var columnSelect = $('.select-graph-column', blockOptions);
@@ -953,7 +1069,7 @@ var Blocks = {
                 this.options.row = rowSelect.val();
                 this.options.value = valueSelect.val();
             }
-            else if ( this.type == Pipeline.constants.graph.XY ) {
+            else if ( this.type == this.TYPE.XY ) {
                 var blockOptions = $('.graph-xy', this.element);
 
                 var columnSelect = $('.select-graph-column', blockOptions);
@@ -979,7 +1095,7 @@ var Blocks = {
             
             // These could be consolidated, but are left split as an example
             // of how to do more complicated graphs with different options.
-            if ( this.type == Pipeline.constants.graph.HISTOGRAM ) {
+            if ( this.type == this.TYPE.HISTOGRAM ) {
                 var blockOptions = $('.graph-histogram', this.element);
                 
                 // Show this block
@@ -993,7 +1109,7 @@ var Blocks = {
                 rowSelect.val(this.options.row);
                 valueSelect.val(this.options.value);
             }
-            else if ( this.type == Pipeline.constants.graph.XY ) {
+            else if ( this.type == this.TYPE.XY ) {
                 var blockOptions = $('.graph-xy', this.element);
                 
                 // Show this block
@@ -1020,7 +1136,7 @@ var Blocks = {
             
             // These could be consolidated, but are left split as an example
             // of how to do more complicated graphs with different options.
-            if ( this.type == Pipeline.constants.graph.HISTOGRAM ) {
+            if ( this.type == this.TYPE.HISTOGRAM ) {
                 var blockOptions = $('.graph-histogram', this.element);
                 
                 // Show this block
@@ -1049,7 +1165,7 @@ var Blocks = {
                 }
                 
             }
-            else if ( this.type == Pipeline.constants.graph.XY ) {
+            else if ( this.type == this.TYPE.XY ) {
                 var blockOptions = $('.graph-xy', this.element);
                 
                 // Show this block
@@ -1085,7 +1201,7 @@ var Blocks = {
                 return false;
             }
         }
-    })
+    }),
 };
 
 
@@ -1270,32 +1386,9 @@ var Pipeline = {
     /**
      * Some constants
      */
-    constants: {
-        // Type of filter
-        filter: {
-            IS: 1,
-            IS_NOT: 2
-        },
-        
-        // Type of aggregate
-        aggregate: {
-            MEAN: 1,    // Arithmetic mean
-            GEOMEAN: 2  // Geometric mean
-        },
-        
-        // Type of normaliser
-        normaliser: {
-            SELECT: 1,  // A specific scenario is the normaliser
-            BEST: 2     // The best value in the group is the normaliser
-        },
-        
-        // Type of graph
-        graph: {
-            HISTOGRAM: 1, // Bar chart
-            XY: 2         // XY scatter plot
-        },
-        
+    constants: {        
         // Reasons for cascade being called
+        CASCADE_REASON_PIPELINE_LOADED: 0,   // A new pipeline was loaded
         CASCADE_REASON_LOGS_CHANGED: 1,      // Available logs have changed
         CASCADE_REASON_BLOCK_ADDED: 2,       // A new block was added
         CASCADE_REASON_BLOCK_REMOVED: 3,     // A block was removed
@@ -1309,7 +1402,16 @@ var Pipeline = {
     encoder: {
         BLOCK_SEPARATOR: "|",
         GROUP_SEPARATOR: "&",
-        PARAM_SEPARATOR: "^"
+        PARAM_SEPARATOR: "^",
+
+        // Mappings from IDs to blocks (the inverse of the mappings inside each
+        // block)
+        MAPPINGS: {
+            1: Blocks.FilterBlock,
+            2: Blocks.AggregateBlock,
+            3: Blocks.NormaliseBlock,
+            4: Blocks.GraphBlock
+        }
     },
     
     /**
@@ -1321,7 +1423,7 @@ var Pipeline = {
     /**
      * The option table for log files
      */
-    logFileOptionTable: null,
+    logFileOptionsTable: null,
     
     /**
      * Blocks in the pipeline
@@ -1337,14 +1439,12 @@ var Pipeline = {
      * called after the DOM is ready.
      */
     init: function() {
-        console.debug("Pipeline.init start");
-        
         // Set up AJAX request options
         $.ajaxSetup({
             cache: false,
             // TODO: A nice exception handler for AJAX failure
             error: function(xhr, textStatus, errorThrown) {
-                console.log("ajax failed: ", xhr, textStatus, errorThrown);
+                console.error("ajax failed: ", xhr, textStatus, errorThrown);
             }
         });
         $('#loading-indicator').ajaxStart(function() {
@@ -1354,8 +1454,8 @@ var Pipeline = {
         });
         
         // Create the options table for log files
-        this.logFileOptionTable = new OptionsTable($('#pipeline-log-table'), null, Pipeline.refreshAvailableColumns);
-        
+        Pipeline.logFileOptionsTable = new OptionsTable($('#pipeline-log-table'), null, Pipeline.refreshAvailableColumns);
+
         // Hook the log selection dropdowns
         $("#pipeline-log").delegate(".select-log", 'change', Pipeline.refreshAvailableColumns);
         
@@ -1415,7 +1515,7 @@ var Pipeline = {
             console.debug("Pipeline.refresh: Pipeline not valid.");
         }
         else {
-            console.debug("Pipeline.refresh: Pipeline valid.");
+            console.debug("Pipeline.refresh: Pipeline valid: " + encoded);
         }
     },
     
@@ -1462,8 +1562,86 @@ var Pipeline = {
         }
         else {
             $('#header-config').css('background-color', 'green');
-            return "hello";
+            return Pipeline.encode();
         }
+    },
+
+    /**
+     * Encode the entire pipeline. This function assumes the pipeline has
+     * already been validated and is correct - if not, the results of this
+     * are probably unpredictable.
+     *
+     * @return string The encoded pipeline.
+     */
+    encode: function() {
+        var strs = [];
+
+        // Encode the selected log files.
+        var logFiles = Pipeline._selectedLogFiles();
+        strs.push(logFiles.join(Pipeline.encoder.GROUP_SEPARATOR));
+
+        // Encode the scenario and value columns
+        var scenarioCols = Utilities.multiSelectValue($("#select-scenario-cols"));
+        var valueCols = Utilities.multiSelectValue($("#select-value-cols"));
+
+        strs.push(scenarioCols.join(Pipeline.encoder.GROUP_SEPARATOR));
+        strs.push(valueCols.join(Pipeline.encoder.GROUP_SEPARATOR));
+
+        // Now encode the pipeline
+        jQuery.each(this.blocks, function(i, block) {
+            strs.push(block.ID + block.encode());
+        });
+
+        return strs.join(Pipeline.encoder.BLOCK_SEPARATOR);
+    },
+
+    /**
+     * Load a pipeline from an encoded string.
+     *
+     * @param encoded String The encoded pipeline string to parse.
+     */
+    decode: function(encoded) {
+        var parts = encoded.split(Pipeline.encoder.BLOCK_SEPARATOR);
+
+        var logFiles = parts[0].split(Pipeline.encoder.GROUP_SEPARATOR);
+        var scenarioCols = parts[1].split(Pipeline.encoder.GROUP_SEPARATOR);
+        var valueCols = parts[2].split(Pipeline.encoder.GROUP_SEPARATOR);
+
+        var blocks = parts.slice(3);
+
+        // Reset the pipeline
+        Pipeline.logFileOptionsTable.reset();
+        jQuery.each(Pipeline.blocks, function(i, block) {
+            block.removeBlock();
+        });
+        Pipeline.blocks = [];
+
+        // Load the log files into the table
+        jQuery.each(logFiles, function(i, log) {
+            var row = Pipeline.logFileOptionsTable.addRow();
+            $('.select-log', row).val(log);
+        });
+
+        // Load new columns
+        Pipeline.ajax.logValues(function(data, textStatus, xhr) {
+            Pipeline.valueCache = data.scenarioValues;
+
+            // Update scenario and value column selections
+            Utilities.updateMultiSelect($("#select-scenario-cols"), data.scenarioCols, scenarioCols);
+            Utilities.updateMultiSelect($("#select-value-cols"), data.valueCols, valueCols);
+
+            // Start creating blocks
+            jQuery.each(blocks, function(i, params) {
+                var paramString = params.slice(1);
+                var block = new Pipeline.encoder.MAPPINGS[params[0]](Pipeline.blocks.length);
+                block.cascade(data.scenarioCols, data.valueCols);
+                block.decode(paramString);
+                block.loadState();
+                Pipeline.blocks.push(block);
+            });
+
+            Pipeline.refresh(Pipeline.constants.CASCADE_REASON_PIPELINE_LOADED);
+        });
     },
     
     /**
@@ -1475,8 +1653,7 @@ var Pipeline = {
         Pipeline.valueCache = {};
         
         // Load new columns.
-        var url = 'ajax/log-values/' + Pipeline._selectedLogFiles().join(',') + '/';
-        $.getJSON(url, function(data, textStatus, xhr) {
+        Pipeline.ajax.logValues(function(data, textStatus, xhr) {
             Pipeline.updateAvailableColumns(data.scenarioCols, data.valueCols);
             Pipeline.valueCache = data.scenarioValues;
             Pipeline.refresh(Pipeline.constants.CASCADE_REASON_LOGS_CHANGED);
@@ -1493,33 +1670,20 @@ var Pipeline = {
         Utilities.updateMultiSelect($("#select-scenario-cols"), scenarioCols, true);
         Utilities.updateMultiSelect($("#select-value-cols"), valueCols, true);
     },
-    
+
     /**
-     * Load the available values for a scenario column.
-     *
-     * @param scenarioCol string The scenario column to load available values
-     *   for.
-     * @param callback function(Array) The callback function to call when the
-     *   data has been loaded. Since this may result in an AJAX request, it
-     *   may not happen immediately.
+     * Ajax requests.
      */
-    loadValuesForScenarioColumn: function(scenarioCol, callback) {
-        // Check if we already have values in the cache; if so, trigger the
-        // callback now with cached values
-        if ( scenarioCol in Pipeline.valueCache ) {
-            console.debug("Values for " + scenarioCol + " are cached.");
-            callback.call(this, Pipeline.valueCache[scenarioCol]);
-        }
-         
-        else {
-            var url = 'ajax/filter-values/' + Pipeline._selectedLogFiles().join(',') + '/' + scenarioCol + '/';
-            $.getJSON(url, function(data, textStatus, xhr) {
-                Pipeline.valueCache[scenarioCol] = data;
-                callback.call(this, data);
-            });
+    ajax: {
+        /**
+         * ajax/log-values/<logs>/ returns information about the columns in the
+         * specified logfiles
+         */
+        logValues: function(callback) {
+            $.getJSON('ajax/log-values/' + Pipeline._selectedLogFiles().join(',') + '/', callback);
         }
     },
-     
+    
     /**
      ** Utility methods
      **/
@@ -1529,7 +1693,7 @@ var Pipeline = {
      */
     _selectedLogFiles: function() {
         var logs = [];
-        $('.select-log').each(function() {
+        $('.select-log', Pipeline.logFileOptionsTable.element).each(function() {
             if ( $(this).val() != '-1' ) {
                 logs.push($(this).val());
             }
