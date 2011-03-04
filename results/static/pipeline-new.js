@@ -1431,6 +1431,11 @@ var Pipeline = {
     blocks: [],
     
     /**
+     * The current page hash, used to run hashchange events
+     */
+    hash: "",
+
+    /**
      ** Public methods
      **/
     
@@ -1478,6 +1483,28 @@ var Pipeline = {
         $('#add-graph').click(function() {
             Pipeline.createBlock(Blocks.GraphBlock);
         });
+
+        // Hook the hashchange event for history nav. Based on
+        // http://www.bcherry.net/static/lib/js/jquery.pathchange.js
+        var isSupported = "onhashchange" in window;
+        if ( !isSupported && window.setAttribute ) {
+            window.setAttribute("onhashchange", "return;");
+            isSupported = ( typeof window.onhashchange === "function" );
+        }
+        $(window).bind("hashchange", Pipeline.hashChange);
+        if ( !isSupported ) {
+            var lastHash = window.location.hash;
+            setInterval(function() {
+                if ( lastHash !== window.location.hash ) {
+                    $(window).trigger("hashchange");
+                    lastHash = window.location.hash;
+                }
+            });
+        }
+
+        // Trigger it once now
+        Pipeline.hashChange();
+        
     },
     
     /**
@@ -1516,9 +1543,39 @@ var Pipeline = {
         }
         else {
             console.debug("Pipeline.refresh: Pipeline valid: " + encoded);
+            // Here's where we'd load stuff.
+            Pipeline.pushState(encoded);
         }
     },
+
+    /**
+     * The hash has changed. Read it, check it, and do something about it.
+     */
+    hashChange: function() {
+        var hash = window.location.hash;
+        if ( hash[0] == "#" ) {
+            hash = hash.substr(1);
+        }
+        console.debug("Hashchange: window.location.hash = " + hash + ", Pipeline.hash = " + Pipeline.hash);
+        if ( hash == Pipeline.hash ) {
+            console.debug("Hashchange: false alarm");
+            return;
+        }
+        Pipeline.decode(hash);
+        Pipeline.hash = hash;
+    },
     
+    /**
+     * Push a new pipeline onto the history stack
+     *
+     * @param encoded string The encoded pipeline to push
+     */
+    pushState: function(encoded) {
+        console.debug("pushState: " + encoded);
+        Pipeline.hash = encoded;
+        window.location.hash = encoded;
+    },
+
     /**
      * Cascade the available scenario and value columns down the pipeline.
      *
@@ -1651,7 +1708,7 @@ var Pipeline = {
     refreshAvailableColumns: function() {
         // Clear the values cache, since a log changed it's invalid now.
         Pipeline.valueCache = {};
-        
+                
         // Load new columns.
         Pipeline.ajax.logValues(function(data, textStatus, xhr) {
             Pipeline.updateAvailableColumns(data.scenarioCols, data.valueCols);
