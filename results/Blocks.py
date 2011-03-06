@@ -1,55 +1,96 @@
 import math, copy, tempfile, os
 from plotty.results.DataTypes import DataTable, DataRow, DataAggregate
 from plotty.results.Utilities import present_value, scenario_hash, present_value_csv
+from plotty.results.Exceptions import *
+import plotty.results.PipelineEncoder as PipelineEncoder
 from plotty import settings
 import logging
 
-class PipelineAmbiguityException(Exception):
-    def __init__(self, msg, block=-1):
-        self.block = block
-        self.msg = msg
 
-class FilterBlock:
+class Block(object):
+    """ The base object for blocks. Defines methods all blocks should implement.
+    """
+    def decode(self, paramString):
+        """ Decodes a paramater string and stores the configuration in local
+            fields. """
+        pass
+    
+    def apply(self, dataTable):
+        """ Apply this block to the dataTable. dataTable is passed by reference,
+            so this method does not return.
+
+            Can throw PipelineAmbiguityException or PipelineBlockException. """
+        pass
+
+
+class FilterBlock(Block):
     """ Filters the datatable by including or excluding particular rows based
         on criteria. The rows that do not match every filter are thrown out 
-        (that is, the list of filters is ANDed together).
-        
-        datatable: the DataTable object to be filtered, passed by reference.
-        filters:   an array of dictionaries describing the filters to be applied.
-                   Each filter has three properties:
-                    * column -- the scenario column to be checked (string)
-                    * value  -- the value the specified scenario column should
-                                take
-                    * is     -- if true, each row must have the specified scenario
-                                column set to the specified value. If false, each
-                                row must *not* have the specified column set to
-                                the specified value.
+        (that is, the list of filters is ANDed together). """
+    
+    """ An array of dictionaries describing the filters to be applied.
+        Each filter has three properties:
+         * column -- the scenario column to be checked (string)
+         * value  -- the value the specified scenario column should
+                     take
+         * is     -- if true, each row must have the specified scenario
+                     column set to the specified value. If false, each
+                     row must *not* have the specified column set to
+                     the specified value.
     """
-    def process(self, datatable, filters):
+
+    # Be warned: though declared the same, we use filters only as an
+    # _instance_ variable, and TYPE only as a _static_/class variable
+    filters = []
+    TYPE = {
+        'IS': '1',
+        'IS_NOT': '2'
+    }
+
+    def decode(self, paramString):
+        filts = paramString.split(PipelineEncoder.GROUP_SEPARATOR)
+        for filtStr in filts:
+            parts = filtStr.split(PipelineEncoder.PARAM_SEPARATOR)
+            self.filters.append({
+                'scenario': parts[0],
+                'is':       (parts[1] == FilterBlock.TYPE['IS']),
+                'value':    parts[2]
+            })
+
+    def apply(self, dataTable):
         newRows = []
-        for row in datatable:
+        removeScenarioCols = set()
+        for filt in self.filters:
+            if filt['is']:
+                removeScenarioCols.add(filt['scenario'])
+
+        for row in dataTable:
             add = True
-            for filt in filters:
+            for filt in self.filters:
                 if filt['is']:
-                    if filt['column'] not in row.scenario or row.scenario[filt['column']] <> filt['value']:
+                    if filt['scenario'] not in row.scenario or row.scenario[filt['scenario']] != filt['value']:
                         add = False
                         break
                 else:
-                    if filt['column'] in row.scenario and row.scenario[filt['column']] == filt['value']:
+                    if filt['scenario'] in row.scenario and row.scenario[filt['scenario']] == filt['value']:
                         add = False
                         break
             if add:
-                # Delete each of the `is` columns from the datatable, as they are
-                # now redundant (since every row will have the same value).
-                removeScenarioColumns = set()
-                for filt in filters:
-                    if filt['is']:
-                        del row.scenario[filt['column']]
-                        removeScenarioColumns.add(filt['column'])
-                datatable.scenarioColumns -= removeScenarioColumns
+                # Delete the scenario columns
+                for col in removeScenarioCols:
+                    if col in row.scenario:
+                        del row.scenario[col]
                 newRows.append(row)
 
-        datatable.rows = newRows
+        # We do it this way because calling .remove(x) on a set raises a key
+        # value error if it wasn't in the set
+        removeScenarioCols = set()
+        for filt in self.filters:
+            if filt['is']:
+                removeScenarioCols.add(filt['scenario'])
+        
+        dataTable.scenarioColumns -= removeScenarioCols
+        dataTable.rows = newRows
 
 
 class AggregateBlock:
@@ -65,20 +106,33 @@ class AggregateBlock:
                     column which is ignored when regrouping rows).
         * type   -- the type of aggregate to generate, either 'mean' or 'geomean'
     """
-    def process(self, datatable, **kwargs):
+
+    column = None
+    type = None
+    TYPE = {
+        '1': 'mean',
+        '2': 'geomean'
+    }
+
+    def decode(self, paramString):
+        parts = paramString.split(PipelineEncoder.GROUP_SEPARATOR)
+        self.type = parts[0]
+        self.column = parts[1]
+
+    def apply(self, dataTable):
         groups = {}
         scenarios = {}
         ignored_rows = 0
         # Group the rows based on their scenarios except for the specified column
-        for row in datatable:
-            if kwargs['column'] not in row.scenario:
+        for row in dataTable:
+            if self.column not in row.scenario:
                 ignored_rows += 1
                 continue
-            schash = scenario_hash(scenario=row.scenario, exclude=[kwargs['column']])
+            schash = scenario_hash(scenario=row.scenario, exclude=[self.column])
             if schash not in scenarios:
                 groups[schash] = []
                 scenarios[schash] = copy.copy(row.scenario)
-                del scenarios[schash][kwargs['column']]
+                del scenarios[schash][self.column]
             groups[schash].append(row.values)
         
         # Create the DataAggregate objects for each group
@@ -88,17 +142,18 @@ class AggregateBlock:
             for row in rows:
                 for (key,val) in row.items():
                     if key not in aggregates:
-                        aggregates[key] = DataAggregate(kwargs['type'])
+                        aggregates[key] = DataAggregate(AggregateBlock.TYPE[self.type])
                     aggregates[key].append(val)
             newRow = DataRow()
             newRow.scenario = scenarios[sc]
             newRow.values = aggregates
             newRows.append(newRow)
         
-        datatable.rows = newRows
-        datatable.scenarioColumns -= set([kwargs['column']])
+        dataTable.rows = newRows
+        dataTable.scenarioColumns -= set([self.column])
         if ignored_rows > 0:
-            logging.info('Aggregate block (%s over %s) ignored %d rows.' % (kwargs['type'], kwargs['column'], ignored_rows))
+            logging.info('Aggregate block (%s over %s) ignored %d rows.' % (self.type, self.column, ignored_rows))
+
 
 
 class NormaliseBlock:
@@ -114,13 +169,38 @@ class NormaliseBlock:
         * normaliser -- the type of normalisation to perform.
           [other arguments determined by this value - see methods below]
     """
-    def process(self, datatable, **kwargs):
-        if kwargs['normaliser'] == 'select':
-            self.processSelectNormaliser(datatable, **kwargs)
-        elif kwargs['normaliser'] == 'best':
-            self.processBestNormaliser(datatable, **kwargs)
-        
-    def processSelectNormaliser(self, datatable, **kwargs):
+
+    group = []
+    type = None
+    normaliser = []
+    TYPE = {
+        'SELECT': '1',
+        'BEST': '2'
+    }
+
+    def decode(self, paramString):
+        parts = paramString.split(PipelineEncoder.GROUP_SEPARATOR)
+        self.type = parts[0]
+        if self.type == NormaliseBlock.TYPE['SELECT']:
+            for part in parts[1:]:
+                if PipelineEncoder.PARAM_SEPARATOR in part:
+                    vals = part.split(PipelineEncoder.PARAM_SEPARATOR)
+                    self.normaliser.append({
+                        'scenario': vals[0],
+                        'value':    vals[1]
+                    })
+                elif part != '':
+                    self.group.append(part)
+        else:
+            self.group = filter(lambda x: x != '', parts[1:])
+    
+    def apply(self, dataTable):
+        if self.type == NormaliseBlock.TYPE['SELECT']:
+            self.processSelectNormaliser(dataTable)
+        elif self.type == NormaliseBlock.TYPE['SELECT']:
+            self.processBestNormaliser(dataTable)
+
+    def processSelectNormaliser(self, dataTable):
         """ Normalises the rows to a specified normaliser. The normaliser is
             specified by a column and value in the scenario of each row. Rows
             in the table are first grouped by every column except the one chosen
@@ -135,32 +215,33 @@ class NormaliseBlock:
             * value  -- the value which the specified column should be equal to
                         in order to select that row as a normaliser.
         """
-        # Handle a parsing bug when constructing the dictionary
-        if kwargs['group'] == ['']:
-            kwargs['group'] = []
         
         # Build the groups for normalisation and find a normaliser for each one
         scenarios = {}
         normalisers = {}
         ignored_rows = 0
 
-        for row in datatable:
+        for row in dataTable:
+            # If any of the normaliser cols aren't in this row's scenario,
+            # throw the row away.
             throw = False
-            for selection in kwargs['selection']:
-                if selection['column'] not in row.scenario:
+            for selection in self.normaliser:
+                if selection['scenario'] not in row.scenario:
                     ignored_rows += 1
                     throw = True
                     break
             if throw:
                 continue
             
-            schash = scenario_hash(scenario=row.scenario, include=kwargs['group'])
+            schash = scenario_hash(scenario=row.scenario, include=self.group)
             if schash not in scenarios:
                 scenarios[schash] = []
             scenarios[schash].append(row)
+
+            # Is this a normaliser we're interested in?
             match = True
-            for selection in kwargs['selection']:
-                if row.scenario[selection['column']] <> selection['value']:
+            for selection in self.normaliser:
+                if row.scenario[selection['scenario']] != selection['value']:
                     match = False
                     break
             if match:
@@ -191,13 +272,13 @@ class NormaliseBlock:
                     row.values[key] = row.values[key] / normalisers[sc][key]
             newRows.extend(rows)
         
-        datatable.rows = newRows
+        dataTable.rows = newRows
         if ignored_rows > 0:
             logging.info('Normalise block (to normaliser %s) ignored %d rows because they did not have a value for some column in the normaliser.' % (kwargs['selection'], ignored_rows))
         if no_normaliser_rows > 0:
             logging.info('Normalise block (to normaliser %s) ignored %d rows because no normaliser existed for them.' % (kwargs['selection'], no_normaliser_rows))
     
-    def processBestNormaliser(self, datatable, **kwargs):
+    def processBestNormaliser(self, dataTable):
         """ Normalises the rows to the best normaliser available. The rows in the
             table are firstly grouped by comparing their scenarios only on the
             specified columns. Then the best value in each group is found and
@@ -210,18 +291,13 @@ class NormaliseBlock:
         """
         scenarios = {}
         normalisers = {}
-        ignored_rows = 0
-        
-        # Handle a parsing bug when constructing the dictionary
-        if kwargs['group'] == ['']:
-            kwargs['group'] = []
         
         # Build the groups to be used and find a normaliser for each one
-        for row in datatable:
+        for row in dataTable:
             # If the row does not have values for each scenario column to be used
             # for grouping, it is discarded
             throw = False
-            for key in kwargs['group']:
+            for key in self.group:
                 if key not in row.scenario:
                     throw = True
                     break
@@ -229,7 +305,7 @@ class NormaliseBlock:
                 ignored_rows += 1
                 continue
             
-            schash = scenario_hash(scenario=row.scenario, include=kwargs['group'])
+            schash = scenario_hash(scenario=row.scenario, include=self.group)
             if schash not in scenarios:
                 scenarios[schash] = []
                 normalisers[schash] = {}
@@ -237,7 +313,7 @@ class NormaliseBlock:
             scenarios[schash].append(row)
             # Check if it is the best normaliser
             for (key,val) in row.values.items():
-                if float(val) <> 0 and val < normalisers[schash].get(key, float('inf')):
+                if float(val) != 0 and val < normalisers[schash].get(key, float('inf')):
                     normalisers[schash][key] = val
         
         newRows = []
@@ -259,7 +335,7 @@ class NormaliseBlock:
                     row.values[key] = row.values[key] / normalisers[sc][key]
                 newRows.append(row)                
         
-        datatable.rows = newRows
+        dataTable.rows = newRows
         if ignored_rows > 0:
             logging.info('Normalise block (to best value, grouping by %s) ignored %d rows because they did not have a value for %s.' % (kwargs['group'], ignored_rows, kwargs['column']))
         if no_normaliser_rows > 0:
