@@ -1711,7 +1711,7 @@ var Pipeline = {
      * @param encoded String The encoded pipeline string to parse.
      */
     decode: function(encoded) {
-        var parts = encoded.split(Pipeline.encoder.BLOCK_SEPARATOR);
+        var parts = unescape(encoded).split(Pipeline.encoder.BLOCK_SEPARATOR);
 
         var logFiles = parts[0].split(Pipeline.encoder.GROUP_SEPARATOR);
         var scenarioCols = parts[1].split(Pipeline.encoder.GROUP_SEPARATOR);
