@@ -248,6 +248,7 @@ class NormaliseBlock:
                 if schash not in normalisers:
                     normalisers[schash] = copy.copy(row.values)
                 else:
+                    logging.debug("Duplicate schash=%s: %s (old: %s)" % (schash, row, normalisers[schash]))
                     raise PipelineAmbiguityException('More than one normaliser was found for the scenario %s.' % row.scenario)
         
         newRows = []
@@ -274,9 +275,9 @@ class NormaliseBlock:
         
         dataTable.rows = newRows
         if ignored_rows > 0:
-            logging.info('Normalise block (to normaliser %s) ignored %d rows because they did not have a value for some column in the normaliser.' % (kwargs['selection'], ignored_rows))
+            logging.info('Normalise block (to normaliser %s) ignored %d rows because they did not have a value for some column in the normaliser.' % (this.normaliser, ignored_rows))
         if no_normaliser_rows > 0:
-            logging.info('Normalise block (to normaliser %s) ignored %d rows because no normaliser existed for them.' % (kwargs['selection'], no_normaliser_rows))
+            logging.info('Normalise block (to normaliser %s) ignored %d rows because no normaliser existed for them.' % (this.normaliser, no_normaliser_rows))
     
     def processBestNormaliser(self, dataTable):
         """ Normalises the rows to the best normaliser available. The rows in the

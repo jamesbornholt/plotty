@@ -769,7 +769,9 @@ var Blocks = {
                     }
                 });
             }
-            strs.push(this.group.join(Pipeline.encoder.PARAM_SEPARATOR));
+            if ( this.group.length > 0 ) {
+                strs.push(this.group.join(Pipeline.encoder.PARAM_SEPARATOR));
+            }
             
             return strs.join(Pipeline.encoder.GROUP_SEPARATOR);
         },
@@ -882,10 +884,6 @@ var Blocks = {
                         changed = true;
                         return;
                     }
-                    
-                    // We now have a valid scenario and value. Remove this scenario
-                    // from returnScenarioCols
-                    returnScenarioCols.remove(norm.scenario);
                 });
             }
             
@@ -898,9 +896,6 @@ var Blocks = {
                     // This is safe due to the way jQuery.each iterates.
                     thisBlock.group.splice(i, 1);
                     changed = true;
-                }
-                else {
-                    returnScenarioCols.remove(grp);
                 }
             });
             
@@ -1482,6 +1477,12 @@ var Pipeline = {
         });
         $('#add-graph').click(function() {
             Pipeline.createBlock(Blocks.GraphBlock);
+        });
+
+        // Hook the button for showing large tables
+        $('#load-large-table').click(function() {
+            $('#output table, #output .foldable.table').show();
+            $('#large-table-confirm').hide();
         });
 
         // Hook the hashchange event for history nav. Based on
