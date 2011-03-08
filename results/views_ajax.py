@@ -50,23 +50,35 @@ def pipeline(request, pipeline):
         p = Pipeline()
         p.decode(pipeline)
         graph_outputs = p.apply()
+
     except PipelineBlockException as e:
         output = '<div class="exception"><h1>Exception in executing block ' + str(e.block + 1) + '</h1>' + e.msg + '<div class="foldable"><h1>Traceback<a href="" class="toggle">[show]</a></h1><div class="foldable-content hidden"><pre>' + e.traceback + '</pre></div></div>'
         return HttpResponse(json.dumps({'error': True, 'index': e.block, 'html': output, 'rows': 1}))
     except PipelineLoadException as e:
-        output = '<div class="exception"><h1>Exception in loading log files</h1>' + e.msg + '<div class="foldable"><h1>Traceback<a href="" class="toggle">[show]</a></h1><div class="foldable-content hidden"><pre>' + e.traceback + '</pre></div></div>'
+        output = '<div class="exception"><h1>Exception in loading data</h1>' + e.msg + '<div class="foldable"><h1>Traceback<a href="" class="toggle">[show]</a></h1><div class="foldable-content hidden"><pre>' + e.traceback + '</pre></div></div>'
         return HttpResponse(json.dumps({'error': True, 'html': output, 'rows': 1}))
+    except PipelineError as e:
+        if isinstance(e.block, str):
+            output = '<div class="exception"><h1>Error in' + e.block + '</h1>' + e.msg + '</div>'
+        else:
+            output = '<div class="exception"><h1>Error in block ' + str(e.block + 1) + '</h1>' + e.msg + '</div>'
+        return HttpResponse(json.dumps({'error': True, 'index': e.block, 'html': output, 'rows': 1}))
     except PipelineAmbiguityException as e:
-        output = '<div class="ambiguity"><h1>Ambiguity in block ' + str(e.block + 1) + '</h1>' + e.msg + '<div><strong>The data below shows the output of the pipeline up to but not including block ' + str(e.block + 1) + '</strong></div></div>'
-        ambiguity = True
-        ambiguityIndex = e.block
-        dt = e.datatable
-        graph_outputs = e.graph_outputs
-        #return HttpResponse(json.dumps({'error': False, 'ambiguity': True, 'index': e.block, 'html': output, 'rows': 1}))
+        if isinstance(e.block, str):
+            # The exception occured early on - cols, probably
+            output = '<div class="ambiguity"><h1>Ambiguity in ' + e.block + '</h1>' + e.msg + '<div></strong></div></div>'
+            return HttpResponse(json.dumps({'error': False, 'ambiguity': True, 'index': e.block, 'html': output, 'rows': 1}))
+        else:
+            output = '<div class="ambiguity"><h1>Ambiguity in block ' + str(e.block + 1) + '</h1>' + e.msg + '<div><strong>The data below shows the output of the pipeline up to but not including block ' + str(e.block + 1) + '</strong></div></div>'
+            ambiguity = True
+            ambiguityIndex = e.block
+            dt = e.dataTable
+            graph_outputs = e.graph_outputs
     else:
         output = ''
         ambiguity = False
         ambiguityIndex = -1
+        dt = p.dataTable
     
     if len(graph_outputs) > 0:
         for i, graph_set in enumerate(graph_outputs, start=1):
@@ -74,11 +86,11 @@ def pipeline(request, pipeline):
             titles.sort()
             for title in titles:
                 output += '<div class="foldable"><h1>' + title + ' (block ' + str(i) + ')</h1>' + graph_set[title] + '</div>'
-        output += '<div class="foldable"><h1>Table</h1>' + p.dataTable.renderToTable() + '</div>'
+        output += '<div class="foldable"><h1>Table</h1>' + dt.renderToTable() + '</div>'
     else:
-        output += p.dataTable.renderToTable()
+        output += dt.renderToTable()
     
-    return HttpResponse(json.dumps({'error': False, 'ambiguity': ambiguity, 'index': ambiguityIndex, 'html': output, 'rows': len(p.dataTable.rows), 'graph': len(graph_outputs) > 0}))
+    return HttpResponse(json.dumps({'error': False, 'ambiguity': ambiguity, 'index': ambiguityIndex, 'html': output, 'rows': len(dt.rows), 'graph': len(graph_outputs) > 0}))
 
 def save_pipeline(request):
     if 'name' not in request.POST or 'encoded' not in request.POST:

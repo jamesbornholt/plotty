@@ -498,37 +498,3 @@ class DataAggregate:
             res = copy.copy(self)
             res.map(lambda d: d / float(other))
             return res
-
-    # Utility
-    
-    def sparkline(self):
-        """ Creates a HTML IMG tag that contains a sparkline for this
-            DataAggregate's values.
-            
-            From http://bitworking.org/news/Sparklines_in_data_URIs_in_Python
-        """
-        if not self._isValid:
-            self._calculate()
-        im = Image.new("RGB", (len(self._values)*2 + 2, 20), 'white')
-        draw = ImageDraw.Draw(im)
-        min_val = float(self._min)
-        max_val = float(self._max)
-        
-        # Generate the set of coordinates
-        if max_val == min_val:
-            coords = map(lambda x: (x, 10), range(0, len(self._values)*2, 10))
-        else:
-            coords = zip(range(0, len(self._values)*2, 2), [15 - 10*(float(y)-min_val)/(max_val-min_val) for y in self._values])
-        draw.line(coords, fill="#888888")
-        
-        # Draw the min and max points
-        min_pt = coords[self._values.index(min_val)]
-        draw.rectangle([min_pt[0]-1, min_pt[1]-1, min_pt[0]+1, min_pt[1]+1], fill="#00FF00")
-        max_pt = coords[self._values.index(max_val)]
-        draw.rectangle([max_pt[0]-1, max_pt[1]-1, max_pt[0]+1, max_pt[1]+1], fill="#FF0000")
-        del draw
-
-        # Write out as a data: URI
-        f = StringIO.StringIO()
-        im.save(f, "PNG")
-        return '<img class="sparkline" src="data:image/png,%s" title="%s" />' % (urllib.quote(f.getvalue()), ", ".join(map(lambda v: str(float(v)), self._values)))

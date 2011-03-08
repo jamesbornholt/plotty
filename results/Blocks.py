@@ -39,13 +39,13 @@ class FilterBlock(Block):
                      the specified value.
     """
 
-    # Be warned: though declared the same, we use filters only as an
-    # _instance_ variable, and TYPE only as a _static_/class variable
-    filters = []
     TYPE = {
         'IS': '1',
         'IS_NOT': '2'
     }
+
+    def __init__(self):
+        self.filters = []
 
     def decode(self, paramString):
         filts = paramString.split(PipelineEncoder.GROUP_SEPARATOR)
@@ -107,12 +107,14 @@ class AggregateBlock:
         * type   -- the type of aggregate to generate, either 'mean' or 'geomean'
     """
 
-    column = None
-    type = None
     TYPE = {
         '1': 'mean',
         '2': 'geomean'
     }
+
+    def __init__(self):
+        self.column = None
+        self.type = None
 
     def decode(self, paramString):
         parts = paramString.split(PipelineEncoder.GROUP_SEPARATOR)
@@ -170,13 +172,15 @@ class NormaliseBlock:
           [other arguments determined by this value - see methods below]
     """
 
-    group = []
-    type = None
-    normaliser = []
     TYPE = {
         'SELECT': '1',
         'BEST': '2'
     }
+
+    def __init__(self):
+        self.group = []
+        self.type = None
+        self.normaliser = []
 
     def decode(self, paramString):
         parts = paramString.split(PipelineEncoder.GROUP_SEPARATOR)
@@ -248,7 +252,6 @@ class NormaliseBlock:
                 if schash not in normalisers:
                     normalisers[schash] = copy.copy(row.values)
                 else:
-                    logging.debug("Duplicate schash=%s: %s (old: %s)" % (schash, row, normalisers[schash]))
                     raise PipelineAmbiguityException('More than one normaliser was found for the scenario %s.' % row.scenario)
         
         newRows = []
@@ -275,9 +278,9 @@ class NormaliseBlock:
         
         dataTable.rows = newRows
         if ignored_rows > 0:
-            logging.info('Normalise block (to normaliser %s) ignored %d rows because they did not have a value for some column in the normaliser.' % (this.normaliser, ignored_rows))
+            logging.info('Normalise block (to normaliser %s) ignored %d rows because they did not have a value for some column in the normaliser.' % (self.normaliser, ignored_rows))
         if no_normaliser_rows > 0:
-            logging.info('Normalise block (to normaliser %s) ignored %d rows because no normaliser existed for them.' % (this.normaliser, no_normaliser_rows))
+            logging.info('Normalise block (to normaliser %s) ignored %d rows because no normaliser existed for them.' % (self.normaliser, no_normaliser_rows))
     
     def processBestNormaliser(self, dataTable):
         """ Normalises the rows to the best normaliser available. The rows in the
@@ -350,6 +353,9 @@ class GraphBlock:
         'HISTOGRAM': '1',
         'XY': '2'
     }
+
+    def __init__(self):
+        self.type = None
 
     def decode(self, paramString):
         parts = paramString.split(PipelineEncoder.GROUP_SEPARATOR)

@@ -29,29 +29,55 @@ class Pipeline(object):
 
     def decode(self, encoded):
         """ Decodes an entire paramater string. """
-        parts = encoded.split(PipelineEncoder.BLOCK_SEPARATOR)
-        self.logs = parts[0].split(PipelineEncoder.GROUP_SEPARATOR)
-        self.scenarioCols = set(parts[1].split(PipelineEncoder.GROUP_SEPARATOR))
-        self.valueCols = set(parts[2].split(PipelineEncoder.GROUP_SEPARATOR))
-
-        for params in parts[3:]:
-            block = BLOCK_MAPPINGS[params[0]]()
-            block.decode(params[1:])
-            self.blocks.append(block)
+        try:
+            parts = encoded.split(PipelineEncoder.BLOCK_SEPARATOR)
+            self.logs = parts[0].split(PipelineEncoder.GROUP_SEPARATOR)
+            self.scenarioCols = set(parts[1].split(PipelineEncoder.GROUP_SEPARATOR))
+            self.valueCols = set(parts[2].split(PipelineEncoder.GROUP_SEPARATOR))
+    
+            for params in parts[3:]:
+                block = BLOCK_MAPPINGS[params[0]]()
+                block.decode(params[1:])
+                self.blocks.append(block)
+        except:
+            raise PipelineLoadException(*sys.exc_info())
         
     def apply(self):
         if len(self.logs) == 0:
-            logging.debug("No logs available")
-            return
+            raise PipelineError("No log files are selected.", 'selected log files')
         
-        self.dataTable = DataTable(logs=self.logs)
-        self.dataTable.selectScenarioColumns(self.scenarioCols)
-        self.dataTable.selectValueColumns(self.valueCols)
+        try:
+            self.dataTable = DataTable(logs=self.logs)
+            self.dataTable.selectScenarioColumns(self.scenarioCols)
+            self.dataTable.selectValueColumns(self.valueCols)
+        except PipelineAmbiguityException as e:
+            e.block = 'selected data'
+            raise e
+        except PipelineError:
+            raise
+        except:
+            raise PipelineLoadException(*sys.exc_info())
 
         graph_outputs = []
 
         for i,block in enumerate(self.blocks):
-            ret = block.apply(self.dataTable)
+            try:
+                ret = block.apply(self.dataTable)
+            except PipelineAmbiguityException as e:
+                e.block = i
+                # Remove this block + the rest of the pipeline, and try again
+                # This is safe - if we've gotten to this point, everything
+                # before this block has already worked
+                del self.blocks[i:]
+                graph_outputs = self.apply()
+                e.dataTable = self.dataTable
+                e.graph_outputs = graph_outputs
+                raise e
+            except PipelineError:
+                raise
+            except:
+                raise PipelineBlockException(i, *sys.exc_info())
+            
             if isinstance(block, GraphBlock):
                 graph_outputs.append(ret)
         

@@ -29,8 +29,6 @@ def present_value(val):
                 output += ' <span class="ci">&plusmn;%.2f%%</span>' % ciDown
             else:
                 output += ' <span class="ci">-%.2f%%, +%.2f%%</span>' % (ciDown, ciUp)
-        if val.count() > 0:
-            output += val.sparkline()
     else:
         output = str(val)
     return output

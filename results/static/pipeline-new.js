@@ -1482,7 +1482,22 @@ var Pipeline = {
         // Hook the button for showing large tables
         $('#load-large-table').click(function() {
             $('#output table, #output .foldable.table').show();
+            $('#output').css('paddingTop', '60px');
             $('#large-table-confirm').hide();
+        });
+
+        // Hook the foldable things
+        $("#output").delegate('.foldable h1 a.toggle', 'click', function() {
+            var foldable_content = $(this).parents('.foldable').children('.foldable-content');
+            if ( foldable_content.hasClass('hidden') ) {
+                foldable_content.removeClass('hidden');
+                $(this).html('[hide]');
+            }
+            else {
+                foldable_content.addClass('hidden');
+                $(this).html('[show]');
+            }
+            return false;
         });
 
         // Hook the hashchange event for history nav. Based on
@@ -1552,17 +1567,36 @@ var Pipeline = {
                 // Stop the sparklines from being rendered unless we actually want them
                 $('#output').hide();
                 $('#output').append(data.html);
-                if ( $('#show-sparklines').get(0).checked === false )
-                    $('.sparkline').hide();
                 if ( data.rows > 100 && !data.graph) {
                     $('#output table, #output .foldable.table').hide();
                     $('#large-table-confirm span').html(data.rows);
                     $('#large-table-confirm').show();
+                    $('#output').css('paddingTop', '6em');
                 }
                 else {
                     $('#large-table-confirm').hide();
+                    $('#output').css('paddingTop', '60px');
                 }
                 $('#output').show();
+
+                $('.error-block').removeClass('error-block');
+                $('.ambiguous-block').removeClass('ambiguous-block');
+                if ( data.error === true ) {
+                    if ( data.index === 'selected log files' ) {
+                        $('#pipeline-log').addClass('error-block');
+                    }
+                    else if ( typeof data.index === 'number' ) {
+                        $('#pipeline .pipeline-block').eq(data.index).addClass('error-block');
+                    }
+                }
+                else if ( data.ambiguity === true ) {
+                    if ( data.index === 'selected data' ) {
+                        $('#pipeline-log').addClass('ambiguity-block');
+                    }
+                    else if ( typeof data.index === 'number' ) {
+                        $('#pipeline .pipeline-block').eq(data.index).addClass('ambiguous-block');
+                    }
+                }
             });
         }
     },
