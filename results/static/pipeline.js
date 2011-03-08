@@ -517,8 +517,12 @@ function selectedLogFiles() {
 function serialisePipeline() {
     var dict = {}
     dict['logs'] = selectedLogFiles();
-    dict['scenario_columns'] = $('#select-scenario-cols').val();
-    dict['value_columns'] = $('#select-value-cols').val();
+    dict['scenario_columns'] = $('#select-scenario-cols input:checked').map(function() {
+            return this.value;
+    }).get();
+    dict['value_columns'] = $('#select-value-cols input:checked').map(function() {
+            return this.value;
+    }).get();
     if ( $('#select-value-derived').val() != '' )
         dict['value_columns'].push($('#select-value-derived').val());
     
