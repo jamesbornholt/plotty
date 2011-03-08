@@ -19,12 +19,13 @@ class Pipeline(object):
         This is distinct from DataTypes.DataTable. We wish to preserve the
         distinction between the Pipeline as a set of actions, and the DataTable
         which results from applying a Pipeline to a set of data. """
-    
-    logs = []
-    scenarioCols = set()
-    valueCols = set()
-    blocks = []
-    dataTable = None
+
+    def __init__(self):
+        self.logs = []
+        self.scenarioCols = set()
+        self.valueCols = set()
+        self.blocks = []
+        self.dataTable = None
 
     def decode(self, encoded):
         """ Decodes an entire paramater string. """
@@ -37,18 +38,24 @@ class Pipeline(object):
             block = BLOCK_MAPPINGS[params[0]]()
             block.decode(params[1:])
             self.blocks.append(block)
-    
+        
     def apply(self):
         if len(self.logs) == 0:
-            print "No logs."
+            logging.debug("No logs available")
             return
         
         self.dataTable = DataTable(logs=self.logs)
         self.dataTable.selectScenarioColumns(self.scenarioCols)
         self.dataTable.selectValueColumns(self.valueCols)
 
+        graph_outputs = []
+
         for i,block in enumerate(self.blocks):
-            block.apply(self.dataTable)
+            ret = block.apply(self.dataTable)
+            if isinstance(block, GraphBlock):
+                graph_outputs.append(ret)
+        
+        return graph_outputs
 
 
 def execute_pipeline(encoded_string, csv_graphs=False):

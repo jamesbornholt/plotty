@@ -1545,6 +1545,24 @@ var Pipeline = {
             console.debug("Pipeline.refresh: Pipeline valid: " + encoded);
             // Here's where we'd load stuff.
             Pipeline.pushState(encoded);
+            $('#pipeline-debug-link').attr('href', 'list/' + encoded + '?debug');
+            Pipeline.ajax.pipeline(encoded, function(data) {
+                $('#output').children().not('#loading-indicator').remove();
+                // Stop the sparklines from being rendered unless we actually want them
+                $('#output').hide();
+                $('#output').append(data.html);
+                if ( $('#show-sparklines').get(0).checked === false )
+                    $('.sparkline').hide();
+                if ( data.rows > 100 && !data.graph) {
+                    $('#output table, #output .foldable.table').hide();
+                    $('#large-table-confirm span').html(data.rows);
+                    $('#large-table-confirm').show();
+                }
+                else {
+                    $('#large-table-confirm').hide();
+                }
+                $('#output').show();
+            });
         }
     },
 
@@ -1738,6 +1756,14 @@ var Pipeline = {
          */
         logValues: function(callback) {
             $.getJSON('ajax/log-values/' + Pipeline._selectedLogFiles().join(',') + '/', callback);
+        },
+
+        /**
+         * ajax/pipeline/<pipeline> delivers the results of executing a
+         * pipeline
+         */
+        pipeline: function(encoded, callback) {
+            $.getJSON('ajax/pipeline/' + encoded, callback);
         }
     },
     

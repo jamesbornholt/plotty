@@ -345,205 +345,114 @@ class NormaliseBlock:
 class GraphBlock:
     """ Generate graphs based on the data in the DataTable. """
     
-    def process(self, datatable, **kwargs):
-        return self.processGraph(datatable, kwargs['graph-type'] == 'histogram', **kwargs)
-    
-    def processGraph(self, datatable, isHistogram, renderCSV=False, csvIndex=-1, pipeline_hash='', **kwargs):
-        """ Pivots the datatable into a histogram-style row vs column table and
-            returns the resulting HTML. We return a list of HTML strings, one per
-            table, to provide the possibility that a graph generates more than
-            one table.
+    TYPE = {
+        'HISTOGRAM': '1',
+        'XY': '2'
+    }
+
+    def decode(self, paramString):
+        parts = paramString.split(PipelineEncoder.GROUP_SEPARATOR)
+        self.type = parts[0]
+        if self.type == GraphBlock.TYPE['HISTOGRAM']:
+            self.column = parts[1]
+            self.row = parts[2]
+            self.value = parts[3]
+        elif self.type == GraphBlock.TYPE['XY']:
+            self.column = parts[1]
+            self.row = parts[2]
+            self.value = parts[3]
+
+    def pivot(self, rows):
+        """ Pivot a set of rows based on the settings in this block. """
+        pivot_rows = {}
+        column_keys = set()
+        # We aggregate by column - every column has a min, max, mean, geomean,
+        # and count
+        mins = {}
+        maxs = {}
+        sums = {}
+        products = {}
+        counts = {}
+
+        for row in rows:
+            # Check if we've got any pivoted results for this row
+            if row.scenario[self.row] not in pivot_rows:
+                pivot_rows[row.scenario[self.row]] = {}
+            # Check if this is a column we haven't seen before
+            if row.scenario[self.column] not in column_keys:
+                column_keys.add(row.scenario[self.column])
+                mins[row.scenario[self.column]] = float('+inf')
+                maxs[row.scenario[self.column]] = float('-inf')
+                sums[row.scenario[self.column]] = 0
+                products[row.scenario[self.column]] = 1
+                counts[row.scenario[self.column]] = 0
             
-            isCSV: whether the resulting table should be rendered as a CSV file
-            Keyword arguments:
-            * row    -- the scenario column to be used as the row discriminator
-            * column -- the scenario column to be used as the column discriminator
-            * value  -- the value to be plotted
-        """
-        if renderCSV:
-            method = self.renderCSV
-        else:
-            method = self.renderTable
-        outputs = {}
+            # If there's already a value in this cell, we have am ambiguity
+            if row.scenario[self.column] in pivot_rows[row.scenario[self.row]]:
+                raise PipelineAmbiguityException('More than one value exists for the graph cell (%s=%s, %s=%s)' % (self.row, row.scenario[self.row], self.column, row.scenario[self.column]))
+            # Populate this cell
+            pivot_rows[row.scenario[self.row]][row.scenario[self.column]] = row.values[self.value]
+            
+            # Check for new min/max and update the aggregates
+            if float(row.values[self.value]) < mins[row.scenario[self.column]]:
+                mins[row.scenario[self.column]] = float(row.values[self.value])
+            if float(row.values[self.value]) > maxs[row.scenario[self.column]]:
+                maxs[row.scenario[self.column]] = float(row.values[self.value])
+            sums[row.scenario[self.column]] += float(row.values[self.value])
+            products[row.scenario[self.column]] *= float(row.values[self.value])
+            counts[row.scenario[self.column]] += 1
+        
+        aggregates = {
+            'min': mins,
+            'max': maxs,
+            'mean': {},
+            'geomean': {}
+        }
+        for key in column_keys:
+            if counts[key] > 0:
+                aggregates['mean'][key] = sums[key] / counts[key]
+                aggregates['geomean'][key] = math.pow(products[key], 1.0/counts[key])
+            else:
+                aggregates['mean'][key] = 0
+                aggregates['geomean'][key] = 1
+        
+        return pivot_rows, aggregates, column_keys
+
+    def group(self, dataTable):
+        """ Split the rows in the datatable into groups based on the
+            cross-product of their scenario columns (apart from those used as
+            column or row) """
+        
+        sets = {}
         scenario_keys = {}
-        graph_sets = {}
-        for row in datatable:
-            if kwargs['column'] in row.scenario and kwargs['row'] in row.scenario and kwargs['value'] in row.values:
-                schash = scenario_hash(row.scenario, exclude=[kwargs['column'], kwargs['row']])
+        for row in dataTable:
+            if self.column in row.scenario and self.row in row.scenario and self.value in row.values:
+                schash = scenario_hash(row.scenario, exclude=[self.column, self.row])
                 if schash not in scenario_keys:
                     scenario = copy.copy(row.scenario)
-                    del scenario[kwargs['column']]
-                    del scenario[kwargs['row']]
+                    del scenario[self.column]
+                    del scenario[self.row]
                     scenario_keys[schash] = scenario
-                if schash not in graph_sets:
-                    graph_sets[schash] = []
-                graph_sets[schash].append(row)
+                if schash not in sets:
+                    sets[schash] = []
+                sets[schash].append(row)
         
-        for sc, rows in graph_sets.items():
-            graph_rows = {}
-            column_keys = []
-            mins = {}
-            maxs = {}
-            # We do sum(x)/n instead of sum(x/n) to be sure we don't lose precision
-            # with small x. The effect is probably negligible, but whatever.
-            sums = {}
-            products = {}
-            # Count each key individually, in case one col/row pair doesn't have an entry
-            # even though the rest of that row has entries.
-            counts = {}
-            for row in rows:
-                if row.scenario[kwargs['row']] not in graph_rows:
-                    graph_rows[row.scenario[kwargs['row']]] = {}
-                if row.scenario[kwargs['column']] not in column_keys:
-                    column_keys.append(row.scenario[kwargs['column']])
-                    mins[row.scenario[kwargs['column']]] = float('+inf')
-                    maxs[row.scenario[kwargs['column']]] = float('-inf')
-                    sums[row.scenario[kwargs['column']]] = 0
-                    products[row.scenario[kwargs['column']]] = 1
-                    counts[row.scenario[kwargs['column']]] = 0
-                if row.scenario[kwargs['column']] in graph_rows[row.scenario[kwargs['row']]]:
-                    raise PipelineAmbiguityException('More than one value exists for the graph cell (%s=%s, %s=%s)' % (kwargs['row'], row.scenario[kwargs['row']], kwargs['column'], row.scenario[kwargs['column']]))
-                graph_rows[row.scenario[kwargs['row']]][row.scenario[kwargs['column']]] = row.values[kwargs['value']]
-                if float(row.values[kwargs['value']]) < mins[row.scenario[kwargs['column']]]:
-                    mins[row.scenario[kwargs['column']]] = float(row.values[kwargs['value']])
-                if float(row.values[kwargs['value']]) > maxs[row.scenario[kwargs['column']]]:
-                    maxs[row.scenario[kwargs['column']]] = float(row.values[kwargs['value']])
-                sums[row.scenario[kwargs['column']]] += float(row.values[kwargs['value']])
-                products[row.scenario[kwargs['column']]] *= float(row.values[kwargs['value']])
-                counts[row.scenario[kwargs['column']]] += 1
-                
-            row_keys = graph_rows.keys()
-            # Try to sort keys numerically first, if they're not numbers, sort as lowercase strings
-            try:
-                row_keys.sort(key=float)
-            except ValueError:
-                row_keys.sort(key=str.lower)
-            
-            try:
-                column_keys.sort(key=float)
-            except ValueError:
-                column_keys.sort(key=str.lower)
-            
-            aggregates = {}
-            aggregates['min'] = mins.copy()
-            aggregates['max'] = maxs.copy()
-            means = {}
-            geomeans = {}
-            for key in column_keys:
-                if counts[key] > 0:
-                    means[key] = sums[key] / counts[key]
-                    geomeans[key] = math.pow(products[key], 1.0/counts[key])
-                else:
-                    means[key] = 0
-                    geomeans[key] = 1
-            aggregates['mean'] = means.copy()
-            aggregates['geomean'] = geomeans.copy()
-            
-            key = ', '.join([k + ' = ' + scenario_keys[sc][k] for k in scenario_keys[sc].keys()])
-            outputs[key] = method(isHistogram, datatable.lastModified, graph_rows, row_keys, column_keys, kwargs['row'], kwargs['column'], kwargs['value'], aggregates, key, pipeline_hash)
-            
-        #for row in datatable:
-        #    if kwargs['column'] in row.scenario and kwargs['row'] in row.scenario and kwargs['value'] in row.values:
-        #        if row.scenario[kwargs['row']] not in graph_rows:
-        #            graph_rows[row.scenario[kwargs['row']]] = {}
-        #        if row.scenario[kwargs['column']] in graph_rows[row.scenario[kwargs['row']]]:
-        #            raise PipelineAmbiguityException('More than one value exists for the graph cell (%s=%s, %s=%s)' % (kwargs['row'], row.scenario[kwargs['row']], kwargs['column'], row.scenario[kwargs['column']]))
-        #        graph_rows[row.scenario[kwargs['row']]][row.scenario[kwargs['column']]] = row.values[kwargs['value']]
-        #        if row.scenario[kwargs['column']] not in column_keys:
-        #            column_keys.append(row.scenario[kwargs['column']])                    
-        #
-        #row_keys = graph_rows.keys()
-        ## Try to sort keys numerically first, if they're not numbers, sort as lowercase strings
-        #try:
-        #    row_keys.sort(key=float)
-        #except ValueError:
-        #    row_keys.sort(key=str.lower)
-        #
-        #try:
-        #    column_keys.sort(key=float)
-        #except ValueError:
-        #    column_keys.sort(key=str.lower)
-        #
-        #return [method(graph_rows, row_keys, column_keys, kwargs['row'], kwargs['column'])]
-        return outputs
-    
-    def renderTable(self, isHistogram, lastModified, rows, row_keys, column_keys, row_title, column_title, value_title, aggregates, graph_key, pipeline_hash):
-        """ Renders a pivoted table (e.g. generated by processHistogram) 
-            into HTML. 
-            
-            rows:         the set of rows, a dictionary which maps a row value
-                          to a dictionary of column values
-            row_keys:     the keys which appear in the rows dictionary, used as
-                          the first value in each row
-            column_keys:  the keys which appear in each dictionary in the row
-                          set, used as the headers for each column
-            row_title:    the title of the scenario column used as a row
-                          discriminator
-            column_title: the title of the scenario column used as a column
-                          discriminator
-        """
-        graph_hash = str(abs(hash(pipeline_hash + graph_key)))
-        graph_path = os.path.join(settings.GRAPH_CACHE_DIR, graph_hash)
-        # Here we might check if it already exists in the graph cache...
-        csv_last_modified = 0 
-        if os.path.exists(graph_path + '.csv'):
-          csv_last_modified = os.path.getmtime(graph_path + '.csv')
-        if csv_last_modified <= lastModified:
-          csv = self.renderCSV(isHistogram, lastModified, rows, row_keys, column_keys, row_title, column_title, value_title, aggregates, graph_key, pipeline_hash, for_plotting=True)
-          csv_file = open(graph_path + '.csv', "w")
-          csv_file.write(csv)
-          csv_file.close()
-          if isHistogram:
-            self.plotHistogram(len(column_keys), graph_path, value_title)
-          else:
-            self.plotXYGraph(len(column_keys), graph_path, value_title)
-        output = '<img src="graph/' + graph_hash + '.svg" />'
-        output += '<p>'
-        output += '<a href="graph/' + graph_hash + '.csv">csv</a> '
-        output += '<a href="graph/' + graph_hash + '.gpt">gpt</a> '
-        output += '<a href="graph/' + graph_hash + '.svg">svg</a> '
-        output += '<a href="graph/' + graph_hash + '.pdf">pdf</a> '
-        output += '<a href="graph/' + graph_hash + '.wide.pdf">wide pdf</a>'
-        output += '</p>'
-        output += '<table><thead><tr><th>' + row_title + '</th>'
-        for key in column_keys:
-            output += '<th>' + column_title + '=' + key + '</th>'
-        output += '</tr></thead><tbody>'
-        for row in row_keys:
-            output += '<tr><td>' + row + '</td>'
-            for key in column_keys:
-                if key in rows[row]:
-                    output += '<td>' + present_value(rows[row][key]) + '</td>'
-                else:
-                    output += '<td>*</td>'
-            output += '</tr>'
-        output += '<tr><td>&nbsp;</td></tr>'
-        if isHistogram:
-          for agg in ['min', 'max', 'mean', 'geomean']:
-              output += '<tr><td><i>' + agg + '</i></td>'
-              for key in column_keys:
-                  if key in aggregates[agg]:
-                      output += '<td>%.3f</td>' % aggregates[agg][key]
-                  else:
-                      output += '<td>*</td>'
-              output += '</tr>'
-        output += '</tbody></table>'
-        
-        return output
-        
-    def renderCSV(self, isHistogram, lastModified, rows, row_keys, column_keys, row_title, column_title, value_title, aggregates, graph_key, pipeline_hash, for_plotting=False):
+        return sets, scenario_keys
+
+    def renderCSV(self, pivot_table, column_keys, row_keys, aggregates=None, for_gnuplot=False):
         # Look for DataAggregates. We can't just check the first one because it
         # may not exist.
-        has_cis = for_plotting
-        for row in row_keys:
-            for key in column_keys:
-                if key in rows[row] and isinstance(rows[row][key], DataAggregate):
-                    has_cis = True
-                    break
+        has_cis = for_gnuplot
+        for row in pivot_table.itervalues():
             if has_cis:
                 break
+            for key in column_keys:
+                if key in row and isinstance(row[key], DataAggregate):
+                    has_cis = True
+                    break
         
-        output = '"' + row_title + '",'
+        # Build the header row
+        output = '"' + self.row + '",'
         for key in column_keys:
             output += '"' + key + '",'
             if has_cis:
@@ -553,56 +462,153 @@ class GraphBlock:
         if output[-1] == ',':
             output = output[:-1]
         output += "\r\n"
-        for row in row_keys:
-            output += '"' + row + '",'
+        
+        # Build the rows
+        for row_name in row_keys:
+            output += '"' + row_name + '",'
             for key in column_keys:
-                if key in rows[row]:
-                    output += present_value_csv('graph', rows[row][key], ['graph'] if has_cis else []) + ','
+                if key in pivot_table[row_name]:
+                    val = pivot_table[row_name][key]
+                    if has_cis:
+                        if isinstance(val, DataAggregate):
+                            ciDown, ciUp = val.ci()
+                            if math.isnan(ciDown):
+                                output += '%f,%f,%f,' % ((val.value(),)*3)
+                            else:
+                                output += '%f,%f,%f,' % (val.value(), ciDown, ciUp)
+                        else:
+                            output += '%f,%f,%f,' % ((val,)*3)
+                    else :
+                        output += '%f,' % (val.value())
                 else:
                     if has_cis:
                         output += '"","","",'
                     else:
                         output += '"",'
+            
+            # Truncate the last comma to be clear
             if output[-1] == ',':
                 output = output[:-1]
             output += "\r\n"
-#        if for_plotting:
-#            output += '"",'
-#            for key in column_keys:
-#                if has_cis:
-#                    output += '0,0,0,'
-#                else:
-#                    output += '0,'
-#            if output[-1] == ',':
-#                output = output[:-1]
-#            output += "\r\n"
-        if isHistogram:
-          for agg in ['min', 'max', 'mean', 'geomean']:
-              output += '"' + agg + '",'
-              for key in column_keys:
-                  if key in aggregates[agg]:
-                      if has_cis:
-                          # gnuplot expects non-empty data, with error cols containing the absolute val
-                          # of the error (e.g. a val of 1.3 with CI of 1.25-1.35 needs to report
-                          # 1.3,1.25,1.35 to gnuplot)
-                          if for_plotting:
-                              output += '%f,%f,%f,' % (aggregates[agg][key], aggregates[agg][key], aggregates[agg][key])
-                          else:
-                              output += '%f,,,' % aggregates[agg][key]
-                      else:
-                          output += '%f,' % aggregates[agg][key]
-                  else:
-                      if has_cis:
-                          output += '0,0,0,'
-                      else:
-                          output += '0,'
-              if output[-1] == ',':
-                  output = output[:-1]
-              output += "\r\n"            
+
+        if aggregates != None:
+            for agg in ['min', 'max', 'mean', 'geomean']:
+                output += '"' + agg + '",'
+                for key in column_keys:
+                    if key in aggregates[agg]:
+                        if has_cis:
+                            # gnuplot expects non-empty data, with error cols containing the absolute val
+                            # of the error (e.g. a val of 1.3 with CI of 1.25-1.35 needs to report
+                            # 1.3,1.25,1.35 to gnuplot)
+                            if for_gnuplot:
+                                output += '%f,%f,%f,' % (aggregates[agg][key], aggregates[agg][key], aggregates[agg][key])
+                            else:
+                                output += '%f,,,' % aggregates[agg][key]
+                        else:
+                            output += '%f,' % aggregates[agg][key]
+                    else:
+                        if has_cis:
+                            output += '0,0,0,'
+                        else:
+                            output += '0,'
+                # Truncate the last comma to be clear
+                if output[-1] == ',':
+                    output = output[:-1]
+                output += "\r\n"            
         
         return output
+
+    def renderHTML(self, pivot_table, column_keys, row_keys, graph_hash, aggregates=None):
+        output  = '<img src="graph/' + graph_hash + '.svg" />'
+        output += '<p>Download: '
+        output += '<a href="graph/' + graph_hash + '.csv">csv</a> '
+        output += '<a href="graph/' + graph_hash + '.gpt">gpt</a> '
+        output += '<a href="graph/' + graph_hash + '.svg">svg</a> '
+        output += '<a href="graph/' + graph_hash + '.pdf">pdf</a> '
+        output += '<a href="graph/' + graph_hash + '.wide.pdf">wide pdf</a>'
+        output += '</p>'
+        output += '<table><thead><tr><th>' + self.row + '</th>'
+        for key in column_keys:
+            output += '<th>' + self.column + '=' + key + '</th>'
+        output += '</tr></thead><tbody>'
+        for row_name in row_keys:
+            output += '<tr><td>' + row_name + '</td>'
+            for key in column_keys:
+                if key in pivot_table[row_name]:
+                    output += '<td>' + present_value(pivot_table[row_name][key]) + '</td>'
+                else:
+                    output += '<td>*</td>'
+            output += '</tr>'
+        output += '<tr><td>&nbsp;</td></tr>'
+        if aggregates != None:
+          for agg in ['min', 'max', 'mean', 'geomean']:
+              output += '<tr><td><i>' + agg + '</i></td>'
+              for key in column_keys:
+                  if key in aggregates[agg]:
+                      output += '<td>%.3f</td>' % aggregates[agg][key]
+                  else:
+                      output += '<td>*</td>'
+              output += '</tr>'
+        output += '</tbody></table>'
+
+        return output
+
+    def apply(self, dataTable):
+        """ Render the graph to HTML, including images """
+
+        sets, scenario_keys = self.group(dataTable)
+        graphs = {}
+        for sc, rows in sets.iteritems():
+            # Pivot the data
+            pivot_table, aggregates, column_keys = self.pivot(rows)
+
+            # Sort the column and keys so they show nicely in the graph
+            column_keys = list(column_keys)
+            row_keys = pivot_table.keys()
+            try:
+                row_keys.sort(key=float)
+            except ValueError:
+                row_keys.sort(key=str.lower)
+            
+            try:
+                column_keys.sort(key=float)
+            except ValueError:
+                column_keys.sort(key=str.lower)
+
+            # Generate a hash for this graph
+            graph_hash = str(abs(hash(str(id(self)) + sc)))
+            graph_path = os.path.join(settings.GRAPH_CACHE_DIR, graph_hash)
+
+            # If the csv doesn't exist or is out of date (the dataTable has
+            # logs newer than it), replot the data
+            csv_last_modified = 0 
+            if os.path.exists(graph_path + '.csv'):
+                csv_last_modified = os.path.getmtime(graph_path + '.csv')
+            if csv_last_modified <= dataTable.lastModified:
+                # Render the CSV
+                csv = self.renderCSV(pivot_table, column_keys, row_keys, aggregates, for_gnuplot=True)
+                csv_file = open(graph_path + '.csv', "w")
+                csv_file.write(csv)
+                csv_file.close()
+
+                # Plot the graph
+                if self.type == GraphBlock.TYPE['HISTOGRAM']:
+                    self.plotHistogram(graph_path, len(column_keys))
+                elif self.type == GraphBlock.TYPE['XY']:
+                    self.plotXY(graph_path, len(column_keys))
+            
+            # Render the HTML!
+            html = self.renderHTML(pivot_table, column_keys, row_keys, graph_hash, aggregates)
+
+            title = "Graph"
+            if len(scenario_keys[sc]) > 0:
+                title = ', '.join([k + ' = ' + scenario_keys[sc][k] for k in scenario_keys[sc].keys()])
+            
+            graphs[title] = html
+        
+        return graphs
     
-    def plotXYGraph(self, num_cols, graph_path, yaxis_title):
+    def plotXYGraph(self, graph_path, num_cols):
         """ Plot a histogram csv file with gnuplot.
         
         csv_filename: the csv file where the graph data has been temporarily
@@ -649,14 +655,14 @@ set output '{graph_path}.wide.eps'
 replot
 """
         gp_file = open(graph_path + ".gpt", "w")
-        gp_file.write(gnuplot.format(graph_path=graph_path, num_cols=num_cols, yaxis_title=yaxis_title, font_path=settings.GRAPH_FONT_PATH))
+        gp_file.write(gnuplot.format(graph_path=graph_path, num_cols=num_cols, yaxis_title=self.value, font_path=settings.GRAPH_FONT_PATH))
         gp_file.close()
         os.system(settings.GNUPLOT_EXECUTABLE + ' ' + gp_file.name)
         os.system("ps2pdf -dEPSCrop " + graph_path + ".wide.eps " + graph_path + ".wide.pdf");
         os.system("ps2pdf -dEPSCrop " + graph_path + ".eps " + graph_path + ".pdf");
 
 
-    def plotHistogram(self, num_cols, graph_path, yaxis_title):
+    def plotHistogram(self, graph_path, num_cols):
         """ Plot a histogram csv file with gnuplot.
         
         csv_filename: the csv file where the graph data has been temporarily
@@ -703,7 +709,7 @@ set output '{graph_path}.wide.eps'
 replot
 """
         gp_file = open(graph_path + ".gpt", "w")
-        gp_file.write(gnuplot.format(graph_path=graph_path, num_cols=num_cols, yaxis_title=yaxis_title, font_path=settings.GRAPH_FONT_PATH))
+        gp_file.write(gnuplot.format(graph_path=graph_path, num_cols=num_cols, yaxis_title=self.value, font_path=settings.GRAPH_FONT_PATH))
         gp_file.close()
         os.system(settings.GNUPLOT_EXECUTABLE + ' ' + gp_file.name)
         os.system("ps2pdf -dEPSCrop " + graph_path + ".wide.eps " + graph_path + ".wide.pdf");

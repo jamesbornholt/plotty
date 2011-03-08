@@ -14,7 +14,10 @@ from plotty import settings
 
 def list(request, pipeline):
     try:
-        dt, graph_outputs = execute_pipeline(pipeline)
+        #dt, graph_outputs = execute_pipeline(pipeline)
+        p = Pipeline()
+        p.decode(pipeline)
+        graph_outputs = p.apply()
     except PipelineBlockException as e:
         output = '<div class="exception"><h1>Exception in executing block ' + str(e.block + 1) + '</h1>' + e.msg + '<h1>Traceback</h1><pre>' + e.traceback + '</pre></div>'
         return HttpResponse(output)
@@ -27,14 +30,14 @@ def list(request, pipeline):
     
     output = ''
     if len(graph_outputs) > 0:
-        for i, graphs in enumerate(graph_outputs, start=1):
-            keys = graphs.keys()
-            keys.sort()
-            for key in keys:
-                output += '<div class="foldable"><h1>' + key + ' (block ' + str(i) + ')</h1>' + graphs[key] + '</div>'
-        output += '<div class="foldable"><h1>Table</h1>' + dt.renderToTable() + '</div>'
+        for i, graph_set in enumerate(graph_outputs, start=1):
+            titles = graph_set.keys()
+            titles.sort()
+            for title in titles:
+                output += '<div class="foldable"><h1>' + title + ' (block ' + str(i) + ')</h1>' + graph_set[title] + '</div>'
+        output += '<div class="foldable"><h1>Table</h1>' + p.dataTable.renderToTable() + '</div>'
     else:
-        output += dt.renderToTable()
+        output += p.dataTable.renderToTable()
     
     return HttpResponse('<html><head><title>Listing</title></head><body>' + output + '</body></html')
 

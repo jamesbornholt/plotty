@@ -47,7 +47,9 @@ def log_values(request, logs):
 
 def pipeline(request, pipeline):
     try:
-        dt, graph_outputs = execute_pipeline(pipeline)
+        p = Pipeline()
+        p.decode(pipeline)
+        graph_outputs = p.apply()
     except PipelineBlockException as e:
         output = '<div class="exception"><h1>Exception in executing block ' + str(e.block + 1) + '</h1>' + e.msg + '<div class="foldable"><h1>Traceback<a href="" class="toggle">[show]</a></h1><div class="foldable-content hidden"><pre>' + e.traceback + '</pre></div></div>'
         return HttpResponse(json.dumps({'error': True, 'index': e.block, 'html': output, 'rows': 1}))
@@ -67,16 +69,16 @@ def pipeline(request, pipeline):
         ambiguityIndex = -1
     
     if len(graph_outputs) > 0:
-        for i, graphs in enumerate(graph_outputs, start=1):
-            keys = graphs.keys()
-            keys.sort()
-            for key in keys:
-                output += '<div class="foldable"><h1>' + key + ' (block ' + str(i) + ')<a href="" class="toggle">[hide]</a><a href="ajax/pipeline-csv-graph/' + pipeline + '/' + str(i-1) + '/' + key + '/">[CSV]</a></h1><div class="foldable-content">' + graphs[key] + '</div></div>'
-        output += '<div class="foldable table"><h1>Table<a href="" class="toggle">[show]</a><a href="ajax/pipeline-csv-table/' + pipeline + '/">[CSV]</a></h1><div class="foldable-content hidden">' + dt.renderToTable() + '</div></div>'
+        for i, graph_set in enumerate(graph_outputs, start=1):
+            titles = graph_set.keys()
+            titles.sort()
+            for title in titles:
+                output += '<div class="foldable"><h1>' + title + ' (block ' + str(i) + ')</h1>' + graph_set[title] + '</div>'
+        output += '<div class="foldable"><h1>Table</h1>' + p.dataTable.renderToTable() + '</div>'
     else:
-        output += dt.renderToTable()
+        output += p.dataTable.renderToTable()
     
-    return HttpResponse(json.dumps({'error': False, 'ambiguity': ambiguity, 'index': ambiguityIndex, 'html': output, 'rows': len(dt.rows), 'graph': len(graph_outputs) > 0}))
+    return HttpResponse(json.dumps({'error': False, 'ambiguity': ambiguity, 'index': ambiguityIndex, 'html': output, 'rows': len(p.dataTable.rows), 'graph': len(graph_outputs) > 0}))
 
 def save_pipeline(request):
     if 'name' not in request.POST or 'encoded' not in request.POST:
