@@ -618,7 +618,7 @@ class GraphBlock:
         """
         num_cols = num_cols * 3 - 1
         gnuplot = """
-set terminal svg enhanced fname "Arial" fsize 10 size 960,420
+set terminal svg fname "Arial" fsize 10 size 960,420
 set output '{graph_path}.svg'
 set datafile separator ","
 set ylabel "{yaxis_title}"
@@ -647,11 +647,11 @@ set style line 3 lt 1 pt 0 lc rgb '#ADDFFF' lw 1
 
 plot for [COL=2:{num_cols}:3] "{graph_path}.csv" u 1:COL:xtic(1) title col(COL) w lines, for [COL=2:{num_cols}:3] "" u 1:COL:COL+1:COL+2 notitle w yerr
 
-set terminal postscript eps enhanced "Helvetica" 18 size 5, 2.5
+set terminal postscript eps solid color "Helvetica" 18 size 5, 2.5
 set output '{graph_path}.eps'
 replot
 
-set terminal postscript eps enhanced "Helvetica" 18 size 10, 2.2
+set terminal postscript eps solid color "Helvetica" 18 size 10, 2.2
 set output '{graph_path}.wide.eps'
 replot
 """
@@ -672,7 +672,7 @@ replot
         """
         num_cols = num_cols * 3 - 1
         gnuplot = """
-set terminal svg enhanced fname "Arial" fsize 10 size 960,420
+set terminal svg fname "Arial" fsize 10 size 960,420
 set output '{graph_path}.svg'
 set datafile separator ","
 set ylabel "{yaxis_title}"
@@ -701,11 +701,11 @@ set style line 3 lt 1 pt 0 lc rgb '#ADDFFF' lw 1
 
 plot for [COL=2:{num_cols}:3] "{graph_path}.csv" u COL:COL+1:COL+2:xtic(1) title col(COL)
 
-set terminal postscript eps enhanced "Helvetica" 18 size 5, 2.5
+set terminal postscript eps solid color "Helvetica" 18 size 5, 2.5
 set output '{graph_path}.eps'
 replot
 
-set terminal postscript eps enhanced "Helvetica" 18 size 10, 2.2
+set terminal postscript eps solid color "Helvetica" 18 size 10, 2.2
 set output '{graph_path}.wide.eps'
 replot
 """
