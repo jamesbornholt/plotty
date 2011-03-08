@@ -384,7 +384,9 @@ function updateAvailableData(data, selectedScenarioCols, selectedValueCols) {
 }
 
 function updateScenarioColumns() {
-    var selected = $("#select-scenario-cols").val() || [];
+    var selected = $('#select-scenario-cols input:checked').map(function() {
+            return this.value;
+    }).get();
     
     $('#pipeline .pipeline-block').each(function() {
         $('.scenario-column', this).each(function() {
@@ -422,7 +424,9 @@ function updateScenarioColumns() {
 }
 
 function updateValueColumns() {
-    var selected = $("#select-value-cols").val() || [];
+    var selected = $('#select-value-cols input:checked').map(function() {
+            return this.value;
+    }).get();
     if ( $("#select-value-derived").val() != '' )
         selected.push($("#select-value-derived").val());
     
