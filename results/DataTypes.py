@@ -73,7 +73,14 @@ class DataTable:
         
         invalid_chars = frozenset("+-/*|&^")
         
-        extract_csv(dir_path)
+        # Only retabulate if the logs have been modified since the csv was
+        # generated.
+        if not os.path.exists(dir_path + '.csv') or os.path.getmtime(dir_path + '.csv') < lastModified:
+            logging.debug("Retabulating CSV for " + dir_path + " since CSV was out of date or non-existent")
+            extract_csv(dir_path)
+        else:
+            logging.debug("Valid CSV already exists for " + dir_path + ", skipping retabulation.")
+
         reader = csv.DictReader(open(dir_path + '.csv', 'rb'))
         reader.fieldnames = map(str.lower, reader.fieldnames)
         for line in reader:

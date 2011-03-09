@@ -115,6 +115,20 @@ var Utilities = {
         return $('input:checked', element).map(function() {
             return this.value;
         }).get();
+    },
+
+    /**
+     * Initiate table sorting on all output tables
+     */
+    outputTableSort: function() {
+        $('#output table.results').each(function() {
+            var numScenarioHeaders = $(this).find('th.scenario-header').length;
+            var sortList = [];
+            for ( var i = 0; i < numScenarioHeaders; i++ ) {
+                sortList.push([i, 0]);
+            }
+            $(this).tablesorter({sortList: sortList});
+        });
     }
 };
 
@@ -1481,6 +1495,7 @@ var Pipeline = {
 
         // Hook the button for showing large tables
         $('#load-large-table').click(function() {
+            Utilities.outputTableSort();
             $('#output table, #output .foldable.table').show();
             $('#output').css('paddingTop', '60px');
             $('#large-table-confirm').hide();
@@ -1576,6 +1591,7 @@ var Pipeline = {
                 else {
                     $('#large-table-confirm').hide();
                     $('#output').css('paddingTop', '60px');
+                    Utilities.outputTableSort();
                 }
                 $('#output').show();
 
