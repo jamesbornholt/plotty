@@ -98,7 +98,7 @@
 				    <option value="{{ pipeline.encoded }}">{{ pipeline.name }}</option>
 				    {% endfor %}
 				</select> <button type="button" id="pipeline-load-go">Load</button><br />
-				<a href="list/" id="pipeline-debug-link">Debug</a> <a href="#" id="pipeline-new-link">New pipeline</a>
+				<a href="list/" id="pipeline-debug-link">Debug</a> <a href="/" id="pipeline-new-link">New pipeline</a>
 			</div>
 		</div>
 		<div id="pipeline-log" class="pipeline">
@@ -142,8 +142,7 @@
 		    <div class="pipeline-content">
 		        <span class="pipeline-header">Save Pipeline</span> <br />
 		        <form id="pipeline-save-form">
-		            <input type="text" id="pipeline-save-name" /> <button type="button" id="pipeline-save-go">Save</button>
-		            <input type="hidden" id="pipeline-hash" />
+		            <input type="text" id="pipeline-save-name" disabled="disabled" /> <button type="button" id="pipeline-save-go" disabled="disabled">Save</button>
 		        </form>
 		    </div>
 		</div>

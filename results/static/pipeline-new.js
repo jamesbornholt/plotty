@@ -1533,6 +1533,24 @@ var Pipeline = {
             });
         }
 
+        // Hook the save button and form for saving pipelines
+        $("#pipeline-save-form").submit(function() {
+            Pipeline.savePipeline();
+            return false;
+        });
+        $('#pipeline-save-go').click(function() {
+            Pipeline.savePipeline();
+            return false;
+        });
+
+        // Hook the load button for loading pipelines
+        $("#pipeline-load-go").click(function() {
+            var selected = $('#pipeline-load-select').val();
+            if ( selected != '-1' ) {
+                Pipeline.pushState(selected, true);
+            }
+        });
+
         // Trigger it once now
         Pipeline.hashChange();
         
@@ -1571,12 +1589,17 @@ var Pipeline = {
         var encoded = Pipeline.cascade(reason);
         if ( encoded === false ) {
             console.debug("Pipeline.refresh: Pipeline not valid.");
+            // Disable the save pipeline fields
+            $('#pipeline-save-name, #pipeline-save-go').attr('disabled', 'disabled');
         }
         else {
             console.debug("Pipeline.refresh: Pipeline valid: " + encoded);
-            // Here's where we'd load stuff.
+            // Push the new state onto the history stack
             Pipeline.pushState(encoded);
+            // Update the debug link
             $('#pipeline-debug-link').attr('href', 'list/' + encoded + '?debug');
+            // Enable the save pipeline fields
+            $('#pipeline-save-name, #pipeline-save-go').attr('disabled', '');
             Pipeline.ajax.pipeline(encoded, function(data) {
                 $('#output').children().not('#loading-indicator').remove();
                 // Stop the sparklines from being rendered unless we actually want them
@@ -1639,9 +1662,11 @@ var Pipeline = {
      *
      * @param encoded string The encoded pipeline to push
      */
-    pushState: function(encoded) {
-        console.debug("pushState: " + encoded);
-        Pipeline.hash = encoded;
+    pushState: function(encoded, forceRefresh) {
+        console.debug("pushState: " + encoded + (typeof forceRefresh !== 'undefined' ? " (FORCE)" : ""));
+        if ( typeof forceRefresh === 'undefined' ) {
+            Pipeline.hash = encoded;
+        }
         window.location.hash = encoded;
     },
 
@@ -1729,18 +1754,22 @@ var Pipeline = {
     decode: function(encoded) {
         var parts = unescape(encoded).split(Pipeline.encoder.BLOCK_SEPARATOR);
 
-        var logFiles = parts[0].split(Pipeline.encoder.GROUP_SEPARATOR);
-        var scenarioCols = parts[1].split(Pipeline.encoder.GROUP_SEPARATOR);
-        var valueCols = parts[2].split(Pipeline.encoder.GROUP_SEPARATOR);
-
-        var blocks = parts.slice(3);
-
         // Reset the pipeline
         Pipeline.logFileOptionsTable.reset();
         jQuery.each(Pipeline.blocks, function(i, block) {
             block.removeBlock();
         });
         Pipeline.blocks = [];
+
+        if ( parts.length < 3 ) {
+            return;
+        }
+
+        var logFiles = parts[0].split(Pipeline.encoder.GROUP_SEPARATOR);
+        var scenarioCols = parts[1].split(Pipeline.encoder.GROUP_SEPARATOR);
+        var valueCols = parts[2].split(Pipeline.encoder.GROUP_SEPARATOR);
+
+        var blocks = parts.slice(3);
 
         // Load the log files into the table
         jQuery.each(logFiles, function(i, log) {
@@ -1798,6 +1827,24 @@ var Pipeline = {
     },
 
     /**
+     * Save this pipeline to the server.
+     */
+    savePipeline: function() {
+        var name = $('#pipeline-save-name').val();
+        var encoded = Pipeline.hash;
+        if ( name == '' ) {
+            return false;
+        }
+        Pipeline.ajax.savePipeline(name, encoded, function(data, textStatus, xhr) {
+            console.debug("Saved pipeline: " + name + " = " + encoded);
+            var loadDropdown = $("#pipeline-load-select");
+            loadDropdown.get(0).options.add(new Option(name, encoded));
+            loadDropdown.val(encoded);
+            $('#pipeline-save-name').val('');
+        });
+    },
+
+    /**
      * Ajax requests.
      */
     ajax: {
@@ -1815,6 +1862,17 @@ var Pipeline = {
          */
         pipeline: function(encoded, callback) {
             $.getJSON('ajax/pipeline/' + encoded, callback);
+        },
+
+        /**
+         * ajax/save-pipeline/ saved a pipeline to the server given a name and
+         * the encoded hash
+         *
+         * @param name string The name of the new pipeline
+         * @param encoded string The encoded verison of the new pipeline
+         */
+        savePipeline: function(name, encoded, callback) {
+            $.post('ajax/save-pipeline/', {'name': name, 'encoded': encoded}, callback);
         }
     },
     
