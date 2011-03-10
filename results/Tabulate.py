@@ -10,7 +10,7 @@ def extract_csv(log, write_status=None):
     pid = str(os.getpid())
     file_path = os.path.join(write_status, pid + ".status")
     f = open(file_path, 'w')
-    f.write(str(len(entries)) + "\r\n")
+    f.write(str(2 * len(entries)) + "\r\n")
     f.flush()
 
   def build_result(scenariokeys, scenario, key, value) :
@@ -31,6 +31,10 @@ def extract_csv(log, write_status=None):
         m = re.match("====> Scenario (.*)=(.*)$", l)
         if (m):
           scenario[m.group(1)] = 1
+      progress += 1
+      if write_status != None:
+        f.write(str(progress) + "\r\n")
+        f.flush()
 
   scenariokeys = scenario.keys()
 
