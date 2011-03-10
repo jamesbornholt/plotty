@@ -18,5 +18,6 @@ urlpatterns = patterns('plotty.results',
     # Debugging
     (r'^list/graph/(?P<path>.*)$', serve, {'document_root': settings.GRAPH_CACHE_DIR}),
     (r'^list/(?P<pipeline>.*)$', 'views.list'),
+    (r'^debug-clear-cache/$', 'views.debug_clear_cache'),
     (r'', 'views.pipeline'),
 )

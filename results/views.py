@@ -1,6 +1,6 @@
 # Create your views here.
 
-import os, datetime, math, logging
+import os, datetime, math, logging, shutil
 from django.shortcuts import render_to_response
 from django.http import HttpResponse
 from django.template import RequestContext
@@ -52,3 +52,9 @@ def pipeline(request):
         'logs': logs,
         'pipelines': pipelines
     }, context_instance=RequestContext(request))
+
+def debug_clear_cache(request):
+    path = os.path.join(settings.CACHE_ROOT, 'logs/')
+    shutil.rmtree(path)
+    os.mkdir(path)
+    return HttpResponse('Purged cache in ' + path)
