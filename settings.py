@@ -12,6 +12,8 @@ if 'PLOTTY_ROOT' in os.environ:
 else:
     ROOT_DIR = os.path.dirname(__file__)
 
+APP_ROOT = os.path.dirname(__file__)
+
 BM_LOG_DIR = os.path.join(ROOT_DIR, 'logs')
 
 CACHE_ROOT = os.path.join(ROOT_DIR, 'cache')
@@ -23,7 +25,7 @@ GNUPLOT_EXECUTABLE = '/home/web-scripts/plotty-gnuplot/bin/gnuplot'
 GRAPH_CACHE_DIR = os.path.join(ROOT_DIR, 'cache/graphs')
 GRAPH_FONT_PATH = '/usr/share/fonts/truetype/msttcorefonts'
 
-TABULATE_EXECUTABLE = os.path.join(ROOT_DIR, 'results/Tabulate.py')
+TABULATE_EXECUTABLE = os.path.join(APP_ROOT, 'results/Tabulate.py')
 
 if ROOT_DIR not in sys.path:
     sys.path.insert(0, ROOT_DIR)
