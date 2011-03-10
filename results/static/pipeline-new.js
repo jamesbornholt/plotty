@@ -1602,6 +1602,14 @@ var Pipeline = {
             $('#pipeline-save-name, #pipeline-save-go').attr('disabled', '');
             Pipeline.ajax.pipeline(encoded, function(data) {
                 $('#output').children().not('#loading-indicator').remove();
+                if ( data.tabulating === true ) {
+                    // Data is still being tabulated - show a progress indicator,
+                    // then bail.
+                    Pipeline.tabulating(data, function() {
+                        Pipeline.refresh(reason);
+                    });
+                    return;
+                }
                 // Stop the sparklines from being rendered unless we actually want them
                 $('#output').hide();
                 $('#output').append(data.html);
@@ -1638,6 +1646,40 @@ var Pipeline = {
                 }
             });
         }
+    },
+
+    /**
+     * Data was recieved that says a log file is being tabulated. Track its
+     * progress and call the callback when done.
+     *
+     * @param data dict The data dictionary returned from the tabulation start
+     * @param callback function() The callback to fire once the tabulation is
+     *   done.
+     */
+    tabulating: function(data, callback) {
+        var progressDiv = $('#tabulate-progress');
+        var progressName = $('.tabulate-logfile', progressDiv);
+        var progressPercent = $('.tabulate-percent', progressDiv);
+        var maxBGWidth = $('#output').width();
+        var pid = data.pid;
+        progressName.html(data.log);
+        progressPercent.html("0");
+        progressDiv.css('backgroundSize', '0px');
+        progressDiv.show();
+        var timerID;
+        timerID = setInterval(function() {
+            Pipeline.ajax.tabulateProgress(pid, function(data, textStatus, xhr) {
+                if ( data.complete === true ) {
+                    clearTimeout(timerID);
+                    progressDiv.hide();
+                    callback();
+                }
+                else {
+                    progressPercent.html(data.percent);
+                    progressDiv.css('backgroundSize', (data.percent * maxBGWidth / 100) + 'px');
+                }
+            });
+        }, 1000);
     },
 
     /**
@@ -1779,6 +1821,12 @@ var Pipeline = {
 
         // Load new columns
         Pipeline.ajax.logValues(function(data, textStatus, xhr) {
+            if ( data.tabulating ) {
+                Pipeline.tabulating(data, function() {
+                    Pipeline.decode(encoded);
+                });
+                return;
+            }
             Pipeline.valueCache = data.scenarioValues;
 
             // Update scenario and value column selections
@@ -1809,9 +1857,14 @@ var Pipeline = {
                 
         // Load new columns.
         Pipeline.ajax.logValues(function(data, textStatus, xhr) {
-            Pipeline.updateAvailableColumns(data.scenarioCols, data.valueCols);
-            Pipeline.valueCache = data.scenarioValues;
-            Pipeline.refresh(Pipeline.constants.CASCADE_REASON_LOGS_CHANGED);
+            if ( data.tabulating === true ) {
+                Pipeline.tabulating(data, Pipeline.refreshAvailableColumns);
+            }
+            else {
+                Pipeline.updateAvailableColumns(data.scenarioCols, data.valueCols);
+                Pipeline.valueCache = data.scenarioValues;
+                Pipeline.refresh(Pipeline.constants.CASCADE_REASON_LOGS_CHANGED);
+            }
         });
     },
     
@@ -1873,6 +1926,19 @@ var Pipeline = {
          */
         savePipeline: function(name, encoded, callback) {
             $.post('ajax/save-pipeline/', {'name': name, 'encoded': encoded}, callback);
+        },
+
+        /**
+         * ajax/tabulate-progress/<pid>/ checks the process of tabulating from
+         * a given process id
+         */
+        tabulateProgress: function(pid, callback) {
+            $.ajax({
+                url: 'ajax/tabulate-progress/' + pid + '/',
+                dataType: 'json',
+                global: false,
+                success: callback
+            });
         }
     },
     

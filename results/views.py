@@ -15,9 +15,12 @@ from plotty import settings
 def list(request, pipeline):
     try:
         #dt, graph_outputs = execute_pipeline(pipeline)
-        p = Pipeline()
+        p = Pipeline(web_client=True)
         p.decode(pipeline)
         graph_outputs = p.apply()
+    except LogTabulateStarted as e:
+        output = ''
+        return HttpResponse("Tabulating: log %s, pid %d, log number %d/%d" % (e.log, e.pid, e.index, e.length))
     except PipelineBlockException as e:
         output = '<div class="exception"><h1>Exception in executing block ' + str(e.block + 1) + '</h1>' + e.msg + '<h1>Traceback</h1><pre>' + e.traceback + '</pre></div>'
         return HttpResponse(output)

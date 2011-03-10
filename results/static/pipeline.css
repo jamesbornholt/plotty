@@ -146,6 +146,17 @@ div {
     height: 20px;
 }
 
+#tabulate-progress {
+    padding: 0.2em;
+    background: #F5D7C1;
+    border: 1px solid #FFA759;
+    background-image: url(tabulate-progress.gif);
+    background-repeat: repeat-y;
+    background-size: 0px;
+    display: none;
+    height: 20px;
+}
+
 #large-table-confirm {
     padding: 1em;
     background-color: #FFA6B0;

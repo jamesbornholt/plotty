@@ -3,8 +3,15 @@ import os
 import re
 import gzip
 
-def extract_csv(log):
+def extract_csv(log, write_status=None):
   entries = [ f for f in os.listdir(log) if re.search(".log.gz$", f) ]
+  progress = 0
+  if write_status != None:
+    pid = str(os.getpid())
+    file_path = os.path.join(write_status, pid + ".status")
+    f = open(file_path, 'w')
+    f.write(str(len(entries)) + "\r\n")
+    f.flush()
 
   def build_result(scenariokeys, scenario, key, value) :
     r = ''
@@ -107,13 +114,22 @@ def extract_csv(log):
     if subentry >= 0 and error == 0:
       for r in results:
         csv.write(r)
+    progress += 1
+    if write_status != None:
+      f.write(str(progress) + "\r\n")
+      f.flush()
 
   csv.close()
+  if write_status != None:
+    f.close()
 
 if __name__ == "__main__":
-    if ( len(sys.argv) < 2 ):
-        print "Usage: python Tabulate.py log-folder"
+    if len(sys.argv) < 2:
+        print "Usage: python Tabulate.py log-folder [status-dir]"
         sys.exit(1)
     
-    print "Tabulating %s" % (sys.argv[1])
-    extract_csv(sys.argv[1])
+    print "Tabulating %s (pid %d)" % (sys.argv[1], os.getpid())
+    if len(sys.argv) < 3:
+      extract_csv(sys.argv[1])
+    else:
+      extract_csv(sys.argv[1], sys.argv[2])

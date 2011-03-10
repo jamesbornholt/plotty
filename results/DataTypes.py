@@ -1,8 +1,9 @@
 from django.core.cache import cache
-import logging, sys, csv, os, math, re, string
+import logging, sys, csv, os, math, re, string, subprocess
 from plotty import settings
 from plotty.results.Utilities import present_value, present_value_csv, scenario_hash
 from plotty.results.Tabulate import extract_csv
+from plotty.results.Exceptions import LogTabulateStarted
 from scipy import stats
 import Image, ImageDraw, StringIO, urllib
 
@@ -17,7 +18,7 @@ class DataTable:
         data.
     """
     
-    def __init__(self, logs):
+    def __init__(self, logs, wait=True):
         """ Creates a new DataTable by reading each CSV file provided, or
             loading them from cache if they are present. This routine will
             also check whether the log files specified have been modified
@@ -26,19 +27,27 @@ class DataTable:
             
             logs: an array of paths to CSV files, relative to 
                   settings.BM_LOG_DIR.
+            wait: if True, we will wait for the logs to be tabulated. if not,
+                  depending on the size of the logs, we will spawn a subprocess
+                  and wait.
         """
         self.rows = []
         self.scenarioColumns = set()
         self.valueColumns = set()
         self.lastModified = 0
-        for log in logs:
+        for i,log in enumerate(logs):
             dir_path = os.path.join(settings.BM_LOG_DIR, log)
             logging.debug('Attempting to load log %s from cache' % log)
             cached_vals = cache.get(log)
             file_last_modified = os.path.getmtime(dir_path)
             if cached_vals == None or cached_vals['last_modified'] < file_last_modified:
                 logging.debug('Cache empty or expired, reloading %s from file' % log)
-                rows, lastModified, scenarioColumns, valueColumns = self.loadCSV(log)
+                try:
+                    rows, lastModified, scenarioColumns, valueColumns = self.loadCSV(log, wait)
+                except LogTabulateStarted as e:
+                    e.index = i
+                    e.length = len(logs)
+                    raise e
                 ret = cache.set(log, {'last_modified': lastModified, 'rows': rows, 'scenarioColumns': scenarioColumns, 'valueColumns': valueColumns})
                 logging.debug('Storing %d rows to cache for log %s' % (len(rows), log))
             else:
@@ -59,7 +68,7 @@ class DataTable:
         """
         return iter(self.rows)
 
-    def loadCSV(self, log):
+    def loadCSV(self, log, wait):
         """ Parses the CSV file at log into an array of DataRow objects.
             
             log: a relative path to the log file to be parsed.
@@ -77,7 +86,13 @@ class DataTable:
         # generated.
         if not os.path.exists(dir_path + '.csv') or os.path.getmtime(dir_path + '.csv') < lastModified:
             logging.debug("Retabulating CSV for " + dir_path + " since CSV was out of date or non-existent")
-            extract_csv(dir_path)
+            if not wait:
+                # We don't want to wait - throw an exception and tell the client
+                # to come back later.
+                pid = subprocess.Popen(["python", settings.TABULATE_EXECUTABLE, dir_path, settings.CACHE_ROOT]).pid
+                raise LogTabulateStarted(log, pid)
+            else:
+                extract_csv(dir_path)
         else:
             logging.debug("Valid CSV already exists for " + dir_path + ", skipping retabulation.")
 
@@ -85,8 +100,14 @@ class DataTable:
         reader.fieldnames = map(str.lower, reader.fieldnames)
         for line in reader:
             key = line.pop('key')
+            if key == None or key == '':
+                continue
             key_clean = ''.join(('.' if c in invalid_chars else c) for c in key)
+            if key_clean == '':
+                continue
             value = line.pop('value')
+            if value == '' or value == None:
+                continue
             if key_clean not in value_cols:
                 value_cols.add(key_clean)
             line['logfile'] = str(log)

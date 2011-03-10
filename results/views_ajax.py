@@ -6,7 +6,8 @@ from plotty.results.DataTypes import *
 from plotty.results.Blocks import *
 from plotty.results.models import SavedPipeline
 from plotty.results.Pipeline import *
-import json, csv, logging
+from plotty import settings
+import json, csv, logging, os
 from datetime import datetime
 
 def filter_values(request, logs, col):
@@ -28,7 +29,10 @@ def log_values(request, logs):
     if logs == '':
         return HttpResponse(json.dumps({'scenarioCols': [], 'valueCols': [], 'scenairoValues': []}))
     
-    dt = DataTable(logs.split(','))
+    try:
+        dt = DataTable(logs.split(','), wait=False)
+    except LogTabulateStarted as e:
+        return HttpResponse(json.dumps({'tabulating': True, 'log': e.log, 'pid': e.pid, 'index': e.index, 'total': e.length}))
 
     # Grab and sort scenario and value columns
     scenarioCols = list(dt.scenarioColumns)
@@ -51,10 +55,12 @@ def log_values(request, logs):
 
 def pipeline(request, pipeline):
     try:
-        p = Pipeline()
+        p = Pipeline(web_client=True)
         p.decode(pipeline)
         graph_outputs = p.apply()
 
+    except LogTabulateStarted as e:
+        return HttpResponse(json.dumps({'tabulating': True, 'log': e.log, 'pid': e.pid, 'index': e.index, 'total': e.length}))
     except PipelineBlockException as e:
         output = '<div class="exception"><h1>Exception in executing block ' + str(e.block + 1) + '</h1>' + e.msg + '<div class="foldable"><h1>Traceback<a href="" class="toggle">[show]</a></h1><div class="foldable-content hidden"><pre>' + e.traceback + '</pre></div></div>'
         return HttpResponse(json.dumps({'error': True, 'index': e.block, 'html': output, 'rows': 1}))
@@ -130,3 +136,37 @@ def csv_graph(request, pipeline, index, graph):
     resp = HttpResponse(output, mimetype='text/csv')
     resp['Content-Disposition'] = 'attachment; filename=' + filename
     return resp
+
+def tabulate_progress(request, pid):
+    if not os.path.exists(os.path.join(settings.CACHE_ROOT, pid + ".status")):
+        return HttpResponse(json.dumps({'complete': True, 'reason': 'file'}))
+    else:
+        resp = None
+        done = False
+        f = open(os.path.join(settings.CACHE_ROOT, pid + ".status"), 'r')
+        lines = f.readlines()
+        if lines[-1] == '':
+            del lines[-1]
+        if len(lines) > 1 and lines[-1] == lines[0]:
+            resp = HttpResponse(json.dumps({'complete': True, 'reason': 'finished'}))
+            done = True
+        else:
+            # Sanity check: does the process still exist?
+            try:
+                os.kill(int(pid), 0)
+                exists = True
+            except OSError:
+                exists = False
+            if not exists:
+                resp = HttpResponse(json.dumps({'complete': True, 'reason': 'process'}))
+                done = True
+            else:
+                if len(lines) > 1:
+                    progress = '%.0f' % (float(lines[-1]) * 100.0 / float(lines[0]))
+                else:
+                    progress = "0"
+                resp = HttpResponse(json.dumps({'complete': False, 'percent': progress}))
+        f.close()
+        if done:
+            os.remove(os.path.join(settings.CACHE_ROOT, pid + ".status"))
+        return resp

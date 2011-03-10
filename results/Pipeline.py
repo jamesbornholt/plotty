@@ -20,12 +20,13 @@ class Pipeline(object):
         distinction between the Pipeline as a set of actions, and the DataTable
         which results from applying a Pipeline to a set of data. """
 
-    def __init__(self):
+    def __init__(self, web_client=False):
         self.logs = []
         self.scenarioCols = set()
         self.valueCols = set()
         self.blocks = []
         self.dataTable = None
+        self.webClient = web_client
 
     def decode(self, encoded):
         """ Decodes an entire paramater string. """
@@ -47,9 +48,11 @@ class Pipeline(object):
             raise PipelineError("No log files are selected.", 'selected log files')
         
         try:
-            self.dataTable = DataTable(logs=self.logs)
+            self.dataTable = DataTable(logs=self.logs, wait=not self.webClient)
             self.dataTable.selectScenarioColumns(self.scenarioCols)
             self.dataTable.selectValueColumns(self.valueCols)
+        except LogTabulateStarted:
+            raise
         except PipelineAmbiguityException as e:
             e.block = 'selected data'
             raise e

@@ -14,12 +14,16 @@ else:
 
 BM_LOG_DIR = os.path.join(ROOT_DIR, 'logs')
 
+CACHE_ROOT = os.path.join(ROOT_DIR, 'cache')
+
 CACHE_TIMEOUT = 24*60*60 # 24 hours
 CACHE_BACKEND = "file://" + os.path.join(ROOT_DIR, 'cache/logs') + ('?timeout=%d' % CACHE_TIMEOUT)
 
 GNUPLOT_EXECUTABLE = '/home/web-scripts/plotty-gnuplot/bin/gnuplot'
 GRAPH_CACHE_DIR = os.path.join(ROOT_DIR, 'cache/graphs')
 GRAPH_FONT_PATH = '/usr/share/fonts/truetype/msttcorefonts'
+
+TABULATE_EXECUTABLE = os.path.join(ROOT_DIR, 'results/Tabulate.py')
 
 if ROOT_DIR not in sys.path:
     sys.path.insert(0, ROOT_DIR)

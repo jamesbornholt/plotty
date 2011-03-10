@@ -13,6 +13,7 @@ urlpatterns = patterns('plotty.results',
     (r'^ajax/save-pipeline/$', 'views_ajax.save_pipeline'),
     (r'^ajax/pipeline-csv-table/(?P<pipeline>.*)$', 'views_ajax.csv_table'),
     (r'^ajax/pipeline-csv-graph/(?P<pipeline>.*)/(?P<index>.*)/(?P<graph>.*)/$', 'views_ajax.csv_graph'),
+    (r'^ajax/tabulate-progress/(?P<pid>[0-9]*)/$', 'views_ajax.tabulate_progress'),
     
     # Debugging
     (r'^list/graph/(?P<path>.*)$', serve, {'document_root': settings.GRAPH_CACHE_DIR}),
