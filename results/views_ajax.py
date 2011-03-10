@@ -24,6 +24,10 @@ def filter_values(request, logs, col):
 def log_values(request, logs):
     """ Given a set of log files, find all possible scenario variables in those
         logs, and all possible value keys """
+    
+    if logs == '':
+        return HttpResponse(json.dumps({'scenarioCols': [], 'valueCols': [], 'scenairoValues': []}))
+    
     dt = DataTable(logs.split(','))
 
     # Grab and sort scenario and value columns
