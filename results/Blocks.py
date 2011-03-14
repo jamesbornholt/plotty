@@ -1,7 +1,13 @@
-import math, copy, tempfile, os
-from plotty.results.DataTypes import DataTable, DataRow, DataAggregate
-from plotty.results.Utilities import present_value, scenario_hash, present_value_csv
-from plotty.results.Exceptions import *
+"""
+This module defines the blocks available to a pipeline, and their functionality.
+Every block is a subclass of the Block class, which defines two basic methods
+which it describes.
+"""
+
+import math, copy, os
+from plotty.results.DataTypes import DataRow, DataAggregate
+from plotty.results.Utilities import present_value, scenario_hash
+from plotty.results.Exceptions import PipelineAmbiguityException, PipelineError, PipelineBlockException
 import plotty.results.PipelineEncoder as PipelineEncoder
 from plotty import settings
 import logging
@@ -10,13 +16,13 @@ import logging
 class Block(object):
     """ The base object for blocks. Defines methods all blocks should implement.
     """
-    def decode(self, paramString):
+    def decode(self, param_string):
         """ Decodes a paramater string and stores the configuration in local
             fields. """
         pass
     
-    def apply(self, dataTable):
-        """ Apply this block to the dataTable. dataTable is passed by reference,
+    def apply(self, data_table):
+        """ Apply this block to the data_table. data_table is passed by reference,
             so this method does not return.
 
             Can throw PipelineAmbiguityException or PipelineBlockException. """
@@ -27,8 +33,16 @@ class FilterBlock(Block):
     """ Filters the datatable by including or excluding particular rows based
         on criteria. The rows that do not match every filter are thrown out 
         (that is, the list of filters is ANDed together). """
-    
-    """ An array of dictionaries describing the filters to be applied.
+
+    TYPE = {
+        'IS': '1',
+        'IS_NOT': '2'
+    }
+
+    def __init__(self):
+        """ Define the single instance variable of a FilterBlock.
+        
+        filters:  An array of dictionaries describing the filters to be applied.
         Each filter has three properties:
          * column -- the scenario column to be checked (string)
          * value  -- the value the specified scenario column should
@@ -37,34 +51,36 @@ class FilterBlock(Block):
                      column set to the specified value. If false, each
                      row must *not* have the specified column set to
                      the specified value.
-    """
+        """
+        super(FilterBlock, self).__init__()
 
-    TYPE = {
-        'IS': '1',
-        'IS_NOT': '2'
-    }
-
-    def __init__(self):
         self.filters = []
 
-    def decode(self, paramString):
-        filts = paramString.split(PipelineEncoder.GROUP_SEPARATOR)
-        for filtStr in filts:
-            parts = filtStr.split(PipelineEncoder.PARAM_SEPARATOR)
+
+    def decode(self, param_string):
+        """ Decode a filter block from an encoded pipeline string.
+            Filter blocks are encoded in the form:
+            filter1scenario^filter1is^filter1value&filter2scenario^...
+        """
+        filts = param_string.split(PipelineEncoder.GROUP_SEPARATOR)
+        for filt_str in filts:
+            parts = filt_str.split(PipelineEncoder.PARAM_SEPARATOR)
             self.filters.append({
                 'scenario': parts[0],
                 'is':       (parts[1] == FilterBlock.TYPE['IS']),
                 'value':    parts[2]
             })
 
-    def apply(self, dataTable):
-        newRows = []
-        removeScenarioCols = set()
+    def apply(self, data_table):
+        """ Apply this block to the given data table.
+        """
+        new_rows = []
+        removed_scenario_cols = set()
         for filt in self.filters:
             if filt['is']:
-                removeScenarioCols.add(filt['scenario'])
+                removed_scenario_cols.add(filt['scenario'])
 
-        for row in dataTable:
+        for row in data_table:
             add = True
             for filt in self.filters:
                 if filt['is']:
@@ -77,23 +93,23 @@ class FilterBlock(Block):
                         break
             if add:
                 # Delete the scenario columns
-                for col in removeScenarioCols:
+                for col in removed_scenario_cols:
                     if col in row.scenario:
                         del row.scenario[col]
-                newRows.append(row)
+                new_rows.append(row)
 
         # We do it this way because calling .remove(x) on a set raises a key
         # value error if it wasn't in the set
-        removeScenarioCols = set()
+        removed_scenario_cols = set()
         for filt in self.filters:
             if filt['is']:
-                removeScenarioCols.add(filt['scenario'])
+                removed_scenario_cols.add(filt['scenario'])
         
-        dataTable.scenarioColumns -= removeScenarioCols
-        dataTable.rows = newRows
+        data_table.scenarioColumns -= removed_scenario_cols
+        data_table.rows = new_rows
 
 
-class AggregateBlock:
+class AggregateBlock(Block):
     """ Aggregates the rows in the DataTable by grouping them based on a
         specified column. Every row that has the same scenario except for
         the value in the specified column is grouped together and turned into
@@ -113,20 +129,29 @@ class AggregateBlock:
     }
 
     def __init__(self):
+        super(AggregateBlock, self).__init__()
         self.column = None
         self.type = None
 
-    def decode(self, paramString):
-        parts = paramString.split(PipelineEncoder.GROUP_SEPARATOR)
+    def decode(self, param_string):
+        """ Decode an aggregate block from an encoded pipeline string.
+            Aggregate blocks are encoded in the form:
+            1&column
+            where the number is the TYPE chosen, and column is the scenario
+            column.
+        """
+        parts = param_string.split(PipelineEncoder.GROUP_SEPARATOR)
         self.type = parts[0]
         self.column = parts[1]
 
-    def apply(self, dataTable):
+    def apply(self, data_table):
+        """ Apply this block to the given data table.
+        """
         groups = {}
         scenarios = {}
         ignored_rows = 0
         # Group the rows based on their scenarios except for the specified column
-        for row in dataTable:
+        for row in data_table:
             if self.column not in row.scenario:
                 ignored_rows += 1
                 continue
@@ -138,27 +163,27 @@ class AggregateBlock:
             groups[schash].append(row.values)
         
         # Create the DataAggregate objects for each group
-        newRows = []
-        for (sc, rows) in groups.items():
+        new_rows = []
+        for (scenario, rows) in groups.items():
             aggregates = {}
             for row in rows:
-                for (key,val) in row.items():
+                for (key, val) in row.items():
                     if key not in aggregates:
                         aggregates[key] = DataAggregate(AggregateBlock.TYPE[self.type])
                     aggregates[key].append(val)
-            newRow = DataRow()
-            newRow.scenario = scenarios[sc]
-            newRow.values = aggregates
-            newRows.append(newRow)
+            new_row = DataRow()
+            new_row.scenario = scenarios[scenario]
+            new_row.values = aggregates
+            new_rows.append(new_row)
         
-        dataTable.rows = newRows
-        dataTable.scenarioColumns -= set([self.column])
+        data_table.rows = new_rows
+        data_table.scenarioColumns -= set([self.column])
         if ignored_rows > 0:
-            logging.info('Aggregate block (%s over %s) ignored %d rows.' % (self.type, self.column, ignored_rows))
+            logging.info('Aggregate block (%s over %s) ignored %d rows.', self.type, self.column, ignored_rows)
 
 
 
-class NormaliseBlock:
+class NormaliseBlock(Block):
     """ Normalises the rows in the DataTable to a specified value. The
         normalisation can be performed in two ways - either by specifying a
         normaliser to be used, or by finding the best value in a group and
@@ -178,12 +203,20 @@ class NormaliseBlock:
     }
 
     def __init__(self):
+        super(NormaliseBlock, self).__init__()
+
         self.group = []
         self.type = None
         self.normaliser = []
 
-    def decode(self, paramString):
-        parts = paramString.split(PipelineEncoder.GROUP_SEPARATOR)
+    def decode(self, param_string):
+        """ Decode a normalise block from an encoded pipeline string.
+            Normalise blocks are encoded in the form:
+            0&scenario^value&scenario^value&groupscenario&groupscenario
+            We distinguish between selected normalisers and group scenarios
+            by the presence of the ^ character.
+        """
+        parts = param_string.split(PipelineEncoder.GROUP_SEPARATOR)
         self.type = parts[0]
         if self.type == NormaliseBlock.TYPE['SELECT']:
             for part in parts[1:]:
@@ -196,15 +229,65 @@ class NormaliseBlock:
                 elif part != '':
                     self.group.append(part)
         else:
-            self.group = filter(lambda x: x != '', parts[1:])
+            self.group = [s for s in parts[1:] if s != '']
     
-    def apply(self, dataTable):
-        if self.type == NormaliseBlock.TYPE['SELECT']:
-            self.processSelectNormaliser(dataTable)
-        elif self.type == NormaliseBlock.TYPE['SELECT']:
-            self.processBestNormaliser(dataTable)
+    def apply(self, data_table):
+        """ Apply this block to the given data table.
+        """
 
-    def processSelectNormaliser(self, dataTable):
+        ignored_rows = []
+        no_normaliser_rows = []
+
+        groups = {}
+
+        # Group the rows up as needed
+        for row in data_table:
+            # Check if all the group columns are defined
+            skip = False
+            for key in self.group:
+                if key not in row.scenario:
+                    skip = True
+                    break
+            if skip:
+                ignored_rows.append(row)
+                continue
+            
+            # Hash the scenario and insert it into its group
+            sc_hash = scenario_hash(scenario=row.scenario, include=self.group)
+            if sc_hash not in groups:
+                groups[sc_hash] = []
+            groups[sc_hash].append(row)
+
+        # Get a set of normalisers
+        normalisers = {}
+        if self.type == NormaliseBlock.TYPE['SELECT']:
+            normalisers = self.processSelectNormaliser(groups)
+        elif self.type == NormaliseBlock.TYPE['BEST']:
+            normalisers = self.processBestNormaliser(groups)
+
+        # Perform the normalisation
+        new_rows = []
+        for (scenario, rows) in groups.iteritems():
+            if scenario not in normalisers:
+                no_normaliser_rows.extend(rows)
+                continue
+            for row in rows:
+                for key in row.values.keys():
+                    if key in normalisers[scenario]:
+                        row.values[key] = row.values[key] / normalisers[scenario][key]
+                    else:
+                        del row.values[key]
+            new_rows.extend(rows)
+        
+        # Wrap it all up
+        data_table.rows = new_rows
+
+        if len(ignored_rows) > 0:
+            logging.info("Normaliser block ignored %d rows because they were missing a scenario column from the selected grouping", len(ignored_rows))
+        if len(no_normaliser_rows) > 0:
+            logging.info("Normaliser block ignored %d rows because no normaliser existed for them", len(no_normaliser_rows))
+
+    def processSelectNormaliser(self, groups):
         """ Normalises the rows to a specified normaliser. The normaliser is
             specified by a column and value in the scenario of each row. Rows
             in the table are first grouped by every column except the one chosen
@@ -220,69 +303,34 @@ class NormaliseBlock:
                         in order to select that row as a normaliser.
         """
         
-        # Build the groups for normalisation and find a normaliser for each one
-        scenarios = {}
         normalisers = {}
-        ignored_rows = 0
 
-        for row in dataTable:
-            # If any of the normaliser cols aren't in this row's scenario,
-            # throw the row away.
-            throw = False
-            for selection in self.normaliser:
-                if selection['scenario'] not in row.scenario:
-                    ignored_rows += 1
-                    throw = True
-                    break
-            if throw:
-                continue
-            
-            schash = scenario_hash(scenario=row.scenario, include=self.group)
-            if schash not in scenarios:
-                scenarios[schash] = []
-            scenarios[schash].append(row)
+        select_ignored_rows = []
 
-            # Is this a normaliser we're interested in?
-            match = True
-            for selection in self.normaliser:
-                if row.scenario[selection['scenario']] != selection['value']:
-                    match = False
-                    break
-            if match:
-                if schash not in normalisers:
-                    normalisers[schash] = copy.copy(row.values)
-                else:
-                    raise PipelineAmbiguityException('More than one normaliser was found for the scenario %s.' % row.scenario)
+        for (scenario, rows) in groups.iteritems():
+            for (i, row) in enumerate(rows):
+                match = True
+                for selection in self.normaliser:
+                    if selection['scenario'] not in row.scenario:
+                        select_ignored_rows.append(row)
+                        del rows[i]
+                        match = False
+                        break
+                    elif row.scenario[selection['scenario']] != selection['value']:
+                        match = False
+                        break
+                if match:
+                    if scenario not in normalisers:
+                        normalisers[scenario] = copy.copy(row.values)
+                    else:
+                        raise PipelineAmbiguityException('More than one normaliser was found for the scenario %s.' % row.scenario)
         
-        newRows = []
-        
-        # Normalise each group based on the found normaliser and collect the new
-        # rows.
-        no_normaliser_rows = 0
-        for (sc, rows) in scenarios.items():
-            # Throw away groups which do not have a normaliser
-            if sc not in normalisers:
-                no_normaliser_rows += len(rows)
-                for row in rows:
-                    row.values = {}
-                #trashed_rows.extend(rows)
-                continue
-            # Normalise each value in each row
-            for row in rows:
-                for (key,val) in row.values.items():
-                    if key not in normalisers[sc]:
-                        del row.values[key]
-                        continue
-                    row.values[key] = row.values[key] / normalisers[sc][key]
-            newRows.extend(rows)
-        
-        dataTable.rows = newRows
-        if ignored_rows > 0:
-            logging.info('Normalise block (to normaliser %s) ignored %d rows because they did not have a value for some column in the normaliser.' % (self.normaliser, ignored_rows))
-        if no_normaliser_rows > 0:
-            logging.info('Normalise block (to normaliser %s) ignored %d rows because no normaliser existed for them.' % (self.normaliser, no_normaliser_rows))
-    
-    def processBestNormaliser(self, dataTable):
+        if len(select_ignored_rows) > 0:
+            logging.info("Normaliser block ignored %d rows because they were missing a scenario column from the selected normaliser", len(select_ignored_rows))
+
+        return normalisers
+  
+    def processBestNormaliser(self, groups):
         """ Normalises the rows to the best normaliser available. The rows in the
             table are firstly grouped by comparing their scenarios only on the
             specified columns. Then the best value in each group is found and
@@ -293,60 +341,21 @@ class NormaliseBlock:
             * group -- a list of scenario columns which should be used for
                        grouping the rows before normalisation.
         """
-        scenarios = {}
+
         normalisers = {}
-        
-        # Build the groups to be used and find a normaliser for each one
-        for row in dataTable:
-            # If the row does not have values for each scenario column to be used
-            # for grouping, it is discarded
-            throw = False
-            for key in self.group:
-                if key not in row.scenario:
-                    throw = True
-                    break
-            if throw:
-                ignored_rows += 1
-                continue
-            
-            schash = scenario_hash(scenario=row.scenario, include=self.group)
-            if schash not in scenarios:
-                scenarios[schash] = []
-                normalisers[schash] = {}
-            # Add the row to its group
-            scenarios[schash].append(row)
-            # Check if it is the best normaliser
-            for (key,val) in row.values.items():
-                if float(val) != 0 and val < normalisers[schash].get(key, float('inf')):
-                    normalisers[schash][key] = val
-        
-        newRows = []
-        
-        # Normalise each group based on the found normaliser and collect the new
-        # rows.
-        no_normaliser_rows = 0
-        for (sc, rows) in scenarios.items():
-            # Throw away groups which do not have a normaliser
-            if sc not in normalisers:
-                no_normaliser_rows += len(rows)
-                continue
-            # Normalise each value in each row
+
+        for (scenario, rows) in groups.iteritems():
+            normaliser = {}
             for row in rows:
-                for (key,val) in row.values.items():
-                    if key not in normalisers[sc]:
-                        del row.values[key]
-                        continue
-                    row.values[key] = row.values[key] / normalisers[sc][key]
-                newRows.append(row)                
-        
-        dataTable.rows = newRows
-        if ignored_rows > 0:
-            logging.info('Normalise block (to best value, grouping by %s) ignored %d rows because they did not have a value for %s.' % (kwargs['group'], ignored_rows, kwargs['column']))
-        if no_normaliser_rows > 0:
-            logging.info('Normalise block (to best value, grouping by %s) ignored %d rows because no normaliser existed for them.' % (kwargs['group'], no_normaliser_rows))
+                for (key, val) in row.values.items():
+                    if float(val) != 0 and float(val) < normaliser.get(key, float('inf')):
+                        normaliser[key] = val
+            normalisers[scenario] = normaliser
+
+        return normalisers
 
 
-class GraphBlock:
+class GraphBlock(Block):
     """ Generate graphs based on the data in the DataTable. """
     
     TYPE = {
@@ -356,9 +365,12 @@ class GraphBlock:
 
     def __init__(self):
         self.type = None
+        self.column = None
+        self.row = None
+        self.value = None
 
-    def decode(self, paramString):
-        parts = paramString.split(PipelineEncoder.GROUP_SEPARATOR)
+    def decode(self, param_string):
+        parts = param_string.split(PipelineEncoder.GROUP_SEPARATOR)
         self.type = parts[0]
         if self.type == GraphBlock.TYPE['HISTOGRAM']:
             self.column = parts[1]
@@ -425,14 +437,14 @@ class GraphBlock:
         
         return pivot_rows, aggregates, column_keys
 
-    def group(self, dataTable):
+    def group(self, data_table):
         """ Split the rows in the datatable into groups based on the
             cross-product of their scenario columns (apart from those used as
             column or row) """
         
         sets = {}
         scenario_keys = {}
-        for row in dataTable:
+        for row in data_table:
             if self.column in row.scenario and self.row in row.scenario and self.value in row.values:
                 schash = scenario_hash(row.scenario, exclude=[self.column, self.row])
                 if schash not in scenario_keys:
@@ -548,24 +560,24 @@ class GraphBlock:
             output += '</tr>'
         output += '<tr><td>&nbsp;</td></tr>'
         if aggregates != None:
-          for agg in ['min', 'max', 'mean', 'geomean']:
-              output += '<tr><td><i>' + agg + '</i></td>'
-              for key in column_keys:
-                  if key in aggregates[agg]:
-                      output += '<td>%.3f</td>' % aggregates[agg][key]
-                  else:
-                      output += '<td>*</td>'
-              output += '</tr>'
+            for agg in ['min', 'max', 'mean', 'geomean']:
+                output += '<tr><td><i>' + agg + '</i></td>'
+                for key in column_keys:
+                    if key in aggregates[agg]:
+                        output += '<td>%.3f</td>' % aggregates[agg][key]
+                    else:
+                        output += '<td>*</td>'
+                output += '</tr>'
         output += '</tbody></table>'
 
         return output
 
-    def apply(self, dataTable):
+    def apply(self, data_table):
         """ Render the graph to HTML, including images """
 
-        sets, scenario_keys = self.group(dataTable)
+        sets, scenario_keys = self.group(data_table)
         graphs = {}
-        for sc, rows in sets.iteritems():
+        for (scenario, rows) in sets.iteritems():
             # Pivot the data
             pivot_table, aggregates, column_keys = self.pivot(rows)
 
@@ -583,15 +595,15 @@ class GraphBlock:
                 column_keys.sort(key=str.lower)
 
             # Generate a hash for this graph
-            graph_hash = str(abs(hash(str(id(self)) + sc)))
+            graph_hash = str(abs(hash(str(id(self)) + scenario)))
             graph_path = os.path.join(settings.GRAPH_CACHE_DIR, graph_hash)
 
-            # If the csv doesn't exist or is out of date (the dataTable has
+            # If the csv doesn't exist or is out of date (the data_table has
             # logs newer than it), replot the data
             csv_last_modified = 0 
             if os.path.exists(graph_path + '.csv'):
                 csv_last_modified = os.path.getmtime(graph_path + '.csv')
-            if csv_last_modified <= dataTable.lastModified:
+            if csv_last_modified <= data_table.lastModified:
                 # Render the CSV
                 csv = self.renderCSV(pivot_table, column_keys, row_keys, aggregates, for_gnuplot=True)
                 csv_file = open(graph_path + '.csv', "w")
@@ -602,14 +614,14 @@ class GraphBlock:
                 if self.type == GraphBlock.TYPE['HISTOGRAM']:
                     self.plotHistogram(graph_path, len(column_keys))
                 elif self.type == GraphBlock.TYPE['XY']:
-                    self.plotXY(graph_path, len(column_keys))
+                    self.plotXYGraph(graph_path, len(column_keys))
             
             # Render the HTML!
             html = self.renderHTML(pivot_table, column_keys, row_keys, graph_hash, aggregates)
 
             title = "Graph"
-            if len(scenario_keys[sc]) > 0:
-                title = ', '.join([k + ' = ' + scenario_keys[sc][k] for k in scenario_keys[sc].keys()])
+            if len(scenario_keys[scenario]) > 0:
+                title = ', '.join([k + ' = ' + scenario_keys[scenario][k] for k in scenario_keys[scenario].keys()])
             
             graphs[title] = html
         
@@ -665,8 +677,8 @@ replot
         gp_file.write(gnuplot.format(graph_path=graph_path, num_cols=num_cols, yaxis_title=self.value, font_path=settings.GRAPH_FONT_PATH))
         gp_file.close()
         os.system(settings.GNUPLOT_EXECUTABLE + ' ' + gp_file.name)
-        os.system("ps2pdf -dEPSCrop " + graph_path + ".wide.eps " + graph_path + ".wide.pdf");
-        os.system("ps2pdf -dEPSCrop " + graph_path + ".eps " + graph_path + ".pdf");
+        os.system("ps2pdf -dEPSCrop " + graph_path + ".wide.eps " + graph_path + ".wide.pdf")
+        os.system("ps2pdf -dEPSCrop " + graph_path + ".eps " + graph_path + ".pdf")
 
 
     def plotHistogram(self, graph_path, num_cols):
@@ -719,5 +731,5 @@ replot
         gp_file.write(gnuplot.format(graph_path=graph_path, num_cols=num_cols, yaxis_title=self.value, font_path=settings.GRAPH_FONT_PATH))
         gp_file.close()
         os.system(settings.GNUPLOT_EXECUTABLE + ' ' + gp_file.name)
-        os.system("ps2pdf -dEPSCrop " + graph_path + ".wide.eps " + graph_path + ".wide.pdf");
-        os.system("ps2pdf -dEPSCrop " + graph_path + ".eps " + graph_path + ".pdf");
+        os.system("ps2pdf -dEPSCrop " + graph_path + ".wide.eps " + graph_path + ".wide.pdf")
+        os.system("ps2pdf -dEPSCrop " + graph_path + ".eps " + graph_path + ".pdf")

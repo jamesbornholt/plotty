@@ -11,8 +11,25 @@ from plotty.results.Pipeline import *
 import plotty.results.PipelineEncoder
 from plotty import settings
 
+class LoggingStream(object):
+    def __init__(self):
+        self.entries = []
+    def write(self, s):
+        self.entries.append(s)
+    def flush(self):
+        pass
+    def val(self):
+        s = ""
+        for l in self.entries:
+            s += l + "\r\n"
+        return s
 
 def list(request, pipeline):
+    log_stream = LoggingStream()
+    stream_handler = logging.StreamHandler(log_stream)
+    root_logger = logging.getLogger()
+    root_logger.addHandler(stream_handler)
+
     try:
         #dt, graph_outputs = execute_pipeline(pipeline)
         p = Pipeline(web_client=True)
@@ -22,10 +39,12 @@ def list(request, pipeline):
         output = ''
         return HttpResponse("Tabulating: log %s, pid %d, log number %d/%d" % (e.log, e.pid, e.index, e.length))
     except PipelineBlockException as e:
-        output = '<div class="exception"><h1>Exception in executing block ' + str(e.block + 1) + '</h1>' + e.msg + '<h1>Traceback</h1><pre>' + e.traceback + '</pre></div>'
+        output = '<div class="exception"><h1>Exception in executing block ' + str(e.block + 1) + '</h1>' + e.msg
+        output += '<h1>Traceback</h1><pre>' + e.traceback + '</pre><h1>Log</h1><pre>' + log_stream.val() + '</pre<</div>'
         return HttpResponse(output)
     except PipelineLoadException as e:
-        output = '<div class="exception"><h1>Exception in loading log files</h1>' + e.msg + '<h1>Traceback</h1><pre>' + e.traceback + '</pre></div>'
+        output = '<div class="exception"><h1>Exception in loading log files</h1>' + e.msg
+        output += '<h1>Traceback</h1><pre>' + e.traceback + '</pre><h1>Log</h1><pre>' + log_stream.val() + '</pre<</div>'
         return HttpResponse(output)
     except PipelineAmbiguityException as e:
         output = 'Ambiguity: ' + e.msg + ' in block ' + str(e.block)

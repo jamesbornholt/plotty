@@ -304,7 +304,7 @@ class DataRow:
         self.scenario = scenario
         
     def __repr__(self):
-        return 'Scenario: %s, Values = %s' % (self.scenario, self.values)
+        return '(DataRow scenario=%s values=%s)' % (self.scenario, self.values)
 
 
 class DataAggregate:
