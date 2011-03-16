@@ -538,7 +538,8 @@ class GraphBlock(Block):
         return output
 
     def renderHTML(self, pivot_table, column_keys, row_keys, graph_hash, aggregates=None):
-        output  = '<img src="graph/' + graph_hash + '.svg" />'
+        #output  = '<img src="graph/' + graph_hash + '.svg" />'
+        output  = '<object data="graph/' + graph_hash + '.svg" type="image/svg+xml"></object>'
         output += '<p>Download: '
         output += '<a href="graph/' + graph_hash + '.csv">csv</a> '
         output += '<a href="graph/' + graph_hash + '.gpt">gpt</a> '
