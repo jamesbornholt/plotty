@@ -61,6 +61,10 @@ div {
 	font-weight: bold;
 }
 
+.pipeline-header-right {
+    float: right;
+}
+
 .pipeline-footer {
 	width: 400px;
 	height: 20px;
