@@ -1476,21 +1476,21 @@ var Pipeline = {
         // Turn the scenario and value column selects into multiselects
         $("#select-scenario-cols, #select-value-cols").toChecklist();
         
-	// Hook the [all] links
-	$("#select-scenario-cols-all").click(function() {
-		if ( $('#select-scenario-cols input:checkbox').length == 0 ) return false;
-		$('#select-scenario-cols input:checkbox').attr('checked', 'checked');
-		$('#select-scenario-cols li').addClass('checked');
-		Pipeline.refresh();
-		return false;
-	    });
-	$('#select-scenario-cols-none').click(function() {
-		if ( $('#select-scenario-cols input:checkbox').length == 0 ) return false;
-		$('#select-scenario-cols input:checkbox').attr('checked', '');
-		$('#select-scenario-cols li').removeClass('checked');
-		Pipeline.refresh();
-		return false;
-	    });
+    	// Hook the [all] links
+        $("#select-scenario-cols-all").click(function() {
+            if ( $('#select-scenario-cols input:checkbox').length == 0 ) return false;
+            $('#select-scenario-cols input:checkbox').attr('checked', 'checked');
+            $('#select-scenario-cols li').addClass('checked');
+            Pipeline.refresh();
+            return false;
+        });
+        $('#select-scenario-cols-none').click(function() {
+            if ( $('#select-scenario-cols input:checkbox').length == 0 ) return false;
+            $('#select-scenario-cols input:checkbox').attr('checked', '');
+            $('#select-scenario-cols li').removeClass('checked');
+            Pipeline.refresh();
+            return false;
+        });
 
         // Hook the checkboxes in the scenario and value column selects
         $("#pipeline-values").delegate("#select-scenario-cols input, #select-value-cols input", 'change', Pipeline.refresh);

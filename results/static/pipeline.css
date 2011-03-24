@@ -4,38 +4,38 @@ html {
 
 body {
     height: 100%;
-	padding: 0;
-	margin: 0;
+    padding: 0;
+    margin: 0;
 }
 
 div {
-	padding: 0;
-	margin: 0;
-	font-family: Arial;
+    padding: 0;
+    margin: 0;
+    font-family: Arial;
 }
 
 #pipeline-templates {
-	display: none;
+    display: none;
 }
 
 #pipeline {
     float: left;
-	padding: 0 20px;
-	width: 400px;
-	overflow: auto;
-	height: 100%;
-	position: fixed;
+    padding: 0 20px;
+    width: 400px;
+    overflow: auto;
+    height: 100%;
+    position: fixed;
     background-color: white;
 }
 
 .remove-button {
-	width: 20px;
-	height: 20px;
-	float: right;
-	display: block;
-	margin: 1px;
-	border: 1px;
-	cursor: pointer;
+    width: 20px;
+    height: 20px;
+    float: right;
+    display: block;
+    margin: 1px;
+    border: 1px;
+    cursor: pointer;
 }
 
 .odd {
@@ -43,7 +43,7 @@ div {
 }
 
 .pipeline {
-	width: 400px;
+    width: 400px;
 }
 
 .pipeline:first-child {
@@ -51,14 +51,14 @@ div {
 }
 
 .pipeline-content {
-	border: 1px solid black;
-	border-bottom: 0;
-	padding: 20px;
-	background: transparent;
+    border: 1px solid black;
+    border-bottom: 0;
+    padding: 20px;
+    background: transparent;
 }
 
 .pipeline-header {
-	font-weight: bold;
+    font-weight: bold;
 }
 
 .pipeline-header-right {
@@ -66,27 +66,27 @@ div {
 }
 
 .pipeline-footer {
-	width: 400px;
-	height: 20px;
-	background: transparent url(arrow.gif) center top no-repeat;
+    width: 400px;
+    height: 20px;
+    background: transparent url(arrow.gif) center top no-repeat;
 }
 
 
 #pipeline-log {
-	background: #eee;
+    background: #eee;
 }
 #pipeline-add {
-	background: #ddd;
-	border-bottom: 1px solid black;
-	margin-bottom: 20px;
+    background: #ddd;
+    border-bottom: 1px solid black;
+    margin-bottom: 20px;
 }
 #pipeline-values {
     background: #eee;
 }
 #pipeline-load {
-	background: white;
-	border-bottom: 1px solid black;
-	margin-bottom: 20px;
+    background: white;
+    border-bottom: 1px solid black;
+    margin-bottom: 20px;
 }
 #pipeline-save {
     background: white;
@@ -94,16 +94,16 @@ div {
     margin-bottom: 20px;
 }
 .filter {
-	background: #efd3f2;
+    background: #efd3f2;
 }
 .aggregate {
-	background: #c5f5c1;
+    background: #c5f5c1;
 }
 .normalise {
-	background: #a7e2f5;
+    background: #a7e2f5;
 }
 .graph {
-	background: #fffab3;
+    background: #fffab3;
 }
 
 #output {
@@ -253,12 +253,12 @@ th.headerSortDown {
 }
 
 .error-block .pipeline-content {
-	border: 3px solid red;
-	border-bottom: 0;
+    border: 3px solid red;
+    border-bottom: 0;
 }
 
 .error-block .pipeline-footer {
-	background: transparent url(arrow-error.gif) center top no-repeat;
+    background: transparent url(arrow-error.gif) center top no-repeat;
 }
 
 .ambiguous-block {
@@ -270,12 +270,12 @@ th.headerSortDown {
 }
 
 .ambiguous-block .pipeline-content {
-	border: 3px solid #ff8c26;
-	border-bottom: 0;
+    border: 3px solid #ff8c26;
+    border-bottom: 0;
 }
 
 .ambiguous-block .pipeline-footer {
-	background: transparent url(arrow-ambiguous.gif) center top no-repeat;
+    background: transparent url(arrow-ambiguous.gif) center top no-repeat;
 }
 
 .ambiguity {
