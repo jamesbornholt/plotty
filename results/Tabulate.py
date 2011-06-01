@@ -77,7 +77,10 @@ def extract_csv(log, write_status=None):
               keys = re.split("\s+", headerline)
               vals = re.split("\s+", dataline)
               for key in keys:
+                key = key.strip()
                 val = vals.pop(0)
+                if not key = '':
+                  results.append(build_result(scenariokeys, scenario, key, val))
             else:
               error = 1
           elif re.match("============================ MMTk Statistics Totals ============================", l):
@@ -91,7 +94,8 @@ def extract_csv(log, write_status=None):
                 val = vals.pop(0)
                 if key == 'time.mu' or key == 'time.gc':
                   totaltime = float(totaltime) + float(val)
-                results.append(build_result(scenariokeys, scenario, key, val))
+                if not key = '':
+                  results.append(build_result(scenariokeys, scenario, key, val))
               results.append(build_result(scenariokeys, scenario, 'time', totaltime))
             else:
               error = 1
