@@ -79,7 +79,7 @@ def extract_csv(log, write_status=None):
               for key in keys:
                 key = key.strip()
                 val = vals.pop(0)
-                if not key = '':
+                if not key == '':
                   results.append(build_result(scenariokeys, scenario, key, val))
             else:
               error = 1
@@ -94,7 +94,7 @@ def extract_csv(log, write_status=None):
                 val = vals.pop(0)
                 if key == 'time.mu' or key == 'time.gc':
                   totaltime = float(totaltime) + float(val)
-                if not key = '':
+                if not key == '':
                   results.append(build_result(scenariokeys, scenario, key, val))
               results.append(build_result(scenariokeys, scenario, 'time', totaltime))
             else:
