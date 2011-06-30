@@ -1341,7 +1341,7 @@ var OptionsTable = Base.extend({
         this._updateAddRemoveButtons();
 
         if ( this.addCallback !== null ) {
-            this.addCallback.call(this);
+            this.addCallback.call(newRow);
         }
     },
     
@@ -1402,7 +1402,11 @@ var Pipeline = {
         CASCADE_REASON_BLOCK_ADDED: 2,       // A new block was added
         CASCADE_REASON_BLOCK_REMOVED: 3,     // A block was removed
         CASCADE_REASON_SELECTION_CHANGED: 4, // A selection changed 
-        CASCADE_REASON_SELECTION_CHANGED_NORMALISER: 5    // Scenario selection changed
+        CASCADE_REASON_SELECTION_CHANGED_NORMALISER: 5,    // Scenario selection changed
+
+        // Timeout after the last typing event in a derived value column
+        // expression before the pipeline is refreshed
+        DERIVED_VALUE_COLUMN_CHANGE_TIMEOUT: 1000 // ms
     },
     
     /**
@@ -1433,6 +1437,11 @@ var Pipeline = {
      * The option table for log files
      */
     logFileOptionsTable: null,
+
+    /**
+     * The option table for derived value columns
+     */
+    derivedValueColsOptionsTable: null,
     
     /**
      * Blocks in the pipeline
@@ -1443,6 +1452,12 @@ var Pipeline = {
      * The current page hash, used to run hashchange events
      */
     hash: "",
+
+    /**
+     * The timeout ID for the timeout used to decide when to try to load
+     * a pipeline after a derived value column has been modified.
+     */
+    derivedValueColTimeoutID: -1,
 
     /**
      ** Public methods
@@ -1467,8 +1482,11 @@ var Pipeline = {
             $(this).hide();
         });
         
-        // Create the options table for log files
+        // Create the options table for log files and derived value cols
         Pipeline.logFileOptionsTable = new OptionsTable($('#pipeline-log-table'), null, Pipeline.refreshAvailableColumns);
+        Pipeline.derivedValueColsOptionsTable = new OptionsTable($('#pipeline-derived-value-cols'), null, Pipeline.refresh, function() {
+            $('.pipeline-derived-value-field', this).val("");
+        });
 
         // Hook the log selection dropdowns
         $("#pipeline-log").delegate(".select-log", 'change', Pipeline.refreshAvailableColumns);
@@ -1565,6 +1583,13 @@ var Pipeline = {
             if ( selected != '-1' ) {
                 Pipeline.pushState(selected, true);
             }
+        });
+
+        // Hook the onchange for derived value cols to start a timer to refresh
+        // the pipeline
+        $('#pipeline-derived-value-cols').delegate('.pipeline-derived-value-field', 'keyup', function() {
+            clearTimeout(Pipeline.derivedValueColTimeoutID);
+            Pipeline.derivedValueColTimeoutID = setTimeout(Pipeline.refresh, Pipeline.constants.DERIVED_VALUE_COLUMN_CHANGE_TIMEOUT);
         });
 
         // Trigger it once now
@@ -1792,9 +1817,17 @@ var Pipeline = {
         // Encode the scenario and value columns
         var scenarioCols = Utilities.multiSelectValue($("#select-scenario-cols"));
         var valueCols = Utilities.multiSelectValue($("#select-value-cols"));
+        var derivedValueCols = $('.pipeline-derived-value-field');
+
+        var derivedValueColExprs = [];
+        derivedValueCols.each(function() {
+            var s = $.trim(this.value);
+            if ( s.length > 0 ) derivedValueColExprs.push(s);
+        });
 
         strs.push(scenarioCols.join(Pipeline.encoder.GROUP_SEPARATOR));
         strs.push(valueCols.join(Pipeline.encoder.GROUP_SEPARATOR));
+        strs.push(derivedValueColExprs.join(Pipeline.encoder.GROUP_SEPARATOR));
 
         // Now encode the pipeline
         jQuery.each(this.blocks, function(i, block) {
@@ -1814,6 +1847,7 @@ var Pipeline = {
 
         // Reset the pipeline
         Pipeline.logFileOptionsTable.reset();
+        Pipeline.derivedValueColsOptionsTable.reset();
         jQuery.each(Pipeline.blocks, function(i, block) {
             block.removeBlock();
         });
@@ -1826,8 +1860,9 @@ var Pipeline = {
         var logFiles = parts[0].split(Pipeline.encoder.GROUP_SEPARATOR);
         var scenarioCols = parts[1].split(Pipeline.encoder.GROUP_SEPARATOR);
         var valueCols = parts[2].split(Pipeline.encoder.GROUP_SEPARATOR);
+        var derivedValueCols = parts[3].split(Pipeline.encoder.GROUP_SEPARATOR);
 
-        var blocks = parts.slice(3);
+        var blocks = parts.slice(4);
 
         // Load the log files into the table
         jQuery.each(logFiles, function(i, log) {
@@ -1848,6 +1883,12 @@ var Pipeline = {
             // Update scenario and value column selections
             Utilities.updateMultiSelect($("#select-scenario-cols"), data.scenarioCols, scenarioCols);
             Utilities.updateMultiSelect($("#select-value-cols"), data.valueCols, valueCols);
+
+            // Update the derived value cols
+            jQuery.each(derivedValueCols, function(index, value) {
+                var row = Pipeline.derivedValueColsOptionsTable.addRow();
+                $('.pipeline-derived-value-field', row).val(value);
+            });
 
             // Start creating blocks
             jQuery.each(blocks, function(i, params) {

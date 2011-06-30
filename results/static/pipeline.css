@@ -117,6 +117,10 @@ div {
     color: gray;
 }
 
+.pipeline-derived-value-field {
+    width: 250px;
+}
+
 #select-scenario-cols, #select-value-cols, .select-normalise-group {
     width: 100%;
     height: 100px;

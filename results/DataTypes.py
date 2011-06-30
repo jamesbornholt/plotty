@@ -1,9 +1,9 @@
 from django.core.cache import cache
-import logging, sys, csv, os, math, re, string, subprocess
+import logging, sys, csv, os, math, re, string, subprocess, time
 from plotty import settings
-from plotty.results.Utilities import present_value, present_value_csv, scenario_hash
+from plotty.results.Utilities import present_value, present_value_csv, scenario_hash, length_cmp
 from plotty.results.Tabulate import extract_csv
-from plotty.results.Exceptions import LogTabulateStarted
+from plotty.results.Exceptions import LogTabulateStarted, PipelineError
 import tempfile
 from scipy import stats
 import Image, ImageDraw, StringIO, urllib
@@ -138,6 +138,9 @@ class DataTable:
         values = list()
         values_with_ci = list()
         
+        # XXX TODO: Why do we need to loop here? Can't we just use
+        # self.valueColumns and self.scenarioColumns, assuming they're being
+        # kept up to date?
         for row in self.rows:
             for key in row.scenario.iterkeys():
                 if key not in scenarios:
@@ -150,76 +153,97 @@ class DataTable:
 
         return scenarios, values, values_with_ci
     
-    def selectValueColumns(self, vals):
+    def selectValueColumns(self, vals, derivedVals):
         """ Selects the specified set of value columns and throws away all
             others from each row in the table.
             
             vals: a list of value columns to keep.
         """
-        derived_vals = []
-        value_columns_lower = dict([(str.lower(s), s) for s in self.valueColumns])
-        for expr in vals:
-            if expr not in self.valueColumns:
-                # This must be a derived column - try compiling it
-                val = str.lower(str(expr))
-                
-                # Hacky, but check the expression is simple and mathematical.
-                # Also prepare a substitution key
-                statement_whitespace = val
-                statement = val
-                subst_key = {}
-                for i,valid_val in enumerate(value_columns_lower.iterkeys()):
-                    if statement.find(valid_val) > -1:
-                        statement_whitespace = statement_whitespace.replace(valid_val, '')
-                        statement = statement.replace(valid_val, string.ascii_letters[i])
-                        subst_key[string.ascii_letters[i]] = value_columns_lower[valid_val]
-                if re.search('[^ \+\-\\\*\(\)]', statement_whitespace) == None:
-                    continue
-                
-                # It's a clean and reasonable expression, prepare it properly.
-                # This is a hack that lets us be more flexible with value column
-                # names. A number of column names (particularly stats outputs
-                # from MMTk) are invalid python identifiers.
-                try:
-                    # This is safe - compile won't evaluate the code, just parse it
-                    compiled = compile(statement, statement, 'eval')
-                except SyntaxError:
-                    continue
-                except ValueError:
-                    continue
-                
-                derived_vals.append((expr, compiled, subst_key.copy()))
+
+        vals = set(map(lambda x: str(x), vals))
+        derivedVals = set(map(lambda x: str(x), derivedVals))
         
+        derived_vals = []
+        subst_variable = lambda i: "s%02i" % i
+        value_columns_lower = dict([(str.lower(s), s) for s in self.valueColumns])
+        # Super hack: this avoids e.g. 'time.gc' being interpreted as referring
+        # to the 'time' column, thereby creating an invalid expression. So, we
+        # sort the possible keys by length, so 'time.gc' is always tested before
+        # 'time'.
+        value_columns_keys = value_columns_lower.keys()
+        value_columns_keys.sort(length_cmp)
+        for expr in derivedVals:
+            # Try to compile the derived columns
+            val = str.lower(str(expr))
+                
+            # Replace the value column tokens in the expression with a simple
+            # substitution key. We'll also prepare a simple exemplar row to make
+            # sure the expression evaluates cleanly at this point.
+            statement = val
+            subst_key = {}
+            exemplar_row = {}
+            for i,valid_val in enumerate(value_columns_keys):
+                if statement.find(valid_val) > -1:
+                    var = subst_variable(i)
+                    statement = statement.replace(valid_val, var)
+                    subst_key[var] = value_columns_lower[valid_val]
+                    exemplar_row[var] = 1.0
+            
+            # It's a clean and reasonable expression, prepare it properly.
+            # This is a hack that lets us be more flexible with value column
+            # names. A number of column names (particularly stats outputs
+            # from MMTk) are invalid python identifiers.
+            try:
+                # This is safe - compile won't evaluate the code, just parse it
+                compiled = compile(statement, statement, 'eval')
+            except SyntaxError:
+                raise PipelineError("The expression '%s' is not a valid Python expression" % expr)
+            except ValueError:
+                raise PipelineError("The expression '%s' is not a valid Python expression" % expr)
+            
+            # Now try evaluating it, without access to the standard library
+            try:
+                v = eval(compiled, {'__builtins__': None}, exemplar_row)
+            except:
+                raise PipelineError("The expression '%s' is not a valid Python expression" % expr)
+        
+            derived_vals.append((expr, compiled, subst_key.copy()))
+            # From now on, the derived value cols should be treated exactly like
+            # any other value column
+            vals.add(expr)
+        
+
         for row in self.rows:
             # Calculate derived cols first, since they might not be selected
             # in their own right.
             for name,code,subst in derived_vals:
+                # Calculate the substitution dictionary
                 evaled_subst = {}
-                #logging.debug(subst)
                 invalid = False
                 for token,key in subst.items():
                     if key not in row.values:
-                        #logging.debug('Invalid row: %s because %s not in dict.' % (row.values, key))
                         invalid = True
                         break
                     else:
                         evaled_subst[token] = row.values[key]
                 if invalid:
-                    #logging.debug('Invalid row: %s' % repr(row))
                     continue
+                
+                # Evaluate the code with none of the builtin functions available.
+                # This means none of the python builtin methods, which include the
+                # import statement, are available to the code. This is pretty good
+                # security, but does restrict us somewhat in mathematics.
                 try:
-                    # Evaluate the code with none of the builtin functions available.
-                    # This means none of the python builtin methods, which include the
-                    # import statement, are available to the code. This is pretty good
-                    # security, but does restrict us somewhat in mathematics.
                     row.values[name] = eval(code, {'__builtins__': None}, evaled_subst)
                 except:
                     continue
-                    
+            
+            # Now select the value columns we're after
             for (key,val) in row.values.items():
                 if key not in vals:
                     del row.values[key]
-        self.valueColumns = set(vals)
+
+        self.valueColumns = vals
 
     def selectScenarioColumns(self, cols):
         """ Selects the specified set of scenario columns and throws away all
@@ -244,18 +268,19 @@ class DataTable:
         output += '</thead><tbody>'
         
         for row in self.rows:
-            output += '<tr>'
+            s = '<tr>'
             for key in scenarios:
                 if key in row.scenario:
-                    output += '<td>' + row.scenario[key] + '</td>'
+                    s+= '<td>' + row.scenario[key] + '</td>'
                 else:
-                    output += '<td>*</td>'
+                    s+= '<td>*</td>'
             for key in values:
                 if key in row.values:
-                    output += '<td>' + present_value(row.values[key]) + '</td>'
+                    s += '<td>' + present_value(row.values[key]) + '</td>'
                 else:
-                    output += '<td>*</td>'
-            output += '</tr>'
+                    s += '<td>*</td>'
+            s += '</tr>'
+            output += s
         output += '</tbody></table>'
         return output
     

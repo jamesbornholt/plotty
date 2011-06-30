@@ -128,7 +128,17 @@
 			    </select> <br />
 				<span class="pipeline-header">Value Columns</span> <br />
 				<select id="select-value-cols" multiple="multiple">
-				</select>
+				</select> <br />
+				<span class="pipeline-header">Derived Value Columns</span> <br />
+				<table id="pipeline-derived-value-cols">
+				    <tr>
+				        <td>
+				            <input type="text" class="pipeline-derived-value-field" />
+				        </td>
+				        <td><button type="button" class="remove-row" disabled="disabled">-</button></td>
+				        <td><button type="button" class="add-row">+</button></td>
+				    </tr>
+				</table>
 			</div>
 			<div class="pipeline-footer"></div>
 		</div>

@@ -24,6 +24,7 @@ class Pipeline(object):
         self.logs = []
         self.scenarioCols = set()
         self.valueCols = set()
+        self.derivedValueCols = set()
         self.blocks = []
         self.dataTable = None
         self.webClient = web_client
@@ -35,8 +36,9 @@ class Pipeline(object):
             self.logs = parts[0].split(PipelineEncoder.GROUP_SEPARATOR)
             self.scenarioCols = set(parts[1].split(PipelineEncoder.GROUP_SEPARATOR))
             self.valueCols = set(parts[2].split(PipelineEncoder.GROUP_SEPARATOR))
+            self.derivedValueCols = set(filter(lambda x: x != '', parts[3].split(PipelineEncoder.GROUP_SEPARATOR)))
     
-            for params in parts[3:]:
+            for params in parts[4:]:
                 block = BLOCK_MAPPINGS[params[0]]()
                 block.decode(params[1:])
                 self.blocks.append(block)
@@ -50,7 +52,7 @@ class Pipeline(object):
         try:
             self.dataTable = DataTable(logs=self.logs, wait=not self.webClient)
             self.dataTable.selectScenarioColumns(self.scenarioCols)
-            self.dataTable.selectValueColumns(self.valueCols)
+            self.dataTable.selectValueColumns(self.valueCols, self.derivedValueCols)
         except LogTabulateStarted:
             raise
         except PipelineAmbiguityException as e:
@@ -60,7 +62,7 @@ class Pipeline(object):
             raise
         except:
             raise PipelineLoadException(*sys.exc_info())
-
+        
         graph_outputs = []
 
         for i,block in enumerate(self.blocks):
@@ -83,7 +85,7 @@ class Pipeline(object):
             
             if isinstance(block, GraphBlock):
                 graph_outputs.append(ret)
-        
+
         return graph_outputs
 
 

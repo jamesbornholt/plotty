@@ -47,3 +47,12 @@ def present_value_csv(key, val, values_with_ci):
             return '%f,%f,%f' % (val.value(), ciDown, ciUp)
     else:
         return str(val)
+
+def length_cmp(a, b):
+    """ Used to sort a list of strings by their length in descending order """
+    if len(a) == len(b):
+        return 0
+    elif len(a) < len(b):
+        return 1
+    else:
+        return -1
