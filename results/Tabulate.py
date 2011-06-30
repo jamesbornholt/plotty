@@ -115,7 +115,7 @@ def extract_csv(log, csv_file, write_status=None):
         error = 0
         subentry = subentry + 1
       elif error == 0:
-        if re_err.match(l):
+        if re_err.search(l):
             error = 1
         else:
           if re_tabulate.match(l):
