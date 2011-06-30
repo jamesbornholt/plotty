@@ -3,7 +3,7 @@ import os
 import re
 import gzip
 
-def extract_csv(log, write_status=None):
+def extract_csv(log, csv_file, write_status=None):
   entries = [ f for f in os.listdir(log) if re.search(".log.gz$", f) ]
   progress = 0
   if write_status != None:
@@ -43,6 +43,8 @@ def extract_csv(log, write_status=None):
   legacy_scenario = dict()
   scenario = dict()
   scenario['iteration'] = 1
+  legacy_scenario['iteration'] = 1
+  legacy_scenario['invocation'] = 1
   for entry in entries:
       extract_scenario(legacy_scenario, entry)
       e = gzip.open(os.path.join(log, entry), 'r')
@@ -61,7 +63,7 @@ def extract_csv(log, write_status=None):
   else:
     scenariokeys = scenario.keys()
 
-  csv = open(log + '.csv', 'w')
+  csv = open(csv_file, 'w')
 
   for key in scenariokeys:
     csv.write(key + ',')
@@ -69,6 +71,7 @@ def extract_csv(log, write_status=None):
   csv.write('key,value\n')
 
   for entry in entries:
+    invocation = 0
     subentry = -1
     error = 0
     e = gzip.open(os.path.join(log, entry), 'r')
@@ -86,7 +89,9 @@ def extract_csv(log, write_status=None):
         iteration = 0
         scenario = dict()
         if legacy_mode:
+          scenario["invocation"] = invocation
           extract_scenario(scenario, entry)
+          invocation += 1
         results = list()
         scenario['iteration'] = iteration
         error = 0
@@ -157,12 +162,12 @@ def extract_csv(log, write_status=None):
     f.close()
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print "Usage: python Tabulate.py log-folder [status-dir]"
+    if len(sys.argv) < 3 or len(sys.argv) > 4:
+        print "Usage: python Tabulate.py log-folder csv-file [status-dir]"
         sys.exit(1)
     
-    print "Tabulating %s (pid %d)" % (sys.argv[1], os.getpid())
-    if len(sys.argv) < 3:
-      extract_csv(sys.argv[1])
-    else:
+    print "Tabulating %s to %s (pid %d)" % (sys.argv[1], sys.argv[2], os.getpid())
+    if len(sys.argv) == 3:
       extract_csv(sys.argv[1], sys.argv[2])
+    else:
+      extract_csv(sys.argv[1], sys.argv[2], sys.argv[3])

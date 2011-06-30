@@ -148,6 +148,7 @@ class AggregateBlock(Block):
         """ Apply this block to the given data table.
         """
         groups = {}
+        basescenarios = set()
         scenarios = {}
         ignored_rows = 0
         # Group the rows based on their scenarios except for the specified column
@@ -155,6 +156,11 @@ class AggregateBlock(Block):
             if self.column not in row.scenario:
                 ignored_rows += 1
                 continue
+            schash = scenario_hash(scenario=row.scenario)
+            if schash in basescenarios:
+              raise PipelineAmbiguityException("Base scenario not unique %s" % row.scenario)
+            else:
+              basescenarios.add(schash)
             schash = scenario_hash(scenario=row.scenario, exclude=[self.column])
             if schash not in scenarios:
                 groups[schash] = []

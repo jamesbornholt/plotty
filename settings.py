@@ -14,12 +14,12 @@ else:
 
 APP_ROOT = os.path.dirname(__file__)
 
-BM_LOG_DIR = os.path.join(ROOT_DIR, 'logs')
+BM_LOG_DIR = os.path.join(ROOT_DIR, 'log')
 
 CACHE_ROOT = os.path.join(ROOT_DIR, 'cache')
 
 CACHE_TIMEOUT = 24*60*60 # 24 hours
-CACHE_BACKEND = "file://" + os.path.join(ROOT_DIR, 'cache/logs') + ('?timeout=%d' % CACHE_TIMEOUT)
+CACHE_BACKEND = "file://" + os.path.join(ROOT_DIR, 'cache/log') + ('?timeout=%d' % CACHE_TIMEOUT)
 
 GNUPLOT_EXECUTABLE = '/home/web-scripts/plotty-gnuplot/bin/gnuplot'
 GRAPH_CACHE_DIR = os.path.join(ROOT_DIR, 'cache/graphs')

@@ -4,6 +4,7 @@ from plotty import settings
 from plotty.results.Utilities import present_value, present_value_csv, scenario_hash
 from plotty.results.Tabulate import extract_csv
 from plotty.results.Exceptions import LogTabulateStarted
+import tempfile
 from scipy import stats
 import Image, ImageDraw, StringIO, urllib
 
@@ -77,6 +78,11 @@ class DataTable:
         value_cols = set()
 
         dir_path = os.path.join(settings.BM_LOG_DIR, log)
+        csv_dir = os.path.join(settings.CACHE_ROOT, "csv")
+        csv_file = os.path.join(csv_dir, log + ".csv")
+        if not os.path.exists(csv_dir):
+          os.mkdir(csv_dir)
+
         # Store the log's last modified date
         lastModified = os.path.getmtime(dir_path)
         
@@ -84,19 +90,19 @@ class DataTable:
         
         # Only retabulate if the logs have been modified since the csv was
         # generated.
-        if not os.path.exists(dir_path + '.csv') or os.path.getmtime(dir_path + '.csv') < lastModified:
+        if not os.path.exists(csv_file) or os.path.getmtime(csv_file) < lastModified:
             logging.debug("Retabulating CSV for " + dir_path + " since CSV was out of date or non-existent")
             if not wait:
                 # We don't want to wait - throw an exception and tell the client
                 # to come back later.
-                pid = subprocess.Popen(["python", settings.TABULATE_EXECUTABLE, dir_path, settings.CACHE_ROOT]).pid
+                pid = subprocess.Popen(["python", settings.TABULATE_EXECUTABLE, dir_path, csv_file, settings.CACHE_ROOT]).pid
                 raise LogTabulateStarted(log, pid)
             else:
-                extract_csv(dir_path)
+                extract_csv(dir_path, csv_file)
         else:
             logging.debug("Valid CSV already exists for " + dir_path + ", skipping retabulation.")
 
-        reader = csv.DictReader(open(dir_path + '.csv', 'rb'))
+        reader = csv.DictReader(open(csv_file, 'rb'))
         reader.fieldnames = map(str.lower, reader.fieldnames)
         for line in reader:
             key = line.pop('key')
@@ -114,6 +120,8 @@ class DataTable:
             schash = scenario_hash(line)
             if schash not in scenarios:
                 scenarios[schash] = DataRow(line)
+            if key_clean in scenarios[schash].values:
+              raise PipelineError("Invalid log file, multiple values for key %s with scenario %s" % (key_clean, line))
             scenarios[schash].values[key_clean] = float(value)
         
         logging.debug('Parsed %d rows from CSV' % len(scenarios))
