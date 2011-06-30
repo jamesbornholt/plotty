@@ -2,22 +2,24 @@
 
 APACHE_PATH="/etc/apache2/sites-plotty"
 
-if [ -z "$1" ]; then
-    echo "usage: init-plotty project-name [user-name]"
+if [ -z "$1" || -z "$2" ]; then
+    echo "usage: init-plotty project-name log-dir [user-name]"
     echo ""
     echo "Initialises a new plotty instance in your home folder, named project-name."
+    echo "Logs will be initialized based on the directory based on the command line."
     echo "If user-name was specified, the instance will be created in that user's home."
     echo "This will then be accessible from http://squirrel/plotty/user-name/project-name/"
     exit
 fi
 
 PROJECT_NAME=$1
+LOG_DIR=$2
 
 USER=""
-if [  -z "$2" ]; then
+if [  -z "$3" ]; then
     USER=`whoami`
 else
-    USER=$2
+    USER=$3
 fi
 
 USER_HOME="/home/$USER"
@@ -42,9 +44,10 @@ fi
 
 echo "---> Creating directory structure in $PLOTTY_ROOT"
 
+ln -s $LOG_DIR $PLOTTY_ROOT/log
+
 mkdir $PLOTTY_ROOT
 mkdir $PLOTTY_ROOT/app
-mkdir $PLOTTY_ROOT/logs
 mkdir $PLOTTY_ROOT/cache
 mkdir $PLOTTY_ROOT/cache/logs
 mkdir $PLOTTY_ROOT/cache/graphs
