@@ -1765,7 +1765,11 @@ var Pipeline = {
         // Load the initial scenario and value columns from their selectors
         var scenarioCols = Utilities.multiSelectValue($("#select-scenario-cols"));
         var valueCols = Utilities.multiSelectValue($("#select-value-cols"));
-        
+        $('.pipeline-derived-value-field').each(function() {
+            var s = $.trim(this.value);
+            if ( s.length > 0 ) valueCols.push(s);
+        });
+
         // We want to visit every block even if the pipeline is invalid, since
         // we also need to notify blocks about their new scenario and value
         // columns.
@@ -1861,6 +1865,11 @@ var Pipeline = {
         var scenarioCols = parts[1].split(Pipeline.encoder.GROUP_SEPARATOR);
         var valueCols = parts[2].split(Pipeline.encoder.GROUP_SEPARATOR);
         var derivedValueCols = parts[3].split(Pipeline.encoder.GROUP_SEPARATOR);
+        derivedValueCols = jQuery.map(derivedValueCols, function(val) {
+            var s = $.trim(val);
+            if ( s.length > 0 ) return s;
+            else return null; // removes the item
+        });
 
         var blocks = parts.slice(4);
 
@@ -1889,6 +1898,11 @@ var Pipeline = {
                 var row = Pipeline.derivedValueColsOptionsTable.addRow();
                 $('.pipeline-derived-value-field', row).val(value);
             });
+
+            // We want to cascade all value cols including derived ones,
+            // so add those to the original now
+            // XXX TODO: Hacky - do we need the first cascade before refresh?
+            jQuery.extend(data.valueCols, derivedValueCols);
 
             // Start creating blocks
             jQuery.each(blocks, function(i, params) {

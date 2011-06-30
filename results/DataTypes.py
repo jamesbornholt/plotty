@@ -211,7 +211,6 @@ class DataTable:
             # From now on, the derived value cols should be treated exactly like
             # any other value column
             vals.add(expr)
-        
 
         for row in self.rows:
             # Calculate derived cols first, since they might not be selected
