@@ -22,8 +22,11 @@ def extract_csv(log, csv_file, write_status=None):
     r = r + key + ',' + str(value) + '\n'
     return r
 
+  re_filename = re.compile("^(\w+)\.(\d+)\.(\d+)\.([a-zA-Z0-9_\-\.]+)\.log\.gz$")
+  re_notdigit = re.compile("^[0-9]")
+  re_scenario_kv = re.compile("^([^-]*)-(.*)$")
   def extract_scenario(scenario, entry):
-    m = re.match("^(\w+)\.(\d+)\.(\d+)\.([a-zA-Z0-9_\-\.]+)\.log\.gz$", entry)
+    m = re_filename.match(entry)
     scenario["benchmark"] = m.group(1)
     scenario["hfac"] = m.group(2)
     scenario["heap"] = m.group(3)
@@ -31,8 +34,8 @@ def extract_csv(log, csv_file, write_status=None):
     buildparams = scenario["buildstring"].split(".") 
     scenario["build"] = buildparams[0]
     for p in buildparams[1::] :
-      if not re.match("^[0-9]$", p):
-        m = re.match("^([^-]*)-(.*)$", p)
+      if not re_notdigit.match(p):
+        m = re_scenario_kv.match(p)
         if m:
           scenario[m.group(1)] = m.group(2)
         else:
@@ -45,11 +48,14 @@ def extract_csv(log, csv_file, write_status=None):
   scenario['iteration'] = 1
   legacy_scenario['iteration'] = 1
   legacy_scenario['invocation'] = 1
+
+  re_scenario = re.compile("====> Scenario (.*)=(.*)$")
+
   for entry in entries:
       extract_scenario(legacy_scenario, entry)
       e = gzip.open(os.path.join(log, entry), 'r')
       for l in e:
-        m = re.match("====> Scenario (.*)=(.*)$", l)
+        m = re_scenario.match(l)
         if (m):
           legacy_mode = False
           scenario[m.group(1)] = 1
@@ -70,6 +76,18 @@ def extract_csv(log, csv_file, write_status=None):
 
   csv.write('key,value\n')
 
+  re_timedrun = re.compile("mkdir.*timedrun")
+  re_err = re.compile('NullPointerException|JikesRVM: WARNING: Virtual processor has ignored timer interrupt|hardware trap|-- Stack --|code: -1|OutOfMemory|ArrayIndexOutOfBoundsException|FileNotFoundException|FAILED warmup')
+  re_tabulate = re.compile("============================ Tabulate Statistics ============================")
+  re_mmtkstats = re.compile("============================ MMTk Statistics Totals ============================")
+  re_nonwhitespace = re.compile("\S+")
+  re_whitespace = re.compile("\s+")
+  re_digit = re.compile("\d+")
+  re_passed = re.compile("PASSED in (\d+) msec")
+  re_warmup = re.compile("completed warmup \d* *in (\d+) msec")
+  re_finished = re.compile("Finished in (\S+) secs")
+  re_998 = re.compile("_997_|_998_")
+
   for entry in entries:
     invocation = 0
     subentry = -1
@@ -79,10 +97,10 @@ def extract_csv(log, csv_file, write_status=None):
       l = e.readline()
       if not l:
         break
-      m = re.match("====> Scenario (.*)=(.*)$", l)
+      m = re_scenario.match(l)
       if m:
         scenario[m.group(1)] = m.group(2)
-      elif re.search('mkdir.*timedrun', l):
+      elif re_timedrun.search(l):
         if subentry >= 0 and error == 0:
           for r in results:
             csv.write(r)
@@ -97,15 +115,15 @@ def extract_csv(log, csv_file, write_status=None):
         error = 0
         subentry = subentry + 1
       elif error == 0:
-        if re.search('NullPointerException|JikesRVM: WARNING: Virtual processor has ignored timer interrupt|hardware trap|-- Stack --|code: -1|OutOfMemory|ArrayIndexOutOfBoundsException|FileNotFoundException|FAILED warmup', l):
+        if re_err.match(l):
             error = 1
         else:
-          if re.match("============================ Tabulate Statistics ============================", l):
+          if re_tabulate.match(l):
             headerline = e.readline()
             dataline = e.readline()
-            if re.match("\S+",headerline) and re.match("\d+", dataline):
-              keys = re.split("\s+", headerline)
-              vals = re.split("\s+", dataline)
+            if re_nonwhitespace.match(headerline) and re_digit.match(dataline):
+              keys = re_whitespace.split(headerline)
+              vals = re_whitespace.split(dataline)
               for key in keys:
                 key = key.strip()
                 val = vals.pop(0)
@@ -113,12 +131,12 @@ def extract_csv(log, csv_file, write_status=None):
                   results.append(build_result(scenariokeys, scenario, key, val))
             else:
               error = 1
-          elif re.match("============================ MMTk Statistics Totals ============================", l):
+          elif re_mmtkstats.match(l):
             headerline = e.readline()
             dataline = e.readline()
-            if re.match("\S+",headerline) and re.match("\d+", dataline):
-              keys = re.split("\s+", headerline)
-              vals = re.split("\s+", dataline)
+            if re_nonwhitespace.match(headerline) and re_digit.match(dataline):
+              keys = re_whitespace.split(headerline)
+              vals = re_whitespace.split(dataline)
               totaltime = 0.0
               for key in keys:
                 val = vals.pop(0)
@@ -130,20 +148,20 @@ def extract_csv(log, csv_file, write_status=None):
             else:
               error = 1
           else:
-            m = re.search("PASSED in (\d+) msec",l)
+            m = re_passed.search(l)
             if m:
               results.append(build_result(scenariokeys, scenario, "bmtime", m.group(1)))
               iteration = iteration + 1
               scenario["iteration"] = iteration
             else:
-              m = re.search("completed warmup \d* *in (\d+) msec",l)
+              m = re_warmup.search(l)
               if m:
                 results.append(build_result(scenariokeys, scenario, "bmtime", m.group(1)))
                 iteration = iteration + 1
                 scenario["iteration"] = iteration
               else:
-                m = re.search("Finished in (\S+) secs",l)
-                if m and not re.search("_997_|_998_",l):
+                m = re_finished.search(l)
+                if m and not re_998.search(l):
                   msec = float(m.group(1)) * 1000.0
                   results.append(build_result(scenariokeys, scenario, "bmtime", msec))
                   iteration = iteration + 1
