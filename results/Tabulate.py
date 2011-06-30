@@ -22,21 +22,44 @@ def extract_csv(log, write_status=None):
     r = r + key + ',' + str(value) + '\n'
     return r
 
+  def extract_scenario(scenario, entry):
+    m = re.match("^(\w+)\.(\d+)\.(\d+)\.([a-zA-Z0-9_\-\.]+)\.log\.gz$", entry)
+    scenario["benchmark"] = m.group(1)
+    scenario["hfac"] = m.group(2)
+    scenario["heap"] = m.group(3)
+    scenario["buildstring"] = m.group(4)
+    buildparams = scenario["buildstring"].split(".") 
+    scenario["build"] = buildparams[0]
+    for p in buildparams[1::] :
+      if not re.match("^[0-9]$", p):
+        m = re.match("^([^-]*)-(.*)$", p)
+        if m:
+          scenario[m.group(1)] = m.group(2)
+        else:
+          scenario[p] = 1
+
   # Build the set of unique scenario keys
+  legacy_mode = True
+  legacy_scenario = dict()
   scenario = dict()
   scenario['iteration'] = 1
   for entry in entries:
+      extract_scenario(legacy_scenario, entry)
       e = gzip.open(os.path.join(log, entry), 'r')
       for l in e:
         m = re.match("====> Scenario (.*)=(.*)$", l)
         if (m):
+          legacy_mode = False
           scenario[m.group(1)] = 1
       progress += 1
       if write_status != None:
         f.write(str(progress) + "\r\n")
         f.flush()
 
-  scenariokeys = scenario.keys()
+  if legacy_mode:
+    scenariokeys = legacy_scenario.keys()
+  else:
+    scenariokeys = scenario.keys()
 
   csv = open(log + '.csv', 'w')
 
@@ -62,6 +85,8 @@ def extract_csv(log, write_status=None):
             csv.write(r)
         iteration = 0
         scenario = dict()
+        if legacy_mode:
+          extract_scenario(scenario, entry)
         results = list()
         scenario['iteration'] = iteration
         error = 0
