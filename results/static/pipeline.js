@@ -8,6 +8,10 @@ if ( typeof console === 'undefined' ) {
         debug: function() {}
     }
 }
+// IE 9
+if ( typeof console.debug === 'undefined' ) {
+    console.debug = console.log;
+}
 
 
 /**
