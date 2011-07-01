@@ -553,7 +553,7 @@ class GraphBlock(Block):
 
     def renderHTML(self, pivot_table, column_keys, row_keys, graph_hash, aggregates=None):
         #output  = '<img src="graph/' + graph_hash + '.svg" />'
-        output  = '<object width=100% data="graph/' + graph_hash + '.svg" type="image/svg+xml"></object>'
+        output  = '<object width=100% height=40% data="graph/' + graph_hash + '.svg" type="image/svg+xml"></object>'
         output += '<p>Download: '
         output += '<a href="graph/' + graph_hash + '.csv">csv</a> '
         output += '<a href="graph/' + graph_hash + '.gpt">gpt</a> '
@@ -678,7 +678,7 @@ class GraphBlock(Block):
                 # Plot the graph
                 self.plotScatterGraph(graph_path, series=group_values)
             
-            html = ['<object width=100% data="graph/' + graph_hash + '.svg" type="image/svg+xml"></object>' + \
+            html = ['<object width=100% height=40% data="graph/' + graph_hash + '.svg" type="image/svg+xml"></object>' + \
                     '<p>Download: ' + \
                     '<a href="graph/' + graph_hash + '.csv">csv</a> ' + \
                     '<a href="graph/' + graph_hash + '.gpt">gpt</a> ' + \
@@ -836,8 +836,9 @@ set key reverse Left spacing 1.35
 #set style line 1 lt 1 pt 0 lc rgb '#82CAFA' lw 1
 #set style line 2 lt 1 pt 0 lc rgb '#4CC417' lw 1
 #set style line 3 lt 1 pt 0 lc rgb '#ADDFFF' lw 1
+X="Data"
 
-plot for [X in "{series}"] '<grep "^\\"'.X.'\\"," {graph_path}.csv' u 2:5:3:4:6:7 with xyerrorbars title X
+plot {datafile} u 2:5:3:4:6:7 with xyerrorbars title X
 
 set terminal postscript eps solid color "Helvetica" 18 size 5, 2.5
 set output '{graph_path}.eps'
@@ -847,8 +848,13 @@ set terminal postscript eps solid color "Helvetica" 18 size 10, 2.2
 set output '{graph_path}.wide.eps'
 replot
 """
+
+        if series_str == "":
+          datafile = "'" + graph_path + ".csv'"
+        else:
+          datafile = "for [X in \"" + series_str + "\"] '<grep \"^\\\"'.X.'\\\",\" " + graph_path + ".csv'"
         gp_file = open(graph_path + '.gpt', 'w')
-        gp_file.write(gnuplot.format(series=series_str, graph_path=graph_path, xaxis_title=self.x, yaxis_title=self.y, font_path=settings.GRAPH_FONT_PATH))
+        gp_file.write(gnuplot.format(datafile=datafile, graph_path=graph_path, xaxis_title=self.x, yaxis_title=self.y, font_path=settings.GRAPH_FONT_PATH))
         gp_file.close()
         os.system(settings.GNUPLOT_EXECUTABLE + ' ' + gp_file.name)
         os.system("ps2pdf -dEPSCrop " + graph_path + ".wide.eps " + graph_path + ".wide.pdf")
