@@ -139,9 +139,9 @@ class DataTable:
         """ Returns the headers that would be used to output a table of
             this data as two lists - scenario headers and value headers.
         """
-        scenarios = list()
-        values = list()
-        values_with_ci = list()
+        scenarios = set()
+        values = set()
+        values_with_ci = set()
         
         # XXX TODO: Why do we need to loop here? Can't we just use
         # self.valueColumns and self.scenarioColumns, assuming they're being
@@ -149,14 +149,21 @@ class DataTable:
         for row in self.rows:
             for key in row.scenario.iterkeys():
                 if key not in scenarios:
-                    scenarios.append(key)
+                    scenarios.add(key)
             for key,val in row.values.items():
                 if key not in values:
-                    values.append(key)
+                    values.add(key)
                 if isinstance(val, DataAggregate):
-                    values_with_ci.append(key)
+                    values_with_ci.add(key)
+        
+        s_list = list(scenarios)
+        s_list.sort()
+        v_list = list(values)
+        v_list.sort()
+        vci_list = list(values_with_ci)
+        vci_list.sort()
 
-        return scenarios, values, values_with_ci
+        return s_list, v_list, vci_list
     
     def selectValueColumns(self, vals, derivedVals):
         """ Selects the specified set of value columns and throws away all
