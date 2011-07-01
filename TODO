@@ -1,182 +1,23 @@
-== User Interface ==
+== Short term ==
+* Output div doesn't expand to contain a wide table ( http://bit.ly/j9e5c1 )
+* We should be able to save, reuse and delete derived value columns (probably
+  through a multiselect)
+* Trash the debug link, fix the new pipeline link on squirrel (should be
+  <a href=".#" I think?)
+* Make sure value columns always appear if they're selected, even if there
+  are no values for any row
+  * This predicates on making sure DataTable.scenarioColumns and
+    DataTable.valueColumns are updated accurately
+* Add options flag words for the pipeline, and for each individual block
+* Add option to ignore or error on a failed float conversion when loading
+  the original data (DataTypes.py:128)
+* Add option to turn off the cross-product logic for graphs, and just produce
+  a single graph
+* Purge the graph cache, probably in the plotting code since the slowdown would
+  barely be noticable there
+* Fix the cache key generation for graphs so it's properly consistent
 
-The JavaScript frontend needs a significant overhaul. It's slow, poorly
-structured, wasteful, and suffers from growing pains as new things were tacked
-on. Ideally, the JS would be structured similarly to the Python - distinct
-objects for each instantiated Block, which are responsible for managing the
-HTML of their corresponding block. This means:
-  * new Block objects should be written, one per type of block.
-  * Each Block should accept in its constructor a HTML div that corresponds
-    to the block it will manage. It should also (optionally?) accept
-    arbitrary parameters so that it can initialise itself to a saved value.
-  * Blocks should accept special events in some manner and handle them by
-    updating their own HTML. Such events might include changes to the
-    available value columns.
-      * I envision these events being fired by ajax responses. This way we can
-        also have better error handling when ajax responses cause exceptions.
-  * A block should also offer a function that returns its current effect on
-    available scenario/value columns. That is, (possibly given an input set?)
-    it should return a list of scenario and value columns based on its
-    current understanding on what is available before it in the pipeline, and
-    the impact it has on the available columns.
-      * This might not be the best approach to the "cascading" problem, but
-        something needs to be done to handle this properly.
-  * The existing functionality to identify which block causes an exception or
-    ambiguity needs to be retained, though this would probably be simple given
-    the improved structure and relationship between a HTML block and its
-    JavaScript.
-
-The interface could also do with some minor tweaking. It was repeatedly
-suggested that the dropdowns for scenario and value columns be placed side by
-side. I'm not sure there's enough room to do this currently when some logs
-generate value column names like `BRANCH_INSTRUCTIONS_RETIRED_app`. Notably,
-though, scenario columns seem to have shorter names.
-
-I would like to see the pipeline made wider by perhaps 50px. This might enable
-the move mentioned above to be made. It also should accommodate the longer
-values seen in some log files that will appear in dropdowns.
-
-== Blocks ==
-
+== Other stuff ==
 The filter block probably needs to be more flexible. As a first step it would
 be helpful to toggle between "meets all these criteria" and "meets at least
 one criteria" - that is between AND and OR relations.
-
-Clearly the graph block only implements one type of graph presently. I'd like
-to restructure the code for it, which was mostly rushed. Right now it blends
-presentation and computation logic far too tightly. Some of the reason for
-that is the requirements to be able to call out to gnuplot, but some of it
-can certainly be fixed. This would probably include a smarter way of handling
-the output of a graph block (which can contain multiple graphs because of the
-cross-product functionality). 
-
-== Backend ==
-
-A pass needs to be made over the code adjusting the way modules are imported
-- right now it's a mess of different styles that have different implications.
-This would probably require moving a couple of things into new modules - at
-least the Exceptions in Pipeline.py, which have circular import problems at 
-the moment because of the file they reside in. I don't much like the python
-style of importing...
-
-We also need to be far more careful about ambiguities. Right now to generate
-rubbish results all that has to be done is remove too many scenario columns.
-Then the numbers you get are effectively arbitrary - I suspect they come from
-the last instance of the reduced scenario seen in the log file, but that's up
-in the air. We should generate more warnings about ambiguous data.
-
-== Pipeline Encoding ==
-
-There is the possibility of making pipeline urls much shorter and probably
-more email friendly by always sorting the arrays being referenced, and then
-using indices in the urls instead of strings. This fits well with the model of
-a log file being immutable once it enters the system. If, however, a log file
-were to change for whatever reason, this would clearly break such a system.
-I would picture something like using numbers to identify the different blocks
-(and since this is the only use for numbers, this would be an implicit
-delimiter between blocks), and letters as indices into the arrays. For
-example, if we had a log file with 3 scenario columns and 3 value columns:
-    Scenario Columns            Value Columns
-    benchmark                   bmtime
-    hfac                        time.gc
-    invocation                  time.mu
-(noting the lists are now sorted), we could express filtering to the antlr
-benchmark as, say, 0aaa (assuming antlr was the first available benchmark, and
-we use the middle character to specify is/is not). Adding an aggregation over
-invocation might then look something like 1ac, if we use the first letter in
-an aggregate block to specify the type of aggregation (mean/geomean). So this
-reduces the current style of url:
-    logfile.csv|benchmark&hfac&invocation|bmtime&time.gc&time.mu|0benchmark^1^antlr|1invocation&0
-to something like:
-    logfile.csv|abc|abc|0aaa1ac
-
-The problem of changing values could probably be addressed to some extent by
-assigning global indices to the columns and always using them throughout,
-rather than using a relative index based on which columns are available from
-the point of view of the block.
-
-Note that this would likely cause issues if there was to be some block where
-a column could not be identified as a scenario or value column based solely
-upon its context in the pipeline, but I'm struggling to come up with a
-situation where that might happen.
-
-== Deployment ==
-
-Daniel and I had a long chat about the best way to deploy. Python apps are
-harder to deploy than the Perl site is; generally deploying a new copy
-requires editing apache config files, as opposed to just dropping a checkout
-from mercurial into ~/public_html.
-
-The solution we have is to deploy only one copy of the code, and through some
-combination of apache config trickery and django's url handing, provide a
-separate instance to each user. The likely approach is to require users to
-have a plotty directory in the root of their home directory, which contains
-log files they want to analyse. This can echo the current directory structure
-we use for results in that a typical organisation would look something like:
-    ~james/plotty/
-        javavc-asplos-2011/
-            anaheim-2011-01-05-Wed-213021/
-                antlr.2192.53.FastAdaptiveGenImmix_Base.p-1.log.gz
-                antlr.2192.53.FastAdaptiveGenImmix.p-1.log.gz
-                bloat.2192.72.FastAdaptiveGenImmix_Base.p-1.log.gz
-                bloat.2192.72.FastAdaptiveGenImmix.p-1.log.gz
-                ...
-            pequin-2011-01-06-Thu-102835
-                ...
-        javavc-micro-2010
-            ...
-        ...
-In essence the directory structure is arbitrary - we will gather all the log
-files in the same lowest directory together for the purpose of analysis.
-
-Users would then access logs through a url like:
-http://squirrel/plotty/james/javavc-asplos-2011/
-
-We need to decide on a decent way to combine benchmark runs together. This is
-contingent on building better support for ambiguities. It probably also
-requires a better log navigation system than the simple dropdowns we have now.
-It should, in fact, probably echo the homepage for the perl scripts in some
-capacity.
-
-There is a question about whether the tabulation function should be automatic
-or manual, and whether it should live in a separate interface or inside the
-pipeline. I would like to see it automatic, done whenever you select a log
-folder that has not been tabulated. To that end I'd like to see it inside
-the current interface, but only if we add the ability to save and load log
-file groups.
-
-In terms of directory structure, every user would need their own log cache,
-graph cache and sqlite database file to avoid clashes. These can safely be
-stored in a shared location, though, since the user shouldn't need to access
-them. So a directory structure might look something like:
-    /home/plotty/
-        cache/
-            james
-                graph-cache/
-                    ...
-                log-cache/
-                    ...
-                database.sqlite3
-            ...
-        [plotty source code]
-
-Steve also pointed out it might be useful to be able to change code on the fly
-for personal purposes without affecting anyone else's copy. Since this
-structure doesn't directly accommodate something like that, my best suggestion
-is creating a duplicate /home/plotty-dev/ with the same structure as above,
-but with global write access. That should let anyone toy with the code using
-their own data (it should still look for the same ~/plotty directory for each
-user). A simple reversion script that fires hg revert --all and clears the
-cache leaves it in a state for others to touch.
-
-=== Individual deployments ===
-
-It's probably possible to deploy a single instance per user instead. The
-apache config required is pretty simple (one line, I think) so could be
-done when creating new accounts for people. This gives everyone their own
-private repository of the code to toy with as they see fit, but creates more
-administrative work for Daniel. I'll look into exactly how much work is
-required to do this sort of deployment. If it's a simple matter of creating
-new files in /etc/apache2/sites-enabled/ for each user's deployment, I should
-think that's fairly open to automation. It's also less programming work for
-me!
