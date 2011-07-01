@@ -102,6 +102,13 @@ def pipeline(request, pipeline):
     
     return HttpResponse(json.dumps({'error': False, 'ambiguity': ambiguity, 'index': ambiguityIndex, 'html': output, 'rows': len(dt.rows), 'graph': len(graph_outputs) > 0}))
 
+def delete_saved_pipeline(request):
+    if 'name' not in request.POST:
+        return HttpResponse(json.dumps({'error': True}))
+    new = SavedPipeline(name=request.POST['name'])
+    new.delete()
+    return HttpResponse(json.dumps({'error': False}))
+
 def save_pipeline(request):
     if 'name' not in request.POST or 'encoded' not in request.POST:
         return HttpResponse(json.dumps({'error': True}))

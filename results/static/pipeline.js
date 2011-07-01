@@ -1686,6 +1686,13 @@ var Pipeline = {
             }
         });
 
+        $("#pipeline-delete-go").click(function() {
+            var selected = $('#pipeline-load-select').val();
+            if ( selected != '-1' ) {
+                Pipeline.deletePipeline(selected);
+            }
+        });
+
         // Hook the onchange for derived value cols to start a timer to refresh
         // the pipeline
         $('#pipeline-derived-value-cols').delegate('.pipeline-derived-value-field', 'keyup', function() {
@@ -2070,6 +2077,21 @@ var Pipeline = {
     },
 
     /**
+     * Delete this pipeline from the server.
+     */
+    deletePipeline: function() {
+        var name = $('#pipeline-delete-name').val();
+        if ( name == '' ) {
+            return false;
+        }
+        Pipeline.ajax.deletePipeline(name, function(data, textStatus, xhr) {
+            console.debug("Delete pipeline: " + name);
+//            var loadDropdown = $("#pipeline-load-select");
+//            $('#pipeline-save-name').val('');
+        });
+    },
+
+    /**
      * Ajax requests.
      */
     ajax: {
@@ -2098,6 +2120,15 @@ var Pipeline = {
          */
         savePipeline: function(name, encoded, callback) {
             $.post('ajax/save-pipeline/', {'name': name, 'encoded': encoded}, callback);
+        },
+
+        /**
+         * ajax/save-pipeline/ delete a pipeline on the server given a name
+         *
+         * @param name string The name of the new pipeline
+         */
+        deletePipeline: function(name, callback) {
+            $.post('ajax/delete-pipeline/', {'name': name}, callback);
         },
 
         /**
