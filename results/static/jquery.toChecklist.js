@@ -193,7 +193,7 @@ jQuery.fn.toChecklist = function(o) { // "o" stands for options
 			
 			var checkboxId = jSelectElemId+'_'+checkboxValue;
 			// escape bad values for checkboxId
-			checkboxId = checkboxId.replace(/(\.|\/|\,|\%|\<|\>)/g, '_');
+			checkboxId = checkboxId.replace(/(\.|\/|\,|\%|\<|\>|:)/g, '_');
 			
 			var labelText = $(this).attr('innerHTML');
 			var selected = '';
