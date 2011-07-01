@@ -1,7 +1,5 @@
 #!/bin/bash
 
-APACHE_PATH="/etc/apache2/sites-plotty"
-
 if [ -z "$1" -o -z "$2" ]; then
     echo "usage: init-plotty project-name log-dir [user-name]"
     echo ""
@@ -39,9 +37,6 @@ if [[ -d $PLOTTY_ROOT ]]; then
     exit
 fi
 
-# This is a hack to make sure we catch the executing user's ssh credentials
-# instead of root's
-
 echo "---> Creating directory structure in $PLOTTY_ROOT"
 
 mkdir $PLOTTY_ROOT
@@ -71,6 +66,5 @@ chmod -R a+rw $PLOTTY_ROOT/cache
 echo ""
 echo "Done!"
 echo "The new plotty instance is at $PLOTTY_ROOT"
-echo "To start using it, populate the logs subdirectory with folders of logs,"
-echo "then visit http://squirrel.anu.edu.au/plotty/$USER/$PROJECT_NAME/"
-
+echo "To start using it, populate the logs folder you specified ($LOG_DIR)"
+echo "with folders of logs, then visit http://squirrel.anu.edu.au/plotty/$USER/$PROJECT_NAME/"
