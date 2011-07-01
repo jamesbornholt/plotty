@@ -657,7 +657,7 @@ class GraphBlock(Block):
                 # Render the CSV. We assume the data has confidence intervals
                 # - if not, we just emit the same value three times,
                 # so in gnuplot we can always use the same code.
-                csv = ['"series","' + self.x + '","' + self.x + '.' + str(settings.CONFIDENCE_LEVEL * 100) + '%-CI.lowerBound","' + \
+                csv = ['"' + self.series + '","' + self.x + '","' + self.x + '.' + str(settings.CONFIDENCE_LEVEL * 100) + '%-CI.lowerBound","' + \
                        self.x + '.' + str(settings.CONFIDENCE_LEVEL * 100) + '%-CI.upperBound",' + \
                        '"' + self.y + '","' + self.y + '.' + str(settings.CONFIDENCE_LEVEL * 100) + '%-CI.lowerBound","' + \
                        self.y + '.' + str(settings.CONFIDENCE_LEVEL * 100) + '%-CI.upperBound"']
