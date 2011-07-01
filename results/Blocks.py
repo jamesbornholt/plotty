@@ -377,6 +377,7 @@ class GraphBlock(Block):
         self.value = None
         self.x = None
         self.y = None
+        self.series = None
 
     def decode(self, param_string):
         parts = param_string.split(PipelineEncoder.GROUP_SEPARATOR)
@@ -392,6 +393,7 @@ class GraphBlock(Block):
         elif self.type == GraphBlock.TYPE['SCATTER']:
             self.x = parts[1]
             self.y = parts[2]
+            self.series = parts[3]
 
     def pivot(self, rows):
         """ Pivot a set of rows based on the settings in this block. """
@@ -645,6 +647,9 @@ class GraphBlock(Block):
             graph_hash = str(abs(hash(str(id(self)) + self.x + self.y)))
             graph_path = os.path.join(settings.GRAPH_CACHE_DIR, graph_hash)
 
+            grouping = (self.series != '-1')
+            group_values = set()
+
             csv_last_modified = 0
             if os.path.exists(graph_path + '.csv'):
                 csv_last_modified = os.path.getmtime(graph_path + '.csv')
@@ -652,13 +657,18 @@ class GraphBlock(Block):
                 # Render the CSV. We assume the data has confidence intervals
                 # - if not, we just emit the same value three times,
                 # so in gnuplot we can always use the same code.
-                csv = ['"' + self.x + '","' + self.x + '.' + str(settings.CONFIDENCE_LEVEL * 100) + '%-CI.lowerBound","' + \
+                csv = ['"series","' + self.x + '","' + self.x + '.' + str(settings.CONFIDENCE_LEVEL * 100) + '%-CI.lowerBound","' + \
                        self.x + '.' + str(settings.CONFIDENCE_LEVEL * 100) + '%-CI.upperBound",' + \
                        '"' + self.y + '","' + self.y + '.' + str(settings.CONFIDENCE_LEVEL * 100) + '%-CI.lowerBound","' + \
                        self.y + '.' + str(settings.CONFIDENCE_LEVEL * 100) + '%-CI.upperBound"']
                 for row in data_table:
                     if self.x in row.values and self.y in row.values:
-                        csv.append(present_value_csv_graph(row.values[self.x], True) + ',' + present_value_csv_graph(row.values[self.y], True))
+                        if grouping:
+                            if self.series in row.scenario:
+                                csv.append('"' + row.scenario[self.series] + '",' + present_value_csv_graph(row.values[self.x], True) + ',' + present_value_csv_graph(row.values[self.y], True))
+                                group_values.add(row.scenario[self.series])
+                        else:
+                            csv.append('"",' + present_value_csv_graph(row.values[self.x], True) + ',' + present_value_csv_graph(row.values[self.y], True))
                 csv_text = "\n".join(csv)
 
                 csv_file = open(graph_path + '.csv', 'w')
@@ -666,7 +676,7 @@ class GraphBlock(Block):
                 csv_file.close()
 
                 # Plot the graph
-                self.plotScatterGraph(graph_path)
+                self.plotScatterGraph(graph_path, series=group_values)
             
             html = ['<object width=100% data="graph/' + graph_hash + '.svg" type="image/svg+xml"></object>' + \
                     '<p>Download: ' + \
@@ -793,11 +803,16 @@ replot
         os.system("ps2pdf -dEPSCrop " + graph_path + ".wide.eps " + graph_path + ".wide.pdf")
         os.system("ps2pdf -dEPSCrop " + graph_path + ".eps " + graph_path + ".pdf")
     
-    def plotScatterGraph(self, graph_path):
+    def plotScatterGraph(self, graph_path, series):
         """ Plot a scatter plot csv file with gnuplot.
 
         graph_path: the path to the graph (append with .csv to get the csv file)
+
+        series: a set() of all series. Empty if series were disabled.
         """
+
+        series_str = " ".join(series)
+
         gnuplot = """
 set terminal svg fname "Arial" fsize 10 size 960,420
 set output '{graph_path}.svg'
@@ -821,7 +836,7 @@ set style data dots
 #set style line 2 lt 1 pt 0 lc rgb '#4CC417' lw 1
 #set style line 3 lt 1 pt 0 lc rgb '#ADDFFF' lw 1
 
-plot "{graph_path}.csv" u 1:4 title "Scatter plot" with points
+plot "{graph_path}.csv" u 2:5 title "Scatter plot" with points
 
 set terminal postscript eps solid color "Helvetica" 18 size 5, 2.5
 set output '{graph_path}.eps'

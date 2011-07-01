@@ -1066,7 +1066,8 @@ var Blocks = {
             else if ( this.type == this.TYPE.SCATTER ) {
                 this.options = {
                     x: parts[1],
-                    y: parts[2]
+                    y: parts[2],
+                    series: parts[3]
                 };
             }
         },
@@ -1085,6 +1086,7 @@ var Blocks = {
             else if ( this.type == this.TYPE.SCATTER ) {
                 strs.push(this.options.x);
                 strs.push(this.options.y);
+                strs.push(this.options.series);
             }
             
             return strs.join(Pipeline.encoder.GROUP_SEPARATOR);
@@ -1129,9 +1131,11 @@ var Blocks = {
 
                 var xSelect = $('.select-graph-x', blockOptions);
                 var ySelect = $('.select-graph-y', blockOptions);
+                var seriesSelect = $('.select-graph-series', blockOptions);
 
                 this.options.x = xSelect.val();
                 this.options.y = ySelect.val();
+                this.options.series = seriesSelect.val();
             }
         },
         
@@ -1184,9 +1188,11 @@ var Blocks = {
 
                 var xSelect = $('.select-graph-x', blockOptions);
                 var ySelect = $('.select-graph-y', blockOptions);
+                var seriesSelect = $('.select-graph-series', blockOptions);
 
                 xSelect.val(this.options.x);
                 ySelect.val(this.options.y);
+                seriesSelect.val(this.options.series);
             }
         },
         
@@ -1266,6 +1272,7 @@ var Blocks = {
 
                 var xSelect = $('.select-graph-x', blockOptions);
                 var ySelect = $('.select-graph-y', blockOptions);
+                var seriesSelect = $('.select-graph-series', blockOptions);
 
                 if ( !Utilities.updateSelect(xSelect, valueCols) ) {
                     this.options.x = -1;
@@ -1275,6 +1282,12 @@ var Blocks = {
                     this.options.y = -1;
                     valid = false;
                 }
+                if ( !Utilities.updateSelect(seriesSelect, scenarioCols) ) {
+                    this.options.series = -1;
+                    // This is still valid - we might not want to group by
+                    // series.
+                }
+
             }
             
             if ( valid ) {
