@@ -302,6 +302,7 @@ th.headerSortDown {
     padding: 0.5em;
 }
 
-.ambiguity .foldable-content pre {
+.ambiguity pre {
     margin: 0;
+    white-space: pre-wrap;
 }

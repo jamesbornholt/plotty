@@ -200,6 +200,15 @@ var Block = Base.extend({
         
         this.element = newBlock;
     },
+
+    seed: function(scenarioCols, valueCols) {
+        $('.scenario-column', this.element).each(function() {
+            Utilities.updateSelect(this, scenarioCols);
+        });
+        $('.value-column', this.element).each(function() {
+            Utilities.updateSelect(this, valueCols);
+        });
+    },
     
     /**
      * Decode a parameter string and set this block's configuration according
@@ -743,6 +752,17 @@ var Blocks = {
                 Pipeline.refresh(Pipeline.constants.CASCADE_REASON_SELECTION_CHANGED)
             });
         },
+
+        seed: function(scenarioCols, valueCols) {
+            $('.scenario-column', this.element).each(function() {
+                Utilities.updateSelect(this, scenarioCols);
+            });
+            $('.value-column', this.element).each(function() {
+                Utilities.updateSelect(this, valueCols);
+            });
+
+            Utilities.updateMultiSelect($('.select-normalise-group', this.element), scenarioCols, true);
+        },
         
         /**
         * Decode a parameter string and set this block's configuration according
@@ -784,7 +804,7 @@ var Blocks = {
                 });
             }
             if ( this.group.length > 0 ) {
-                strs.push(this.group.join(Pipeline.encoder.PARAM_SEPARATOR));
+                strs.push(this.group.join(Pipeline.encoder.GROUP_SEPARATOR));
             }
             
             return strs.join(Pipeline.encoder.GROUP_SEPARATOR);
@@ -824,6 +844,10 @@ var Blocks = {
          * HTML.
          */
         loadState: function() {
+            var radios = $('input:radio', this.element);
+            radios.attr('checked', false);
+            radios.filter('[value=' + this.type + ']').attr('checked', true);
+
 	        if ( this.type == this.TYPE.SELECT ) {
 		        // Show and reset the table
 		        this.optionsTable.element.show();
@@ -983,7 +1007,8 @@ var Blocks = {
          */
         TYPE: {
             HISTOGRAM: 1,
-            XY: 2
+            XY: 2,
+            SCATTER: 3
         },
 
         /**
@@ -1038,6 +1063,12 @@ var Blocks = {
                     value: parts[3]
                 };
             }
+            else if ( this.type == this.TYPE.SCATTER ) {
+                this.options = {
+                    x: parts[1],
+                    y: parts[2]
+                };
+            }
         },
         
         /**
@@ -1050,6 +1081,10 @@ var Blocks = {
                 strs.push(this.options.column);
                 strs.push(this.options.row);
                 strs.push(this.options.value);
+            }
+            else if ( this.type == this.TYPE.SCATTER ) {
+                strs.push(this.options.x);
+                strs.push(this.options.y);
             }
             
             return strs.join(Pipeline.encoder.GROUP_SEPARATOR);
@@ -1089,6 +1124,15 @@ var Blocks = {
                 this.options.row = rowSelect.val();
                 this.options.value = valueSelect.val();
             }
+            else if ( this.type == this.TYPE.SCATTER ) {
+                var blockOptions = $('.graph-scatter', this.element);
+
+                var xSelect = $('.select-graph-x', blockOptions);
+                var ySelect = $('.select-graph-y', blockOptions);
+
+                this.options.x = xSelect.val();
+                this.options.y = ySelect.val();
+            }
         },
         
         /**
@@ -1101,7 +1145,7 @@ var Blocks = {
             
             // Set the type dropdown
             $('.select-graph-type').val(this.type);
-            
+
             // These could be consolidated, but are left split as an example
             // of how to do more complicated graphs with different options.
             if ( this.type == this.TYPE.HISTOGRAM ) {
@@ -1131,6 +1175,18 @@ var Blocks = {
                 columnSelect.val(this.options.column);
                 rowSelect.val(this.options.row);
                 valueSelect.val(this.options.value);
+            }
+            else if ( this.type == this.TYPE.SCATTER ) {
+                var blockOptions = $('.graph-scatter', this.element);
+
+                // Show this block
+                blockOptions.show();
+
+                var xSelect = $('.select-graph-x', blockOptions);
+                var ySelect = $('.select-graph-y', blockOptions);
+
+                xSelect.val(this.options.x);
+                ySelect.val(this.options.y);
             }
         },
         
@@ -1142,7 +1198,7 @@ var Blocks = {
             var valid = true;
             
             $('.pipeline-graph-type-options', this.element).hide();
-            
+
             // These could be consolidated, but are left split as an example
             // of how to do more complicated graphs with different options.
             if ( this.type == this.TYPE.HISTOGRAM ) {
@@ -1200,6 +1256,24 @@ var Blocks = {
                 if ( valid ) {
                     scenarioCols.remove(this.options.column);
                     scenarioCols.remove(this.options.row);
+                }
+            }
+            else if ( this.type == this.TYPE.SCATTER ) {
+                var blockOptions = $('.graph-scatter', this.element);
+
+                // Show this block
+                blockOptions.show();
+
+                var xSelect = $('.select-graph-x', blockOptions);
+                var ySelect = $('.select-graph-y', blockOptions);
+
+                if ( !Utilities.updateSelect(xSelect, valueCols) ) {
+                    this.options.x = -1;
+                    valid = false;
+                }
+                if ( !Utilities.updateSelect(ySelect, valueCols) ) {
+                    this.options.y = -1;
+                    valid = false;
                 }
             }
             
@@ -1908,7 +1982,7 @@ var Pipeline = {
             jQuery.each(blocks, function(i, params) {
                 var paramString = params.slice(1);
                 var block = new Pipeline.encoder.MAPPINGS[params[0]](Pipeline.blocks.length);
-                block.cascade(data.scenarioCols, data.valueCols);
+                block.seed(data.scenarioCols, data.valueCols);
                 block.decode(paramString);
                 block.loadState();
                 Pipeline.blocks.push(block);

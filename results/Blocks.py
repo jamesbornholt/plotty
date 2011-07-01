@@ -329,7 +329,7 @@ class NormaliseBlock(Block):
                     if scenario not in normalisers:
                         normalisers[scenario] = copy.copy(row.values)
                     else:
-                        raise PipelineAmbiguityException('More than one normaliser was found for the scenario %s.' % row.scenario)
+                        raise PipelineAmbiguityException('More than one normaliser was found for the scenario %s. Both <pre>%s</pre> and <pre>%s</pre> were valid normalisers. Did you forget to set the right grouping for normalisation?' % (row.scenario, normalisers[scenario], row.values))
         
         if len(select_ignored_rows) > 0:
             logging.info("Normaliser block ignored %d rows because they were missing a scenario column from the selected normaliser", len(select_ignored_rows))
@@ -366,7 +366,8 @@ class GraphBlock(Block):
     
     TYPE = {
         'HISTOGRAM': '1',
-        'XY': '2'
+        'XY': '2',
+        'SCATTER': '3'
     }
 
     def __init__(self):
@@ -374,6 +375,8 @@ class GraphBlock(Block):
         self.column = None
         self.row = None
         self.value = None
+        self.x = None
+        self.y = None
 
     def decode(self, param_string):
         parts = param_string.split(PipelineEncoder.GROUP_SEPARATOR)
@@ -386,6 +389,9 @@ class GraphBlock(Block):
             self.column = parts[1]
             self.row = parts[2]
             self.value = parts[3]
+        elif self.type == GraphBlock.TYPE['SCATTER']:
+            self.x = parts[1]
+            self.y = parts[2]
 
     def pivot(self, rows):
         """ Pivot a set of rows based on the settings in this block. """
@@ -581,58 +587,100 @@ class GraphBlock(Block):
 
     def apply(self, data_table):
         """ Render the graph to HTML, including images """
-
-        sets, scenario_keys = self.group(data_table)
-        graphs = {}
-        for (scenario, rows) in sets.iteritems():
-            # Pivot the data
-            pivot_table, aggregates, column_keys = self.pivot(rows)
-
-            # Sort the column and keys so they show nicely in the graph
-            column_keys = list(column_keys)
-            row_keys = pivot_table.keys()
-            try:
-                row_keys.sort(key=float)
-            except ValueError:
-                row_keys.sort(key=str.lower)
+        if self.type == GraphBlock.TYPE['HISTOGRAM'] or self.type == GraphBlock.TYPE['XY']:
+            sets, scenario_keys = self.group(data_table)
+            graphs = {}
+            for (scenario, rows) in sets.iteritems():
+                # Pivot the data
+                pivot_table, aggregates, column_keys = self.pivot(rows)
+                
+                # Sort the column and keys so they show nicely in the graph
+                column_keys = list(column_keys)
+                row_keys = pivot_table.keys()
+                try:
+                    row_keys.sort(key=float)
+                except ValueError:
+                    row_keys.sort(key=str.lower)
+                
+                try:
+                    column_keys.sort(key=float)
+                except ValueError:
+                    column_keys.sort(key=str.lower)
+                
+                # Generate a hash for this graph
+                graph_hash = str(abs(hash(str(id(self)) + scenario)))
+                graph_path = os.path.join(settings.GRAPH_CACHE_DIR, graph_hash)
+                
+                # If the csv doesn't exist or is out of date (the data_table has
+                # logs newer than it), replot the data
+                csv_last_modified = 0 
+                if os.path.exists(graph_path + '.csv'):
+                    csv_last_modified = os.path.getmtime(graph_path + '.csv')
+                if csv_last_modified <= data_table.lastModified:
+                    # Render the CSV
+                    csv = self.renderCSV(pivot_table, column_keys, row_keys, aggregates, for_gnuplot=True)
+                    csv_file = open(graph_path + '.csv', "w")
+                    csv_file.write(csv)
+                    csv_file.close()
+    
+                    # Plot the graph
+                    if self.type == GraphBlock.TYPE['HISTOGRAM']:
+                        self.plotHistogram(graph_path, len(column_keys))
+                    elif self.type == GraphBlock.TYPE['XY']:
+                        self.plotXYGraph(graph_path, len(column_keys))
+                
+                # Render the HTML!
+                html = self.renderHTML(pivot_table, column_keys, row_keys, graph_hash, aggregates)
+                
+                title = "Graph"
+                if len(scenario_keys[scenario]) > 0:
+                    title = ', '.join([k + ' = ' + scenario_keys[scenario][k] for k in scenario_keys[scenario].keys()])
+                
+                graphs[title] = html
             
-            try:
-                column_keys.sort(key=float)
-            except ValueError:
-                column_keys.sort(key=str.lower)
-
-            # Generate a hash for this graph
-            graph_hash = str(abs(hash(str(id(self)) + scenario)))
+            return graphs
+        elif self.type == GraphBlock.TYPE['SCATTER']:
+            # XXX TODO: this cache key doesn't work; we should implement a
+            # cache key method on DataTable
+            graph_hash = str(abs(hash(str(id(self)) + self.x + self.y)))
             graph_path = os.path.join(settings.GRAPH_CACHE_DIR, graph_hash)
 
-            # If the csv doesn't exist or is out of date (the data_table has
-            # logs newer than it), replot the data
-            csv_last_modified = 0 
+            csv_last_modified = 0
             if os.path.exists(graph_path + '.csv'):
                 csv_last_modified = os.path.getmtime(graph_path + '.csv')
             if csv_last_modified <= data_table.lastModified:
                 # Render the CSV
-                csv = self.renderCSV(pivot_table, column_keys, row_keys, aggregates, for_gnuplot=True)
-                csv_file = open(graph_path + '.csv', "w")
-                csv_file.write(csv)
+                #csv = ['"' + self.x + '","' + self.y + '"']
+                csv = []
+                for row in data_table:
+                    if self.x in row.values and self.y in row.values:
+                        csv.append(str(row.values[self.x]) + ',' + str(row.values[self.y]))
+                csv_text = "\n".join(csv)
+
+                csv_file = open(graph_path + '.csv', 'w')
+                csv_file.write(csv_text)
                 csv_file.close()
 
                 # Plot the graph
-                if self.type == GraphBlock.TYPE['HISTOGRAM']:
-                    self.plotHistogram(graph_path, len(column_keys))
-                elif self.type == GraphBlock.TYPE['XY']:
-                    self.plotXYGraph(graph_path, len(column_keys))
+                self.plotScatterGraph(graph_path)
             
-            # Render the HTML!
-            html = self.renderHTML(pivot_table, column_keys, row_keys, graph_hash, aggregates)
+            html = ['<object width=100% data="graph/' + graph_hash + '.svg" type="image/svg+xml"></object>' + \
+                    '<p>Download: ' + \
+                    '<a href="graph/' + graph_hash + '.csv">csv</a> ' + \
+                    '<a href="graph/' + graph_hash + '.gpt">gpt</a> ' + \
+                    '<a href="graph/' + graph_hash + '.svg">svg</a> ' + \
+                    '<a href="graph/' + graph_hash + '.pdf">pdf</a> ' + \
+                    '<a href="graph/' + graph_hash + '.wide.pdf">wide pdf</a>' + \
+                    '</p>' + \
+                    '<table><thead><tr><th>' + self.x + '</th><th>' + self.y + '</th></tr></thead><tbody>']
+            for row in data_table:
+                if self.x in row.values and self.y in row.values:
+                    html.append('<tr><td>' + str(row.values[self.x]) + '</td><td>' + str(row.values[self.y]) + '</td></tr>')
+            html.append('</tbody></table>')
+            html_text = "\n".join(html)
 
-            title = "Graph"
-            if len(scenario_keys[scenario]) > 0:
-                title = ', '.join([k + ' = ' + scenario_keys[scenario][k] for k in scenario_keys[scenario].keys()])
-            
-            graphs[title] = html
-        
-        return graphs
+            return {'Scatter graph': html_text}
+
     
     def plotXYGraph(self, graph_path, num_cols):
         """ Plot a histogram csv file with gnuplot.
@@ -736,6 +784,51 @@ replot
 """
         gp_file = open(graph_path + ".gpt", "w")
         gp_file.write(gnuplot.format(graph_path=graph_path, num_cols=num_cols, yaxis_title=self.value, font_path=settings.GRAPH_FONT_PATH))
+        gp_file.close()
+        os.system(settings.GNUPLOT_EXECUTABLE + ' ' + gp_file.name)
+        os.system("ps2pdf -dEPSCrop " + graph_path + ".wide.eps " + graph_path + ".wide.pdf")
+        os.system("ps2pdf -dEPSCrop " + graph_path + ".eps " + graph_path + ".pdf")
+    
+    def plotScatterGraph(self, graph_path):
+        """ Plot a scatter plot csv file with gnuplot.
+
+        graph_path: the path to the graph (append with .csv to get the csv file)
+        """
+        gnuplot = """
+set terminal svg fname "Arial" fsize 10 size 960,420
+set output '{graph_path}.svg'
+set datafile separator ","
+set xlabel "{xaxis_title}"
+set ylabel "{yaxis_title}"
+set xtics out
+set ytics out
+set xtics nomirror
+set ytics nomirror
+set nokey
+
+set nobox
+set auto x
+set style data dots
+
+#set style line 20 lt 1 pt 0 lc rgb '#000000' lw 0.25
+#set grid linestyle 20
+#set grid noxtics
+#set style line 1 lt 1 pt 0 lc rgb '#82CAFA' lw 1
+#set style line 2 lt 1 pt 0 lc rgb '#4CC417' lw 1
+#set style line 3 lt 1 pt 0 lc rgb '#ADDFFF' lw 1
+
+plot "{graph_path}.csv" u 1:2 title "Scatter plot" with points
+
+set terminal postscript eps solid color "Helvetica" 18 size 5, 2.5
+set output '{graph_path}.eps'
+replot
+
+set terminal postscript eps solid color "Helvetica" 18 size 10, 2.2
+set output '{graph_path}.wide.eps'
+replot
+"""
+        gp_file = open(graph_path + '.gpt', 'w')
+        gp_file.write(gnuplot.format(graph_path=graph_path, xaxis_title=self.x, yaxis_title=self.y, font_path=settings.GRAPH_FONT_PATH))
         gp_file.close()
         os.system(settings.GNUPLOT_EXECUTABLE + ' ' + gp_file.name)
         os.system("ps2pdf -dEPSCrop " + graph_path + ".wide.eps " + graph_path + ".wide.pdf")
