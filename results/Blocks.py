@@ -372,6 +372,7 @@ class GraphBlock(Block):
 
     def __init__(self):
         self.type = None
+        self.errorbars = None
         self.column = None
         self.row = None
         self.value = None
@@ -381,7 +382,12 @@ class GraphBlock(Block):
 
     def decode(self, param_string):
         parts = param_string.split(PipelineEncoder.GROUP_SEPARATOR)
-        self.type = parts[0]
+        self.type = parts[0][0]
+        if len(parts[0]) > 1: # For compatibility with older strings, assume True
+            self.errorbars = (parts[0][1] == '1')
+        else:
+            self.errorbars = True
+        
         if self.type == GraphBlock.TYPE['HISTOGRAM']:
             self.column = parts[1]
             self.row = parts[2]
@@ -657,7 +663,8 @@ class GraphBlock(Block):
                 # Render the CSV. We assume the data has confidence intervals
                 # - if not, we just emit the same value three times,
                 # so in gnuplot we can always use the same code.
-                csv = ['"' + self.series + '","' + self.x + '","' + self.x + '.' + str(settings.CONFIDENCE_LEVEL * 100) + '%-CI.lowerBound","' + \
+                series_title = self.series if grouping else "series"
+                csv = ['"' + series_title + '","' + self.x + '","' + self.x + '.' + str(settings.CONFIDENCE_LEVEL * 100) + '%-CI.lowerBound","' + \
                        self.x + '.' + str(settings.CONFIDENCE_LEVEL * 100) + '%-CI.upperBound",' + \
                        '"' + self.y + '","' + self.y + '.' + str(settings.CONFIDENCE_LEVEL * 100) + '%-CI.lowerBound","' + \
                        self.y + '.' + str(settings.CONFIDENCE_LEVEL * 100) + '%-CI.upperBound"']

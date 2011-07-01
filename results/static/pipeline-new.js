@@ -1038,7 +1038,7 @@ var Blocks = {
             
             // Hook the dropdowns
             var thisBlock = this;
-            $(this.element).delegate('select', 'change', function() {
+            $(this.element).delegate('select, input', 'change', function() {
                 thisBlock.readState();
                 Pipeline.refresh(Pipeline.constants.CASCADE_REASON_SELECTION_CHANGED);
             });
@@ -1055,7 +1055,13 @@ var Blocks = {
          */
         decode: function(params) {
             var parts = params.split(Pipeline.encoder.GROUP_SEPARATOR);
-            this.type = parts[0];
+            this.type = parts[0][0];
+            if ( parts[0].length > 1 ) {
+                this.errorbars = (parts[0][1] == '1');
+            }
+            else {
+                this.errorbars = true;
+            }
             if ( this.type == this.TYPE.HISTOGRAM || this.type == this.TYPE.XY ) {
                 this.options = {
                     column: parts[1],
@@ -1077,7 +1083,7 @@ var Blocks = {
          */
         encode: function() {
             var strs = [];
-            strs.push(this.type);
+            strs.push(this.type + (this.errorbars ? '1' : '0'));
             if ( this.type == this.TYPE.HISTOGRAM || this.type == this.TYPE.XY ) {
                 strs.push(this.options.column);
                 strs.push(this.options.row);
@@ -1101,6 +1107,8 @@ var Blocks = {
             
             // Read the type
             this.type = $('.select-graph-type', this.element).val();
+
+            this.errorbars = $('.graph-enable-errorbars', this.element).is(':checked');
             
             // These could be consolidated, but are left split as an example
             // of how to do more complicated graphs with different options.
@@ -1148,7 +1156,9 @@ var Blocks = {
             $('.pipeline-graph-type-options', this.element).hide();
             
             // Set the type dropdown
-            $('.select-graph-type').val(this.type);
+            $('.select-graph-type', this.element).val(this.type);
+
+            $('.graph-enable-errorbars', this.element).attr('checked', this.errorbars);
 
             // These could be consolidated, but are left split as an example
             // of how to do more complicated graphs with different options.
