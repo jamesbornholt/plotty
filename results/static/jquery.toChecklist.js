@@ -195,7 +195,7 @@ jQuery.fn.toChecklist = function(o) { // "o" stands for options
 			// escape bad values for checkboxId
 			checkboxId = checkboxId.replace(/(\.|\/|\,|\%|\<|\>|:)/g, '_');
 			
-			var labelText = $(this).attr('innerHTML');
+			var labelText = $(this).prop('innerHTML');
 			var selected = '';
 			if ($(this).attr('disabled')) {
 				var disabled = ' disabled="disabled"';
@@ -255,7 +255,7 @@ jQuery.fn.toChecklist = function(o) { // "o" stands for options
 		// can access it as before. Also, this allows the search box to be inside
 		// the div as well.
 		jSelectElem.replaceWith('<div id="'+jSelectElemId+'" class="'+jSelectElemClass+'"><div id="'+checklistId+'">'
-			+'<ul>'+jSelectElem.attr('innerHTML')+'</ul></div></div>');
+			+'<ul>'+jSelectElem.prop('innerHTML')+'</ul></div></div>');
 		var checklistDivId = '#'+checklistId;
 
 		// We're going to create a custom HTML attribute in the main div box (the one
@@ -520,7 +520,6 @@ jQuery.fn.toChecklist = function(o) { // "o" stands for options
 		
 		// We have to run showSelectedItems() once here too, upon initial conversion.
 		if (o.showSelectedItems) showSelectedItems();
-
 	});
 
 };
