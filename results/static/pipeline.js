@@ -1507,7 +1507,11 @@ var Pipeline = {
 
         // Timeout after the last typing event in a derived value column
         // expression before the pipeline is refreshed
-        DERIVED_VALUE_COLUMN_CHANGE_TIMEOUT: 1000 // ms
+        DERIVED_VALUE_COLUMN_CHANGE_TIMEOUT: 1000, // ms
+
+        // How many rows should a table contain before we don't render it
+        // automatically?
+        MAX_TABLE_ROWS_AUTO_RENDER: 200
     },
     
     /**
@@ -1571,16 +1575,26 @@ var Pipeline = {
     init: function() {
         // Set up AJAX request options
         $.ajaxSetup({
-            cache: false,
-            // TODO: A nice exception handler for AJAX failure
-            error: function(xhr, textStatus, errorThrown) {
-                console.error("ajax failed: ", xhr, textStatus, errorThrown);
-            }
+            cache: false
         });
         $('#loading-indicator').ajaxStart(function() {
+            $('#output .exception').remove();
             $(this).show();
         }).ajaxStop(function() {
             $(this).hide();
+        }).ajaxError(function(event, jqXHR, ajaxSettings, thrownError) {
+            var html = '<div class="exception"><h1>AJAX error</h1>Error thrown: \
+                     ' + thrownError + ' when loading URL <a href="' + ajaxSettings.url + '">\
+                     ' + ajaxSettings.url + '</a>';
+            // Try to get the python exception
+            //html += '<br />Traceback:<pre>' + jqXHR.responseText.length + '</pre>';
+            var exceptionHTML = $(jqXHR.responseText);
+            var exceptionTrace = exceptionHTML.find('#traceback_area');
+            if ( exceptionTrace.length > 0 ) {
+                html += '<br />Traceback:<pre>' + exceptionTrace.val() + '</pre>';
+            }
+            html += '</div>';
+            $('#output').prepend(html);
         });
         
         // Create the options table for log files and derived value cols
@@ -1771,7 +1785,7 @@ var Pipeline = {
                 // Stop the sparklines from being rendered unless we actually want them
                 $('#output').hide();
                 $('#output').append(data.html);
-                if ( data.rows > 100 && !data.graph) {
+                if ( data.rows > Pipeline.constants.MAX_TABLE_ROWS_AUTO_RENDER && !data.graph) {
                     $('#output table, #output .foldable.table').hide();
                     $('#large-table-confirm span').html(data.rows);
                     $('#large-table-confirm').show();
