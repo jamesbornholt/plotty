@@ -21,9 +21,9 @@ CACHE_ROOT = os.path.join(ROOT_DIR, 'cache')
 CACHE_TIMEOUT = 24*60*60 # 24 hours
 CACHE_BACKEND = "file://" + os.path.join(ROOT_DIR, 'cache/log') + ('?timeout=%d' % CACHE_TIMEOUT)
 
-GNUPLOT_EXECUTABLE = 'gnuplot'
+GNUPLOT_EXECUTABLE = '/home/web-scripts/plotty-gnuplot/bin/gnuplot'
 GRAPH_CACHE_DIR = os.path.join(ROOT_DIR, 'cache/graphs')
-GRAPH_FONT_PATH = '/Library/Fonts/Microsoft'
+GRAPH_FONT_PATH = '/usr/share/fonts/truetype/msttcorefonts'
 
 TABULATE_EXECUTABLE = os.path.join(APP_ROOT, 'results/Tabulate.py')
 
