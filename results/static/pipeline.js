@@ -738,7 +738,7 @@ var Blocks = {
             radios.attr('name', 'normalise-type-' + parseInt(Math.random() * 1E7));
             
             // By default we are selecting a specific normaliser
-            radios.first().attr('checked', 'checked');
+            radios.first().attr('checked', true);
             this.type = this.TYPE.SELECT;
             
             // Hook the radio buttons to show/hide the table
@@ -849,7 +849,7 @@ var Blocks = {
          */
         loadState: function() {
             var radios = $('input:radio', this.element);
-            radios.attr('checked', false);
+            radios.removeAttr('checked');
             radios.filter('[value=' + this.type + ']').attr('checked', true);
 
 	        if ( this.type == this.TYPE.SELECT ) {
@@ -883,10 +883,10 @@ var Blocks = {
 		    var thisBlock = this;
 		    $('.select-normalise-group input:checkbox', this.element).each(function() {
 		        if ( jQuery.inArray($(this).val(), thisBlock.group) > -1 ) {
-		            $(this).attr('checked', 'checked');
+		            $(this).attr('checked', true);
 		        }
 		        else {
-		            $(this).attr('checked', '');
+		            $(this).removeAttr('checked');
 		        }
 		    });
 	    },
@@ -898,10 +898,7 @@ var Blocks = {
         cascade: function(scenarioCols, valueCols, reason) {
             var thisBlock = this;
             var changed = false;
-            
-            // We don't want to remove scenario cols prematurely
-            var returnScenarioCols = scenarioCols.slice();
-            
+
             // Update all the scenario columns
             $('.select-normalise-column', this.optionsTable.element).each(function() {
                 Utilities.updateSelect(this, scenarioCols, true);
@@ -951,7 +948,7 @@ var Blocks = {
                 return false;
             }
             else {
-                return [returnScenarioCols, valueCols];
+                return [scenarioCols, valueCols];
             }
         },
         
@@ -1273,10 +1270,12 @@ var Blocks = {
                     valid = false;
                 }
                 
-                if ( valid ) {
-                    scenarioCols.remove(this.options.column);
-                    scenarioCols.remove(this.options.row);
-                }
+                // This isn't right - these shouldn't be consumed, they're still
+                // valid.
+                //if ( valid ) {
+                //    scenarioCols.remove(this.options.column);
+                //    scenarioCols.remove(this.options.row);
+                //}
             }
             else if ( this.type == this.TYPE.SCATTER ) {
                 var blockOptions = $('.graph-scatter', this.element);
@@ -1418,7 +1417,7 @@ var OptionsTable = Base.extend({
     _updateAddRemoveButtons: function() {
         var rows = $('tr', this.element);
         if ( rows.length > 1 ) {
-            $('.remove-row', rows).attr('disabled', '');
+            $('.remove-row', rows).removeAttr('disabled');
             $('.add-row', rows).css('display', 'none');
         }
         else {
@@ -1612,14 +1611,14 @@ var Pipeline = {
     	// Hook the [all] links
         $("#select-scenario-cols-all").click(function() {
             if ( $('#select-scenario-cols input:checkbox').length == 0 ) return false;
-            $('#select-scenario-cols input:checkbox').attr('checked', 'checked');
+            $('#select-scenario-cols input:checkbox').attr('checked', true);
             $('#select-scenario-cols li').addClass('checked');
             Pipeline.refresh();
             return false;
         });
         $('#select-scenario-cols-none').click(function() {
             if ( $('#select-scenario-cols input:checkbox').length == 0 ) return false;
-            $('#select-scenario-cols input:checkbox').attr('checked', '');
+            $('#select-scenario-cols input:checkbox').removeAttr('checked');
             $('#select-scenario-cols li').removeClass('checked');
             Pipeline.refresh();
             return false;
