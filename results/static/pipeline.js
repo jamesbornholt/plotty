@@ -1692,9 +1692,11 @@ var Pipeline = {
                 // Get the name
                 var selectedOption = select.children(':selected');
                 var name = selectedOption.html();
-                Pipeline.ajax.deletePipeline(name, function() {
-                    selectedOption.remove();
-                    select.val('-1');
+                Pipeline.ajax.deletePipeline(name, function(data) {
+                    if ( data.error == false ) {
+                        selectedOption.remove();
+                        select.val('-1');
+                    }
                 });
             }
         });
@@ -1755,7 +1757,7 @@ var Pipeline = {
             // Update the debug link
             $('#pipeline-debug-link').attr('href', 'list/' + encoded + '?debug');
             // Enable the save pipeline fields
-            $('#pipeline-save-name, #pipeline-save-go').attr('disabled', '');
+            $('#pipeline-save-name, #pipeline-save-go').removeAttr('disabled');
             Pipeline.ajax.pipeline(encoded, function(data) {
                 $('#output').children().not('#loading-indicator').remove();
                 if ( data.tabulating === true ) {
@@ -2075,11 +2077,13 @@ var Pipeline = {
             return false;
         }
         Pipeline.ajax.savePipeline(name, encoded, function(data, textStatus, xhr) {
-            console.debug("Saved pipeline: " + name + " = " + encoded);
-            var loadDropdown = $("#pipeline-load-select");
-            loadDropdown.get(0).options.add(new Option(name, encoded));
-            loadDropdown.val(encoded);
-            $('#pipeline-save-name').val('');
+            if ( data.error == false ) {
+                console.debug("Saved pipeline: " + name + " = " + encoded);
+                var loadDropdown = $("#pipeline-load-select");
+                loadDropdown.get(0).options.add(new Option(name, encoded));
+                loadDropdown.val(encoded);
+                $('#pipeline-save-name').val('');
+            }
         });
     },
 
@@ -2111,7 +2115,7 @@ var Pipeline = {
          * @param encoded string The encoded verison of the new pipeline
          */
         savePipeline: function(name, encoded, callback) {
-            $.post('ajax/save-pipeline/', {'name': name, 'encoded': encoded}, callback);
+            $.post('ajax/save-pipeline/', {'name': name, 'encoded': encoded}, callback, 'json');
         },
 
         /**
@@ -2120,7 +2124,7 @@ var Pipeline = {
          * @param name string The name of the pipeline to delete
          */
         deletePipeline: function(name, callback) {
-            $.post('ajax/delete-pipeline/', {'name': name}, callback);
+            $.post('ajax/delete-pipeline/', {'name': name}, callback, 'json');
         },
 
         /**

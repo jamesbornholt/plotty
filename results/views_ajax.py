@@ -115,8 +115,11 @@ def delete_saved_pipeline(request):
 def save_pipeline(request):
     if 'name' not in request.POST or 'encoded' not in request.POST:
         return HttpResponse(json.dumps({'error': True}))
-    new = SavedPipeline(name=request.POST['name'], encoded=request.POST['encoded'])
-    new.save()
+    try:
+        new = SavedPipeline(name=request.POST['name'], encoded=request.POST['encoded'])
+        new.save()
+    except:
+        return HttpResponse(json.dumps({'error': True}))
     return HttpResponse(json.dumps({'error': False}))
     
 def csv_table(request, pipeline):
