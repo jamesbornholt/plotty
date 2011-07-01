@@ -823,11 +823,12 @@ set xtics out
 set ytics out
 set xtics nomirror
 set ytics nomirror
-set nokey
+set key bottom left outside horizontal
 
 set nobox
 set auto x
 set style data dots
+set key reverse Left spacing 1.35
 
 #set style line 20 lt 1 pt 0 lc rgb '#000000' lw 0.25
 #set grid linestyle 20
@@ -836,7 +837,7 @@ set style data dots
 #set style line 2 lt 1 pt 0 lc rgb '#4CC417' lw 1
 #set style line 3 lt 1 pt 0 lc rgb '#ADDFFF' lw 1
 
-plot "{graph_path}.csv" u 2:5 title "Scatter plot" with points
+plot for [X in "{series}"] '<grep "^\\"'.X.'\\"," {graph_path}.csv' u 2:5:3:4:6:7 with xyerrorbars title X
 
 set terminal postscript eps solid color "Helvetica" 18 size 5, 2.5
 set output '{graph_path}.eps'
@@ -847,7 +848,7 @@ set output '{graph_path}.wide.eps'
 replot
 """
         gp_file = open(graph_path + '.gpt', 'w')
-        gp_file.write(gnuplot.format(graph_path=graph_path, xaxis_title=self.x, yaxis_title=self.y, font_path=settings.GRAPH_FONT_PATH))
+        gp_file.write(gnuplot.format(series=series_str, graph_path=graph_path, xaxis_title=self.x, yaxis_title=self.y, font_path=settings.GRAPH_FONT_PATH))
         gp_file.close()
         os.system(settings.GNUPLOT_EXECUTABLE + ' ' + gp_file.name)
         os.system("ps2pdf -dEPSCrop " + graph_path + ".wide.eps " + graph_path + ".wide.pdf")
