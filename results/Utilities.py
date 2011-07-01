@@ -48,6 +48,21 @@ def present_value_csv(key, val, values_with_ci):
     else:
         return str(val)
 
+def present_value_csv_graph(val, useCI):
+    """ Prints a value for CSV """
+    from plotty.results.DataTypes import DataAggregate
+    if useCI:
+        if isinstance(val, DataAggregate):
+            ciDown, ciUp = val.ci()
+            if math.isnan(ciDown):
+                return '%f,%f,%f' % (val.value(), val.value(), val.value())
+            else:
+                return '%f,%f,%f' % (val.value(), ciDown, ciUp)
+        else:
+            return '%f,%f,%f' % (val, val, val)
+    else:
+        return str(val)
+
 def length_cmp(a, b):
     """ Used to sort a list of strings by their length in descending order """
     if len(a) == len(b):

@@ -6,7 +6,7 @@ which it describes.
 
 import math, copy, os
 from plotty.results.DataTypes import DataRow, DataAggregate
-from plotty.results.Utilities import present_value, scenario_hash
+from plotty.results.Utilities import present_value, present_value_csv_graph, scenario_hash
 from plotty.results.Exceptions import PipelineAmbiguityException, PipelineError, PipelineBlockException
 import plotty.results.PipelineEncoder as PipelineEncoder
 from plotty import settings
@@ -649,12 +649,16 @@ class GraphBlock(Block):
             if os.path.exists(graph_path + '.csv'):
                 csv_last_modified = os.path.getmtime(graph_path + '.csv')
             if csv_last_modified <= data_table.lastModified:
-                # Render the CSV
-                #csv = ['"' + self.x + '","' + self.y + '"']
-                csv = []
+                # Render the CSV. We assume the data has confidence intervals
+                # - if not, we just emit the same value three times,
+                # so in gnuplot we can always use the same code.
+                csv = ['"' + self.x + '","' + self.x + '.' + str(settings.CONFIDENCE_LEVEL * 100) + '%-CI.lowerBound","' + \
+                       self.x + '.' + str(settings.CONFIDENCE_LEVEL * 100) + '%-CI.upperBound",' + \
+                       '"' + self.y + '","' + self.y + '.' + str(settings.CONFIDENCE_LEVEL * 100) + '%-CI.lowerBound","' + \
+                       self.y + '.' + str(settings.CONFIDENCE_LEVEL * 100) + '%-CI.upperBound"']
                 for row in data_table:
                     if self.x in row.values and self.y in row.values:
-                        csv.append(str(row.values[self.x]) + ',' + str(row.values[self.y]))
+                        csv.append(present_value_csv_graph(row.values[self.x], True) + ',' + present_value_csv_graph(row.values[self.y], True))
                 csv_text = "\n".join(csv)
 
                 csv_file = open(graph_path + '.csv', 'w')
@@ -675,7 +679,7 @@ class GraphBlock(Block):
                     '<table><thead><tr><th>' + self.x + '</th><th>' + self.y + '</th></tr></thead><tbody>']
             for row in data_table:
                 if self.x in row.values and self.y in row.values:
-                    html.append('<tr><td>' + str(row.values[self.x]) + '</td><td>' + str(row.values[self.y]) + '</td></tr>')
+                    html.append('<tr><td>' + present_value(row.values[self.x]) + '</td><td>' + present_value(row.values[self.y]) + '</td></tr>')
             html.append('</tbody></table>')
             html_text = "\n".join(html)
 
@@ -817,7 +821,7 @@ set style data dots
 #set style line 2 lt 1 pt 0 lc rgb '#4CC417' lw 1
 #set style line 3 lt 1 pt 0 lc rgb '#ADDFFF' lw 1
 
-plot "{graph_path}.csv" u 1:2 title "Scatter plot" with points
+plot "{graph_path}.csv" u 1:4 title "Scatter plot" with points
 
 set terminal postscript eps solid color "Helvetica" 18 size 5, 2.5
 set output '{graph_path}.eps'
