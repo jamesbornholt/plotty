@@ -145,6 +145,10 @@ div {
 #header-config label {
     margin-right: 1em;
 }
+#header-config.error {
+    background-color: #FFA6B0;
+    border: 1px solid #E87280;
+}
 
 #loading-indicator {
     padding: 0.2em;

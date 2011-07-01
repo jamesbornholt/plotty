@@ -1901,6 +1901,9 @@ var Pipeline = {
             if ( s.length > 0 ) valueCols.push(s);
         });
 
+        // Reset any incomplete block styles
+        $('.incomplete-block').removeClass('incomplete-block');
+
         // We want to visit every block even if the pipeline is invalid, since
         // we also need to notify blocks about their new scenario and value
         // columns.
@@ -1909,6 +1912,7 @@ var Pipeline = {
         if ( scenarioCols.length == 0 || valueCols.length == 0 ) {
             console.debug("Pipeline not valid because scenario or value cols empty: [" +  scenarioCols + "], [" + valueCols + "]");
             valid = false;
+            $('#pipeline-values').addClass('incomplete-block');
         }
         
         var ret;
@@ -1917,6 +1921,7 @@ var Pipeline = {
             if ( ret === false ) {
                 console.debug("Block " + i + ": not valid");
                 valid = false;
+                $(Pipeline.blocks[i].element).addClass('incomplete-block');
             }
             else {
                 console.debug("Block " + i + ": valid, scenario=[" + ret[0] + "], value=[" + ret[1] + "]");
@@ -1926,11 +1931,11 @@ var Pipeline = {
         }
         
         if ( !valid ) {
-            $("#header-config").css('background-color', 'red');
+            $("#header-config").addClass('error');
             return false;
         }
         else {
-            $('#header-config').css('background-color', 'green');
+            $("#header-config").removeClass('error');
             return Pipeline.encode();
         }
     },
