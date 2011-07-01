@@ -125,6 +125,7 @@ class DataTable:
             try:
               scenarios[schash].values[key_clean] = float(value)
             except:
+              pass
               # todo: we may want to warn users?
               # raise PipelineError("Invalid value, %s is not a number" % value)
         
