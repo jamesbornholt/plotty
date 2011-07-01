@@ -1687,11 +1687,18 @@ var Pipeline = {
         });
 
         $("#pipeline-delete-go").click(function() {
-            var selected = $('#pipeline-load-select').val();
-            if ( selected != '-1' ) {
-                Pipeline.deletePipeline(selected);
+            var select = $('#pipeline-load-select');
+            if ( select.val() != '-1' ) {
+                // Get the name
+                var selectedOption = select.children(':selected');
+                var name = selectedOption.html();
+                Pipeline.ajax.deletePipeline(name, function() {
+                    selectedOption.remove();
+                    select.val('-1');
+                });
             }
         });
+
 
         // Hook the onchange for derived value cols to start a timer to refresh
         // the pipeline
@@ -2077,21 +2084,6 @@ var Pipeline = {
     },
 
     /**
-     * Delete this pipeline from the server.
-     */
-    deletePipeline: function() {
-        var name = $('#pipeline-delete-name').val();
-        if ( name == '' ) {
-            return false;
-        }
-        Pipeline.ajax.deletePipeline(name, function(data, textStatus, xhr) {
-            console.debug("Delete pipeline: " + name);
-//            var loadDropdown = $("#pipeline-load-select");
-//            $('#pipeline-save-name').val('');
-        });
-    },
-
-    /**
      * Ajax requests.
      */
     ajax: {
@@ -2123,9 +2115,9 @@ var Pipeline = {
         },
 
         /**
-         * ajax/save-pipeline/ delete a pipeline on the server given a name
+         * ajax/save-pipeline/ deletes a pipeline on the server given a name
          *
-         * @param name string The name of the new pipeline
+         * @param name string The name of the pipeline to delete
          */
         deletePipeline: function(name, callback) {
             $.post('ajax/delete-pipeline/', {'name': name}, callback);

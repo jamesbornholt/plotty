@@ -105,8 +105,11 @@ def pipeline(request, pipeline):
 def delete_saved_pipeline(request):
     if 'name' not in request.POST:
         return HttpResponse(json.dumps({'error': True}))
-    new = SavedPipeline(name=request.POST['name'])
-    new.delete()
+    try:
+        pipeline = SavedPipeline.objects.get(name=request.POST['name'])
+    except SavedPipeline.DoesNotExist: # We assume since it's a primary key there's 0 or 1
+        return HttpResponse(json.dumps({'error': True, 'reason': 'No pipeline by that name'}))
+    pipeline.delete()
     return HttpResponse(json.dumps({'error': False}))
 
 def save_pipeline(request):
