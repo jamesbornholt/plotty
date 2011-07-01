@@ -122,7 +122,11 @@ class DataTable:
                 scenarios[schash] = DataRow(line)
             if key_clean in scenarios[schash].values:
               raise PipelineError("Invalid log file, multiple values for key %s with scenario %s" % (key_clean, line))
-            scenarios[schash].values[key_clean] = float(value)
+            try:
+              scenarios[schash].values[key_clean] = float(value)
+            except:
+              # todo: we may want to warn users?
+              # raise PipelineError("Invalid value, %s is not a number" % value)
         
         logging.debug('Parsed %d rows from CSV' % len(scenarios))
         scenario_cols = reader.fieldnames
