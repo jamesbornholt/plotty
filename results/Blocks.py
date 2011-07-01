@@ -559,7 +559,7 @@ class GraphBlock(Block):
 
     def renderHTML(self, pivot_table, column_keys, row_keys, graph_hash, aggregates=None):
         #output  = '<img src="graph/' + graph_hash + '.svg" />'
-        output  = '<object width=100% height=40% data="graph/' + graph_hash + '.svg" type="image/svg+xml"></object>'
+        output  = '<object width=100% height=50% data="graph/' + graph_hash + '.svg" type="image/svg+xml"></object>'
         output += '<p>Download: '
         output += '<a href="graph/' + graph_hash + '.csv">csv</a> '
         output += '<a href="graph/' + graph_hash + '.gpt">gpt</a> '
@@ -685,7 +685,7 @@ class GraphBlock(Block):
                 # Plot the graph
                 self.plotScatterGraph(graph_path, series=group_values)
             
-            html = ['<object width=100% height=40% data="graph/' + graph_hash + '.svg" type="image/svg+xml"></object>' + \
+            html = ['<object width=100% height=50% data="graph/' + graph_hash + '.svg" type="image/svg+xml"></object>' + \
                     '<p>Download: ' + \
                     '<a href="graph/' + graph_hash + '.csv">csv</a> ' + \
                     '<a href="graph/' + graph_hash + '.gpt">gpt</a> ' + \
@@ -738,8 +738,16 @@ set grid noxtics
 set style line 1 lt 1 pt 0 lc rgb '#82CAFA' lw 1
 set style line 2 lt 1 pt 0 lc rgb '#4CC417' lw 1
 set style line 3 lt 1 pt 0 lc rgb '#ADDFFF' lw 1
-
+"""
+        if self.errorbars:
+          gnuplot += """
 plot for [COL=2:{num_cols}:3] "{graph_path}.csv" u 1:COL:xtic(1) title col(COL) w lines, for [COL=2:{num_cols}:3] "" u 1:COL:COL+1:COL+2 notitle w yerr
+"""
+        else:
+          gnuplot += """
+plot for [COL=2:{num_cols}:3] "{graph_path}.csv" u COL:xtic(1) lw 3 title col(COL) w lines
+"""
+        gnuplot += """
 
 set terminal postscript eps solid color "Helvetica" 18 size 5, 2.5
 set output '{graph_path}.eps'
@@ -779,7 +787,6 @@ set key bottom left outside horizontal
 set nobox
 set auto x
 set style data histogram
-set style histogram errorbars gap 1 lw 0.25
 set bars .5
 set style fill solid 1.0 border -1
 set boxwidth 1
@@ -792,9 +799,18 @@ set grid noxtics
 set style line 1 lt 1 pt 0 lc rgb '#82CAFA' lw 1
 set style line 2 lt 1 pt 0 lc rgb '#4CC417' lw 1
 set style line 3 lt 1 pt 0 lc rgb '#ADDFFF' lw 1
-
+"""
+        if self.errorbars:
+          gnuplot += """
+set style histogram errorbars gap 1 lw 0.25
 plot for [COL=2:{num_cols}:3] "{graph_path}.csv" u COL:COL+1:COL+2:xtic(1) title col(COL)
-
+"""
+        else:
+          gnuplot += """
+set style histogram
+plot for [COL=2:{num_cols}:3] "{graph_path}.csv" u COL:xtic(1) title col(COL)
+"""
+        gnuplot += """
 set terminal postscript eps solid color "Helvetica" 18 size 5, 2.5
 set output '{graph_path}.eps'
 replot
@@ -819,7 +835,6 @@ replot
         """
 
         series_str = " ".join(series)
-
         gnuplot = """
 set terminal svg fname "Arial" fsize 10 size 960,420
 set output '{graph_path}.svg'
@@ -834,7 +849,7 @@ set key bottom left outside horizontal
 
 set nobox
 set auto x
-set style data dots
+#set style data dots
 set key reverse Left spacing 1.35
 
 #set style line 20 lt 1 pt 0 lc rgb '#000000' lw 0.25
@@ -845,7 +860,12 @@ set key reverse Left spacing 1.35
 #set style line 3 lt 1 pt 0 lc rgb '#ADDFFF' lw 1
 X="Data"
 
-plot {datafile} u 2:5:3:4:6:7 with xyerrorbars title X
+"""
+        if self.errorbars:
+          gnuplot += "plot {datafile} u 2:5:3:4:6:7 with xyerrorbars title X"
+        else:
+          gnuplot += "plot {datafile} u 2:5 lw 3 title X"
+        gnuplot += """
 
 set terminal postscript eps solid color "Helvetica" 18 size 5, 2.5
 set output '{graph_path}.eps'
