@@ -6,6 +6,7 @@ import string
 BLOCK_SEPARATOR = '|'
 GROUP_SEPARATOR = '&'
 PARAM_SEPARATOR = '^'
+TUPLE_SEPARATOR = ';'
 
 AGGREGATE_TYPES = { 0: 'mean',
                     1: 'geomean', }

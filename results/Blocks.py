@@ -16,6 +16,9 @@ import logging
 class Block(object):
     """ The base object for blocks. Defines methods all blocks should implement.
     """
+    def __init__(self):
+        self.flags = 0
+    
     def decode(self, param_string):
         """ Decodes a paramater string and stores the configuration in local
             fields. """
@@ -27,6 +30,10 @@ class Block(object):
 
             Can throw PipelineAmbiguityException or PipelineBlockException. """
         pass
+    
+    def getFlag(self, flag):
+        """ Get a flag's value """
+        return bool(self.flags & flag)
 
 
 class FilterBlock(Block):
@@ -62,13 +69,24 @@ class FilterBlock(Block):
             Filter blocks are encoded in the form:
             filter1scenario^filter1is^filter1value&filter2scenario^...
         """
-        filts = param_string.split(PipelineEncoder.GROUP_SEPARATOR)
-        for filt_str in filts:
-            parts = filt_str.split(PipelineEncoder.PARAM_SEPARATOR)
+        parts = param_string.split(PipelineEncoder.GROUP_SEPARATOR)
+        # There must be at least two - a flagword and one filter
+        if len(parts) < 2:
+            raise PipelineError("Filter block invalid: not enough parts")
+        
+        self.flags = int(parts[0])
+
+        # Everything past the first part is a filter
+        for filt_str in parts[1:]:
+            settings = filt_str.split(PipelineEncoder.PARAM_SEPARATOR)
+            # Must be exactly three parts - scenario, is, value
+            if len(settings) != 3:
+                logging.debug("Filter invalid: not enough parts in %s" % filt_str)
+                continue
             self.filters.append({
-                'scenario': parts[0],
-                'is':       (parts[1] == FilterBlock.TYPE['IS']),
-                'value':    parts[2]
+                'scenario': settings[0],
+                'is':       (settings[1] == FilterBlock.TYPE['IS']),
+                'value':    settings[2]
             })
 
     def apply(self, data_table):
@@ -141,8 +159,19 @@ class AggregateBlock(Block):
             column.
         """
         parts = param_string.split(PipelineEncoder.GROUP_SEPARATOR)
-        self.type = parts[0]
-        self.column = parts[1]
+        # Exactly two parts - flagword and settings
+        if len(parts) != 2:
+            raise PipelineError("Aggregate block invalid: incorrect number of parts")
+        
+        self.flags = int(parts[0])
+
+        settings = parts[1].split(PipelineEncoder.PARAM_SEPARATOR)
+        # Exactly two settings - type and column
+        if len(settings) != 2:
+            raise PipelineError("Aggregate block invalid: incorrect number of settings")
+
+        self.type = settings[0]
+        self.column = settings[1]
 
     def apply(self, data_table):
         """ Apply this block to the given data table.
@@ -223,19 +252,33 @@ class NormaliseBlock(Block):
             by the presence of the ^ character.
         """
         parts = param_string.split(PipelineEncoder.GROUP_SEPARATOR)
-        self.type = parts[0]
+        # At least three parts - flagword, type, groups (possibly empty)
+        if len(parts) < 3:
+            raise PipelineError("Normalise block invalid: incorrect number of parts")
+        
+        self.flags = int(parts[0])
+        self.type = parts[1]
+
+        # Part 3 is the groupings
+        groupings = parts[2].split(PipelineEncoder.PARAM_SEPARATOR)
+        for grp in groupings:
+            s = grp.strip()
+            if len(s) > 0:
+                self.group.append(s)
+        
+        # If this is a select normaliser, part 4 is the pairs
         if self.type == NormaliseBlock.TYPE['SELECT']:
-            for part in parts[1:]:
-                if PipelineEncoder.PARAM_SEPARATOR in part:
-                    vals = part.split(PipelineEncoder.PARAM_SEPARATOR)
-                    self.normaliser.append({
-                        'scenario': vals[0],
-                        'value':    vals[1]
-                    })
-                elif part != '':
-                    self.group.append(part)
-        else:
-            self.group = [s for s in parts[1:] if s != '']
+            if len(parts) < 4 or len(parts[3].strip()) == 0:
+                raise PipelineError("Normalise block invalid: no pairings for select normaliser")
+            pairs = parts[3].split(PipelineEncoder.PARAM_SEPARATOR)
+            for pair in pairs:
+                elements = pair.split(PipelineEncoder.TUPLE_SEPARATOR)
+                if len(elements) != 2:
+                    logging.debug("Normalise block: Not a valid pairing: ", pair)
+                self.normaliser.append({
+                    'scenario': elements[0],
+                    'value':    elements[1]
+                })
     
     def apply(self, data_table):
         """ Apply this block to the given data table.
@@ -369,8 +412,10 @@ class GraphBlock(Block):
         'XY': '2',
         'SCATTER': '3'
     }
+    FLAG_ERRORBARS = 1 << 0
 
     def __init__(self):
+        super(GraphBlock, self).__init__()
         self.type = None
         self.errorbars = None
         self.column = None
@@ -382,24 +427,33 @@ class GraphBlock(Block):
 
     def decode(self, param_string):
         parts = param_string.split(PipelineEncoder.GROUP_SEPARATOR)
-        self.type = parts[0][0]
-        if len(parts[0]) > 1: # For compatibility with older strings, assume True
-            self.errorbars = (parts[0][1] == '1')
-        else:
-            self.errorbars = True
+        # Exactly 3 parts: flagword, type, settings for that type
+        if len(parts) != 3:
+            raise PipelineError("Graph block invalid: incorrect number of parts")
         
-        if self.type == GraphBlock.TYPE['HISTOGRAM']:
-            self.column = parts[1]
-            self.row = parts[2]
-            self.value = parts[3]
-        elif self.type == GraphBlock.TYPE['XY']:
-            self.column = parts[1]
-            self.row = parts[2]
-            self.value = parts[3]
+        self.flags = int(parts[0])
+        self.type = parts[1]
+
+        self.errorbars = self.getFlag(GraphBlock.FLAG_ERRORBARS)
+
+        settings = parts[2].split(PipelineEncoder.PARAM_SEPARATOR)
+        
+        if self.type == GraphBlock.TYPE['HISTOGRAM'] or self.type == GraphBlock.TYPE['HISTOGRAM']:
+            # Exactly three settings: column, row, value
+            if len(settings) != 3:
+                raise PipelineError("Graph block invalid: incorrect number of histo/xy settings")
+            
+            self.column = settings[0]
+            self.row = settings[1]
+            self.value = settings[2]
         elif self.type == GraphBlock.TYPE['SCATTER']:
-            self.x = parts[1]
-            self.y = parts[2]
-            self.series = parts[3]
+            # Exactly three settings: x, y, series (may be -1 for null)
+            if len(settings) != 3:
+                raise PipelineError("Graph block invalid: incorrect number of histo/xy settings")
+            
+            self.x = settings[0]
+            self.y = settings[1]
+            self.series = settings[2]
 
     def pivot(self, rows):
         """ Pivot a set of rows based on the settings in this block. """

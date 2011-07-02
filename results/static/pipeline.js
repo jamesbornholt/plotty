@@ -157,6 +157,11 @@ var Block = Base.extend({
     ID: null,
 
     /**
+     * Possible flags for Block.flags, ORed onto the flagword
+     */
+    FLAGS: {},
+
+    /**
      ** Object fields
      **/
     
@@ -164,6 +169,11 @@ var Block = Base.extend({
      * The HTML div that contains this block.
      */
     element: null,
+
+    /**
+     * Block-local flags
+     */
+    flags: 0,
     
     /**
      ** Object methods
@@ -212,6 +222,35 @@ var Block = Base.extend({
         $('.value-column', this.element).each(function() {
             Utilities.updateSelect(this, valueCols);
         });
+    },
+
+    /**
+     * Modify this.flags by turning the given flag on or off depending on a
+     * boolean
+     *
+     * @param flag The flag to set/clear, should be a power of 2, usually comes
+     *   from this.FLAGS
+     * @param on true to turn the flag on, false to turn the flag off
+     */
+    setFlag: function(flag, on) {
+        if ( (flag & (flag - 1)) != 0 ) return; // not a power of two
+        if ( on ) {
+            this.flags |= flag;
+        }
+        else {
+            this.flags &= ~flag;
+        }
+    },
+
+    /**
+     * Read a flag and return a boolean representing its state. We need this
+     * because (0 & 1) != false and so will turn checkboxes on.
+     *
+     * @param flag the flag to read
+     * @return boolean true if the flag is on, false if off
+     */
+    getFlag: function(flag) {
+        return (this.flags & flag) != 0;
     },
     
     /**
@@ -363,11 +402,24 @@ var Blocks = {
          */
         decode: function(params) {
             this.filters = [];
-            var filts = params.split(Pipeline.encoder.GROUP_SEPARATOR);
+            var parts = params.split(Pipeline.encoder.GROUP_SEPARATOR);
+            // There must be at least two - a flagword and one filter
+            if ( parts.length < 2 ) {
+                console.debug("Filter block invalid: not enough parts");
+                return;
+            }
+
+            this.flags = parseInt(parts[0]);
+
+            var filts = parts.slice(1);
             var thisBlock = this;
             jQuery.each(filts, function(i ,filter) {
-                var parts = filter.split(Pipeline.encoder.PARAM_SEPARATOR);
-                thisBlock.filters.push({scenario: parts[0], is: thisBlock.TYPE.IS, value: parts[2]});
+                var settings = filter.split(Pipeline.encoder.PARAM_SEPARATOR);
+                // Exactly three parts - scenario, is, value
+                if ( settings.length != 3 ) {
+                    console.debug("Filter invalid: not enough parts in ", filter);
+                }
+                thisBlock.filters.push({scenario: settings[0], is: settings[1], value: settings[2]});
             });
         },
         
@@ -375,7 +427,7 @@ var Blocks = {
          * Encode this block into a parameter string based on its configuration.
          */
         encode: function() {
-            var strs = []
+            var strs = [this.flags];
             jQuery.each(this.filters, function(i, filter) {
                 if ( filter.scenario != -1 && filter.value != -1 ) {
                     strs.push(filter.scenario + Pipeline.encoder.PARAM_SEPARATOR
@@ -592,15 +644,28 @@ var Blocks = {
          */
         decode: function(params) {
             var parts = params.split(Pipeline.encoder.GROUP_SEPARATOR);
-            this.type = parts[0];
-            this.column = parts[1];
+            // Exactly 2 parts - flagword and settings
+            if ( parts.length != 2 ) {
+                console.debug("Aggregate block invalid: incorrect number of parts");
+                return;
+            }
+
+            this.flags = parseInt(parts[0]);
+
+            var settings = parts[1].split(Pipeline.encoder.PARAM_SEPARATOR);
+            if ( settings.length != 2 ) {
+                console.debug("Aggregate block invalid: incorrect number of settings");
+                return;
+            }
+            this.type = settings[0];
+            this.column = settings[1];
         },
         
         /**
          * Encode this block into a parameter string based on its configuration.
          */
         encode: function() {
-            return this.type + Pipeline.encoder.GROUP_SEPARATOR + this.column;
+            return this.flags + Pipeline.encoder.GROUP_SEPARATOR + this.type + Pipeline.encoder.PARAM_SEPARATOR + this.column;
         },
 
         /**
@@ -774,23 +839,41 @@ var Blocks = {
          */
         decode: function(params) {
             var parts = params.split(Pipeline.encoder.GROUP_SEPARATOR);
-            this.type = parts[0];
+            // At least 3 parts - flagword, type, groups (possibly empty)
+            if ( parts.length < 3 ) {
+                console.debug("Normalise block invalid: incorrect number of parts");
+                return
+            }
+
+            this.flags = parseInt(parts[0]);
+            this.type = parts[1];
+
             this.normaliser = [];
             this.group = [];
-            
-            if ( this.type == this.TYPE.SELECT ) {
-                for ( var i = 1; i < parts.length; i++ ) {
-                    if ( parts[i].indexOf(Pipeline.encoder.PARAM_SEPARATOR) > -1 ) {
-                        var opts = parts[i].split(Pipeline.encoder.PARAM_SEPARATOR);
-                        this.normaliser.push({scenario: opts[0], value: opts[1]});
-                    }
-                    else {
-                        this.group.push(parts[i]);
-                    }
+
+            // Part 3 is the groupings
+            var groupings = parts[2].split(Pipeline.encoder.PARAM_SEPARATOR);
+            for ( var i = 0; i < groupings.length; i++ ) {
+                if ( $.trim(groupings[i]).length > 0 ) { // Make sure it's not empty
+                    this.group.push($.trim(groupings[i]));
                 }
             }
-            else {
-                this.group = parts.slice(1);
+
+            // If this is a select normaliser, part 4 is the pairs
+            if ( this.type == this.TYPE.SELECT ) {
+                if ( parts.length < 4 || $.trim(parts[3]).length == 0 ) {
+                    console.debug("Normalise block invalid: no pairings for select normaliser");
+                    return;
+                }
+                var pairs = parts[3].split(Pipeline.encoder.PARAM_SEPARATOR);
+                for ( var i = 0; i < pairs.length; i++ ) {
+                    var elements = pairs[i].split(Pipeline.encoder.TUPLE_SEPARATOR);
+                    if ( elements.length != 2 ) {
+                        console.debug("Normalise block: Not a valid pairing: ", pairs[i]);
+                        continue;
+                    }
+                    this.normaliser.push({scenario: elements[0], value: elements[1]});
+                }
             }
         },
         
@@ -798,17 +881,18 @@ var Blocks = {
          * Encode this block into a parameter string based on its configuration.
          */
         encode: function() {
-            var strs = []
-            strs.push(this.type);
+            var strs = [this.flags, this.type];
+
+            strs.push(this.group.join(Pipeline.encoder.PARAM_SEPARATOR));
+
             if ( this.type == this.TYPE.SELECT ) {
+                var pairs = [];
                 jQuery.each(this.normaliser, function(i, norm) {
                     if ( norm.scenario != -1 && norm.value != -1 ) {
-                        strs.push(norm.scenario + Pipeline.encoder.PARAM_SEPARATOR + norm.value);
+                        pairs.push(norm.scenario + Pipeline.encoder.TUPLE_SEPARATOR + norm.value);
                     }
                 });
-            }
-            if ( this.group.length > 0 ) {
-                strs.push(this.group.join(Pipeline.encoder.GROUP_SEPARATOR));
+                strs.push(pairs.join(Pipeline.encoder.PARAM_SEPARATOR));
             }
             
             return strs.join(Pipeline.encoder.GROUP_SEPARATOR);
@@ -1013,6 +1097,13 @@ var Blocks = {
         },
 
         /**
+         * Block-local flag types
+         */
+        FLAGS: {
+            ERRORBARS: 1 << 0
+        },
+
+        /**
          ** Object fields
          **/
         
@@ -1056,25 +1147,40 @@ var Blocks = {
          */
         decode: function(params) {
             var parts = params.split(Pipeline.encoder.GROUP_SEPARATOR);
-            this.type = parts[0][0];
-            if ( parts[0].length > 1 ) {
-                this.errorbars = (parts[0][1] == '1');
+            // Exactly three parts - flagword, type, settings for that type
+            if ( parts.length != 3 ) {
+                console.debug("Graph block invalid: incorrect number of parts");
+                return;
             }
-            else {
-                this.errorbars = true;
-            }
+
+            this.flags = parseInt(parts[0]);
+            
+            this.type = parts[1];
+
+            var settings = parts[2].split(Pipeline.encoder.PARAM_SEPARATOR);
+
             if ( this.type == this.TYPE.HISTOGRAM || this.type == this.TYPE.XY ) {
+                // Three settings: column, row, value
+                if ( settings.length != 3 ) {
+                    console.debug("Graph block invalid: incorrect number of histo/xy settings");
+                    return;
+                }
                 this.options = {
-                    column: parts[1],
-                    row: parts[2],
-                    value: parts[3]
+                    column: settings[0],
+                    row: settings[1],
+                    value: settings[2]
                 };
             }
             else if ( this.type == this.TYPE.SCATTER ) {
+                // Three settings: x, y, series (may be -1 for null)
+                if ( settings.length != 3 ) {
+                    console.debug("Graph block invalid: incorrect number of scatter settings");
+                    return;
+                }
                 this.options = {
-                    x: parts[1],
-                    y: parts[2],
-                    series: parts[3]
+                    x: settings[0],
+                    y: settings[1],
+                    series: settings[2]
                 };
             }
         },
@@ -1083,18 +1189,16 @@ var Blocks = {
          * Encode this block into a parameter string based on its configuration.
          */
         encode: function() {
-            var strs = [];
-            strs.push(this.type + (this.errorbars ? '1' : '0'));
+            var strs = [this.flags, this.type];
+
+            var settings = [];
             if ( this.type == this.TYPE.HISTOGRAM || this.type == this.TYPE.XY ) {
-                strs.push(this.options.column);
-                strs.push(this.options.row);
-                strs.push(this.options.value);
+                settings = [this.options.column, this.options.row, this.options.value];
             }
             else if ( this.type == this.TYPE.SCATTER ) {
-                strs.push(this.options.x);
-                strs.push(this.options.y);
-                strs.push(this.options.series);
+                settings = [this.options.x, this.options.y, this.options.series];
             }
+            strs.push(settings.join(Pipeline.encoder.PARAM_SEPARATOR));
             
             return strs.join(Pipeline.encoder.GROUP_SEPARATOR);
         },
@@ -1109,7 +1213,7 @@ var Blocks = {
             // Read the type
             this.type = $('.select-graph-type', this.element).val();
 
-            this.errorbars = $('.graph-enable-errorbars', this.element).is(':checked');
+            this.setFlag(this.FLAGS.ERRORBARS, $('.graph-enable-errorbars', this.element).is(':checked'));
             
             // These could be consolidated, but are left split as an example
             // of how to do more complicated graphs with different options.
@@ -1159,7 +1263,7 @@ var Blocks = {
             // Set the type dropdown
             $('.select-graph-type', this.element).val(this.type);
 
-            $('.graph-enable-errorbars', this.element).attr('checked', this.errorbars);
+            $('.graph-enable-errorbars', this.element).attr('checked', this.getFlag(this.FLAGS.ERRORBARS));
 
             // These could be consolidated, but are left split as an example
             // of how to do more complicated graphs with different options.
@@ -1512,6 +1616,13 @@ var Pipeline = {
         // automatically?
         MAX_TABLE_ROWS_AUTO_RENDER: 200
     },
+
+    /**
+     * Possible flags; ORed onto Pipeline.flags
+     */
+    FLAGS: {
+        NOTHING: 0 // not a real flag, just for demonstration
+    },
     
     /**
      * Some special strings for pipeline encoding
@@ -1520,6 +1631,7 @@ var Pipeline = {
         BLOCK_SEPARATOR: "|",
         GROUP_SEPARATOR: "&",
         PARAM_SEPARATOR: "^",
+        TUPLE_SEPARATOR: ";",
 
         // Mappings from IDs to blocks (the inverse of the mappings inside each
         // block)
@@ -1556,6 +1668,11 @@ var Pipeline = {
      * The current page hash, used to run hashchange events
      */
     hash: "",
+
+    /**
+     * Pipeline-global flags
+     */
+    flags: 0,
 
     /**
      * The timeout ID for the timeout used to decide when to try to load
@@ -1949,9 +2066,19 @@ var Pipeline = {
     encode: function() {
         var strs = [];
 
+        /*
+         * part 1: flagword
+         */
+        strs.push(Pipeline.flags);
+
+        /*
+         * part 2: pipeline config
+         */
+        var pipelineConfig = [];
+
         // Encode the selected log files.
         var logFiles = Pipeline._selectedLogFiles();
-        strs.push(logFiles.join(Pipeline.encoder.GROUP_SEPARATOR));
+        pipelineConfig.push(logFiles.join(Pipeline.encoder.PARAM_SEPARATOR));
 
         // Encode the scenario and value columns
         var scenarioCols = Utilities.multiSelectValue($("#select-scenario-cols"));
@@ -1964,11 +2091,15 @@ var Pipeline = {
             if ( s.length > 0 ) derivedValueColExprs.push(s);
         });
 
-        strs.push(scenarioCols.join(Pipeline.encoder.GROUP_SEPARATOR));
-        strs.push(valueCols.join(Pipeline.encoder.GROUP_SEPARATOR));
-        strs.push(derivedValueColExprs.join(Pipeline.encoder.GROUP_SEPARATOR));
+        pipelineConfig.push(scenarioCols.join(Pipeline.encoder.PARAM_SEPARATOR));
+        pipelineConfig.push(valueCols.join(Pipeline.encoder.PARAM_SEPARATOR));
+        pipelineConfig.push(derivedValueColExprs.join(Pipeline.encoder.PARAM_SEPARATOR));
 
-        // Now encode the pipeline
+        strs.push(pipelineConfig.join(Pipeline.encoder.GROUP_SEPARATOR));
+
+        /*
+         * parts 3+: blocks
+         */ 
         jQuery.each(this.blocks, function(i, block) {
             strs.push(block.ID + block.encode());
         });
@@ -1982,39 +2113,90 @@ var Pipeline = {
      * @param encoded String The encoded pipeline string to parse.
      */
     decode: function(encoded) {
-        var parts = unescape(encoded).split(Pipeline.encoder.BLOCK_SEPARATOR);
-
-        // Reset the pipeline
+        /*
+         * Reset the pipeline
+         */
+        
         Pipeline.logFileOptionsTable.reset();
         Pipeline.derivedValueColsOptionsTable.reset();
         jQuery.each(Pipeline.blocks, function(i, block) {
             block.removeBlock();
         });
         Pipeline.blocks = [];
+        Pipeline.setFlags(0);
 
-        if ( parts.length < 3 ) {
+        // Try to convert old ones to new ones. No guarantees!
+        // If the first character isn't a number, it is certainly not a new
+        // pipeline. The converse is not true however, since logfiles may
+        // start with a number (though that's unlikely, I think?). That is,
+        // this code may *miss* an old pipeline, but will never mistakenly catch
+        // a *new* pipeline.
+        if ( !/[0-9]/.test(encoded[0]) ) {
+            alert("Detected an old pipeline string. We'll try to convert, \
+                  but no guarantees!\n\nYou should re-save the pipeline when \
+                  it loads again.".replace(/[ ]+/g, " "));
+            var newStyle = Pipeline.decodeOldStyle(encoded);
+            Pipeline.pushState(newStyle);
+            return;            
+        }
+
+
+        /*
+         flagword | pipeline-config | block1 | ... | blockn
+         flagword: an integer, default 0
+         pipeline-config:   log1 ^ log2 ^ log3
+                          & scenario1 ^ scenario2 ^ scenario3
+                          & value1 ^ value2 ^ value3
+                          & derivedVal1 ^ derivedVal2 ^ derivedVal3
+         block: n[block specific]  -- n a single char identifier for the block
+                (currently 1,2,3,4), which we'll split off here)
+        */
+
+        /*
+         * Get the top-level parts of the encoded string
+         */
+
+        var parts = unescape(encoded).split(Pipeline.encoder.BLOCK_SEPARATOR);
+        // Flagword and pipeline-config are required
+        if ( parts.length < 2 ) {
+            console.debug("Decode invalid because not enough parts");
             return;
         }
 
-        var logFiles = parts[0].split(Pipeline.encoder.GROUP_SEPARATOR);
-        var scenarioCols = parts[1].split(Pipeline.encoder.GROUP_SEPARATOR);
-        var valueCols = parts[2].split(Pipeline.encoder.GROUP_SEPARATOR);
-        var derivedValueCols = parts[3].split(Pipeline.encoder.GROUP_SEPARATOR);
+        var blocks = parts.slice(2); // everything from index 2 onwards
+
+        /*
+         * Set the pipeline config
+         */
+
+        Pipeline.setFlags(parts[0]);
+
+        var pipelineConfig = parts[1].split(Pipeline.encoder.GROUP_SEPARATOR);
+        // All parts required - logs, scenarios, values, derivedVals (may be empty)
+        if ( pipelineConfig.length != 4 ) {
+            console.debug("Decode invalid because not enough pipeline-config parts");
+            return;
+        }
+
+        var logFiles = pipelineConfig[0].split(Pipeline.encoder.PARAM_SEPARATOR);
+        var scenarioCols = pipelineConfig[1].split(Pipeline.encoder.PARAM_SEPARATOR);
+        var valueCols = pipelineConfig[2].split(Pipeline.encoder.PARAM_SEPARATOR);
+        var derivedValueCols = pipelineConfig[3].split(Pipeline.encoder.PARAM_SEPARATOR);
+        // Remove whitespace-only columns from derivedValueCols
         derivedValueCols = jQuery.map(derivedValueCols, function(val) {
             var s = $.trim(val);
             if ( s.length > 0 ) return s;
             else return null; // removes the item
         });
 
-        var blocks = parts.slice(4);
-
         // Load the log files into the table
+        // XXX TODO: if a logfile no longer exists? does this work?
         jQuery.each(logFiles, function(i, log) {
             var row = Pipeline.logFileOptionsTable.addRow();
             $('.select-log', row).val(log);
         });
 
-        // Load new columns
+        // Load the available columns 
         Pipeline.ajax.logValues(function(data, textStatus, xhr) {
             if ( data.tabulating ) {
                 Pipeline.tabulating(data, function() {
@@ -2036,12 +2218,12 @@ var Pipeline = {
 
             // We want to cascade all value cols including derived ones,
             // so add those to the original now
-            // XXX TODO: Hacky - do we need the first cascade before refresh?
-            jQuery.extend(data.valueCols, derivedValueCols);
+            jQuery.merge(data.valueCols, derivedValueCols);
 
             // Start creating blocks
             jQuery.each(blocks, function(i, params) {
-                var paramString = params.slice(1);
+                if ( $.trim(params).length == 0 ) return;
+                var paramString = params.slice(1); // The first character is the block ID
                 var block = new Pipeline.encoder.MAPPINGS[params[0]](Pipeline.blocks.length);
                 block.seed(data.scenarioCols, data.valueCols);
                 block.decode(paramString);
@@ -2053,6 +2235,85 @@ var Pipeline = {
         });
     },
     
+    /**
+     * Attempt to decode an old-style URL and turn it into a new-style one.
+     * Heavily untested - could be disastrous!
+     */
+    decodeOldStyle: function(encoded) {
+        // Old format: log1&log2|scenario1&scenario2|value1&value2|derived1&derived2|block1|...|blockn
+        var parts = unescape(encoded).split(Pipeline.encoder.BLOCK_SEPARATOR);
+
+        var logFiles = parts[0].split(Pipeline.encoder.GROUP_SEPARATOR);
+        var scenarioCols = parts[1].split(Pipeline.encoder.GROUP_SEPARATOR);
+        var valueCols = parts[2].split(Pipeline.encoder.GROUP_SEPARATOR);
+        var derivedValueCols = parts[3].split(Pipeline.encoder.GROUP_SEPARATOR);
+        derivedValueCols = jQuery.map(derivedValueCols, function(val) {
+            var s = $.trim(val);
+            if ( s.length > 0 ) return s;
+            else return null; // removes the item
+        });
+        var blocks = parts.slice(4);
+
+        var blockStrs = [];
+
+        jQuery.each(blocks, function(i, block) {
+            if ( block[0] == '1' ) {
+                // Filter block, mostly the same
+                blockStrs.push("10&" + block.slice(1));
+            }
+            else if ( block[0] == '2' ) {
+                // Aggregate block, different separator
+                var bits = block.slice(1).split(Pipeline.encoder.GROUP_SEPARATOR);
+                blockStrs.push("20&" + bits[0] + "^" + bits[1]);
+            }
+            else if ( block[0] == '3' ) {
+                // Normalise block, very different!
+                var bits = block.slice(1).split(Pipeline.encoder.GROUP_SEPARATOR);
+                var type = bits[0];
+                var normalisers = [];
+                var groups = [];
+                if ( type == '1' ) {
+                    for ( var i = 1; i < bits.length; i++ ) {
+                        if ( bits[i].indexOf(Pipeline.encoder.PARAM_SEPARATOR) > -1 ) {
+                            normalisers.push(bits[i].replace('^', ';'));
+                        }
+                        else {
+                            groups.push(bits[i]);
+                        }
+                    }
+                    blockStrs.push("30&1&" + groups.join('^') + "&" + normalisers.join("^"));
+                }
+                else {
+                    groups = parts.slice(1);
+                    blockStrs.push("30&2&" + groups.join('^'));
+                }
+            }
+            else if ( block[0] == '4' ) {
+                // Graph block, nearly the same
+                var parts = block.slice(1).split(Pipeline.encoder.GROUP_SEPARATOR);
+                var type = parts[0][0];
+                var errorbars = '1';
+                if ( parts[0].length > 1 && parts[0][1] == '0') {
+                    errorbars = '0';
+                }
+                blockStrs.push("4" + errorbars + "&" + type + "&" + parts.slice(1).join("^"));
+            }
+        });
+
+        var pipelineConfig = [];
+        pipelineConfig.push(logFiles.join(Pipeline.encoder.PARAM_SEPARATOR));
+        pipelineConfig.push(scenarioCols.join(Pipeline.encoder.PARAM_SEPARATOR));
+        pipelineConfig.push(valueCols.join(Pipeline.encoder.PARAM_SEPARATOR));
+        pipelineConfig.push(derivedValueCols.join(Pipeline.encoder.PARAM_SEPARATOR));
+
+        var newParts = [0, pipelineConfig.join(Pipeline.encoder.GROUP_SEPARATOR), blockStrs.join(Pipeline.encoder.BLOCK_SEPARATOR)];
+        var newEncoded = newParts.join(Pipeline.encoder.BLOCK_SEPARATOR);
+        console.debug("Old encoded: ", encoded);
+        console.debug("New encoded: ", newEncoded);
+
+        return newEncoded;
+    },
+
     /**
      * Refresh the available scenario and value columns by requesting from
      * the server what's available.
@@ -2103,6 +2364,39 @@ var Pipeline = {
                 $('#pipeline-save-name').val('');
             }
         });
+    },
+
+    /**
+     * Set the flagword. This should also update the UI state according to
+     * the flags.
+     */
+    setFlags: function(flags) {
+        Pipeline.flags = parseInt(flags);
+        // Update the UI
+    },
+
+    /**
+     * Set a flag according to a boolean.
+     */
+    setFlag: function(flag, on) {
+        if ( (flag & (flag - 1)) != 0 ) return; // not a power of two
+        if ( on ) {
+            Pipeline.flags |= flag;
+        }
+        else {
+            Pipeline.flags &= ~flag;
+        }
+    },
+
+    /**
+     * Read a flag and return a boolean representing its state. We need this
+     * because (0 & 1) != false and so will turn checkboxes on.
+     *
+     * @param flag the flag to read
+     * @return boolean true if the flag is on, false if off
+     */
+    getFlag: function(flag) {
+        return (Pipeline.flags & flag) == 0;
     },
 
     /**

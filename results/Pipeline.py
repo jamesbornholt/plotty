@@ -20,7 +20,10 @@ class Pipeline(object):
         distinction between the Pipeline as a set of actions, and the DataTable
         which results from applying a Pipeline to a set of data. """
 
+    FLAG_NOTHING = 0
+
     def __init__(self, web_client=False):
+        self.flags = 0
         self.logs = []
         self.scenarioCols = set()
         self.valueCols = set()
@@ -33,12 +36,28 @@ class Pipeline(object):
         """ Decodes an entire paramater string. """
         try:
             parts = encoded.split(PipelineEncoder.BLOCK_SEPARATOR)
-            self.logs = parts[0].split(PipelineEncoder.GROUP_SEPARATOR)
-            self.scenarioCols = set(parts[1].split(PipelineEncoder.GROUP_SEPARATOR))
-            self.valueCols = set(parts[2].split(PipelineEncoder.GROUP_SEPARATOR))
-            self.derivedValueCols = set(filter(lambda x: x != '', parts[3].split(PipelineEncoder.GROUP_SEPARATOR)))
-    
-            for params in parts[4:]:
+            # Flagword and pipeline-config are required
+            if len(parts) < 2:
+                raise PipelineError("Decode invalid because not enough parts")
+            
+            self.flags = int(parts[0])
+
+            pipelineConfig = parts[1].split(PipelineEncoder.GROUP_SEPARATOR)
+            # All four parts required - logs, scenarios, values, derivedVals (may be empty)
+            if len(pipelineConfig) != 4:
+                raise PipelineError("Decode invalid because not enough pipeline-config parts")
+            
+            self.logs = pipelineConfig[0].split(PipelineEncoder.PARAM_SEPARATOR)
+            self.scenarioCols = set(pipelineConfig[1].split(PipelineEncoder.PARAM_SEPARATOR))
+            self.valueCols = set(pipelineConfig[2].split(PipelineEncoder.PARAM_SEPARATOR))
+            # Filter whitespace-only values
+            self.derivedValueCols = set(filter(lambda x: x != '', pipelineConfig[3].split(PipelineEncoder.PARAM_SEPARATOR)))
+
+            # Index 2 onwards are blocks
+            for params in parts[2:]:
+                if len(params.strip()) == 0:
+                    continue
+                # Chomp the first character, the block ID
                 block = BLOCK_MAPPINGS[params[0]]()
                 block.decode(params[1:])
                 self.blocks.append(block)
