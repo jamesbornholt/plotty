@@ -2,13 +2,10 @@
 * Output div doesn't expand to contain a wide table ( http://bit.ly/j9e5c1 )
 * We should be able to save, reuse and delete derived value columns (probably
   through a multiselect)
-* Trash the debug link, fix the new pipeline link on squirrel (should be
-  <a href=".#" I think?)
 * Make sure value columns always appear if they're selected, even if there
   are no values for any row
   * This predicates on making sure DataTable.scenarioColumns and
     DataTable.valueColumns are updated accurately
-* Add options flag words for the pipeline, and for each individual block
 * Add option to ignore or error on a failed float conversion when loading
   the original data (DataTypes.py:128)
 * Add option to turn off the cross-product logic for graphs, and just produce

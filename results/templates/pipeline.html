@@ -2,6 +2,13 @@
 <html>
 <head>
     <title>Pipeline</title>
+    <script type="text/javascript">
+    {% if debug %}
+    var django_debug = true;
+    {% else %}
+    var django_debug = false;
+    {% endif %}
+    </script>
     <link rel="stylesheet" href="static/pipeline.css" type="text/css" />
     <link rel="stylesheet" href="static/jquery.toChecklist.css" type="text/css" />
     <script type="text/javascript" charset="utf-8" src="static/jquery-1.6.2.js"></script>
@@ -104,7 +111,7 @@
 				    <option value="{{ pipeline.encoded }}">{{ pipeline.name }}</option>
 				    {% endfor %}
 				</select> <button type="button" id="pipeline-load-go">Load</button><button type="button" id="pipeline-delete-go">Delete</button><br />
-				<a href="list/" id="pipeline-debug-link">Debug</a> <a href="." id="pipeline-new-link">New pipeline</a>
+				<a href="." id="pipeline-new-link">New pipeline</a>
 			</div>
 		</div>
 		<div id="pipeline-log" class="pipeline">

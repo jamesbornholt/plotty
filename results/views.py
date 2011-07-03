@@ -69,7 +69,8 @@ def pipeline(request):
     pipelines = SavedPipeline.objects.all().order_by('name')
     return render_to_response('pipeline.html', {
         'logs': logs,
-        'pipelines': pipelines
+        'pipelines': pipelines,
+        'debug': settings.DEBUG
     }, context_instance=RequestContext(request))
 
 def debug_clear_cache(request):

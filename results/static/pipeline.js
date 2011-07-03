@@ -1597,6 +1597,11 @@ var PipelineBuilder = Base.extend({
 
 var Pipeline = {
     /**
+     * True to enable debug link and output
+     */
+    DEBUG: false,
+
+    /**
      * Some constants
      */
     constants: {        
@@ -1689,6 +1694,14 @@ var Pipeline = {
      * called after the DOM is ready.
      */
     init: function() {
+        // Add the debug link if needed
+        if ( Pipeline.DEBUG ) {
+            $('#pipeline-new-link').after('&nbsp;<a href="list/" id="pipeline-debug-link">Debug</a>');
+        }
+        else {
+            console.debug = function() { return; };
+        }
+
         // Set up AJAX request options
         $.ajaxSetup({
             cache: false
@@ -2470,5 +2483,7 @@ var Pipeline = {
         return logs;
     }
 }
+
+Pipeline.DEBUG = ( typeof django_debug !== 'undefined' && django_debug );
 
 $(document).ready(Pipeline.init);
