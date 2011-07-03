@@ -1,7 +1,8 @@
 import sys
 import os
 import re
-import gzip
+import subprocess
+from cStringIO import StringIO
 
 def extract_csv(log, csv_file, write_status=None):
   entries = [ f for f in os.listdir(log) if re.search(".log.gz$", f) ]
@@ -12,6 +13,19 @@ def extract_csv(log, csv_file, write_status=None):
     f = open(file_path, 'w')
     f.write(str(2 * len(entries)) + "\r\n")
     f.flush()
+
+  def gzip_open_zcat(path):
+    """ the gzip module has terrible performance pre-Python 2.7, and still
+        generally awful performance post 2.7. Here we call out to zcat,
+        ugly as it is, store the result in a StringIO buffer which we can then
+        treat as a file object. So, this method is a drop-in replacement for
+        gzip.open. """
+    # zcat has been bugged on OS X since... forever.
+    exe = 'zcat' if sys.platform != 'darwin' else 'gzcat'
+    p = subprocess.Popen([exe, path], stdout=subprocess.PIPE)
+    f = StringIO(p.communicate()[0])
+    assert p.returncode == 0
+    return f
 
   def build_result(scenariokeys, scenario, key, value) :
     r = ''
@@ -53,7 +67,7 @@ def extract_csv(log, csv_file, write_status=None):
 
   for entry in entries:
       extract_scenario(legacy_scenario, entry)
-      e = gzip.open(os.path.join(log, entry), 'r')
+      e = gzip_open_zcat(os.path.join(log, entry))
       for l in e:
         m = re_scenario.match(l)
         if (m):
@@ -92,7 +106,7 @@ def extract_csv(log, csv_file, write_status=None):
     invocation = 0
     subentry = -1
     error = 0
-    e = gzip.open(os.path.join(log, entry), 'r')
+    e = gzip_open_zcat(os.path.join(log, entry))
     while 1:
       l = e.readline()
       if not l:
