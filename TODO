@@ -1,5 +1,9 @@
 == Short term ==
 * Output div doesn't expand to contain a wide table ( http://bit.ly/j9e5c1 )
+  * We can fix the table, but the real issue is the graph. Not much we can do
+    about the graph on the client side. We could try some heuristics on the
+    graph generation side to decide whether the SVG needs to be made wider,
+    depending on the size of the input (number of bars, etc).
 * We should be able to save, reuse and delete derived value columns (probably
   through a multiselect)
 * Make sure value columns always appear if they're selected, even if there
@@ -12,6 +16,8 @@
   a single graph
 * Purge the graph cache, probably in the plotting code since the slowdown would
   barely be noticable there
+* If a log file no longer exists, and we try to load a pipeline involving it,
+  an AJAX error occurs
 
 == Other stuff ==
 The filter block probably needs to be more flexible. As a first step it would
