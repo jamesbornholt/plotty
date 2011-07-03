@@ -32,7 +32,7 @@ def list(request, pipeline):
 
     try:
         #dt, graph_outputs = execute_pipeline(pipeline)
-        p = Pipeline(web_client=True)
+        p = Pipeline(web_client=False)
         p.decode(pipeline)
         graph_outputs = p.apply()
     except LogTabulateStarted as e:

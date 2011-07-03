@@ -38,11 +38,9 @@ class DataTable:
         self.lastModified = 0
         for i,log in enumerate(logs):
             dir_path = os.path.join(settings.BM_LOG_DIR, log)
-            logging.debug('Attempting to load log %s from cache' % log)
             cached_vals = cache.get(log)
             file_last_modified = os.path.getmtime(dir_path)
             if cached_vals == None or cached_vals['last_modified'] < file_last_modified:
-                logging.debug('Cache empty or expired, reloading %s from file' % log)
                 try:
                     rows, lastModified, scenarioColumns, valueColumns = self.loadCSV(log, wait)
                 except LogTabulateStarted as e:
@@ -50,13 +48,13 @@ class DataTable:
                     e.length = len(logs)
                     raise e
                 ret = cache.set(log, {'last_modified': lastModified, 'rows': rows, 'scenarioColumns': scenarioColumns, 'valueColumns': valueColumns})
-                logging.debug('Storing %d rows to cache for log %s' % (len(rows), log))
+                logging.debug('For log %s: cache empty or expired, stored %d rows to cache.' % (log, len(rows)))
             else:
                 lastModified = cached_vals['last_modified']
                 rows = cached_vals['rows']
                 scenarioColumns = cached_vals['scenarioColumns']
                 valueColumns = cached_vals['valueColumns']
-                logging.debug('Loaded %d rows from cache' % len(rows))
+                logging.debug('For log %s: loaded %d rows from cache (dir last modified: %d, cache last modified: %d)' % (log, len(rows), file_last_modified, cached_vals['last_modified']))
             self.rows.extend(rows)
             self.scenarioColumns |= scenarioColumns
             self.valueColumns |= valueColumns

@@ -53,13 +53,21 @@ class Pipeline(object):
             # Filter whitespace-only values
             self.derivedValueCols = set(filter(lambda x: x != '', pipelineConfig[3].split(PipelineEncoder.PARAM_SEPARATOR)))
 
+            # Put the first two parts back into a string, to be used as a 
+            # cache key
+            # XXX TODO: we don't do anything sensible about sorting/order in
+            # the paramater lists, that would make two different encoded strings
+            # represent the same pipeline
+            encoded_cumulative = PipelineEncoder.BLOCK_SEPARATOR.join(parts[0:2])
+
             # Index 2 onwards are blocks
             for params in parts[2:]:
                 if len(params.strip()) == 0:
                     continue
+                encoded_cumulative += PipelineEncoder.BLOCK_SEPARATOR + params
                 # Chomp the first character, the block ID
                 block = BLOCK_MAPPINGS[params[0]]()
-                block.decode(params[1:])
+                block.decode(params[1:], encoded_cumulative)
                 self.blocks.append(block)
         except:
             raise PipelineLoadException(*sys.exc_info())

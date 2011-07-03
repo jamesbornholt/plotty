@@ -12,7 +12,6 @@
   a single graph
 * Purge the graph cache, probably in the plotting code since the slowdown would
   barely be noticable there
-* Fix the cache key generation for graphs so it's properly consistent
 
 == Other stuff ==
 The filter block probably needs to be more flexible. As a first step it would

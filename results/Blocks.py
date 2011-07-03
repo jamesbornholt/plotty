@@ -19,9 +19,13 @@ class Block(object):
     def __init__(self):
         self.flags = 0
     
-    def decode(self, param_string):
+    def decode(self, param_string, cache_key):
         """ Decodes a paramater string and stores the configuration in local
-            fields. """
+            fields. 
+            cache_key is actually the encoded pipeline up to and including this
+            block, but this should not be relied upon. It is intended for use as
+            a unique identifier for the context of this block, to be used for
+            caching results or calculations for reuse. """
         pass
     
     def apply(self, data_table):
@@ -64,7 +68,7 @@ class FilterBlock(Block):
         self.filters = []
 
 
-    def decode(self, param_string):
+    def decode(self, param_string, cache_key):
         """ Decode a filter block from an encoded pipeline string.
             Filter blocks are encoded in the form:
             filter1scenario^filter1is^filter1value&filter2scenario^...
@@ -151,7 +155,7 @@ class AggregateBlock(Block):
         self.column = None
         self.type = None
 
-    def decode(self, param_string):
+    def decode(self, param_string, cache_key):
         """ Decode an aggregate block from an encoded pipeline string.
             Aggregate blocks are encoded in the form:
             1&column
@@ -244,7 +248,7 @@ class NormaliseBlock(Block):
         self.type = None
         self.normaliser = []
 
-    def decode(self, param_string):
+    def decode(self, param_string, cache_key):
         """ Decode a normalise block from an encoded pipeline string.
             Normalise blocks are encoded in the form:
             0&scenario^value&scenario^value&groupscenario&groupscenario
@@ -416,6 +420,7 @@ class GraphBlock(Block):
 
     def __init__(self):
         super(GraphBlock, self).__init__()
+        self.cache_key_base = None
         self.type = None
         self.errorbars = None
         self.column = None
@@ -425,7 +430,9 @@ class GraphBlock(Block):
         self.y = None
         self.series = None
 
-    def decode(self, param_string):
+    def decode(self, param_string, cache_key):
+        self.cache_key_base = cache_key
+
         parts = param_string.split(PipelineEncoder.GROUP_SEPARATOR)
         # Exactly 3 parts: flagword, type, settings for that type
         if len(parts) != 3:
@@ -670,7 +677,7 @@ class GraphBlock(Block):
                     column_keys.sort(key=str.lower)
                 
                 # Generate a hash for this graph
-                graph_hash = str(abs(hash(str(id(self)) + scenario)))
+                graph_hash = str(abs(hash(self.cache_key_base + scenario)))
                 graph_path = os.path.join(settings.GRAPH_CACHE_DIR, graph_hash)
                 
                 # If the csv doesn't exist or is out of date (the data_table has
@@ -679,6 +686,7 @@ class GraphBlock(Block):
                 if os.path.exists(graph_path + '.csv'):
                     csv_last_modified = os.path.getmtime(graph_path + '.csv')
                 if csv_last_modified <= data_table.lastModified:
+                    logging.debug("Regenerating graph %s" % graph_path)
                     # Render the CSV
                     csv = self.renderCSV(pivot_table, column_keys, row_keys, aggregates, for_gnuplot=True)
                     csv_file = open(graph_path + '.csv', "w")
@@ -690,6 +698,8 @@ class GraphBlock(Block):
                         self.plotHistogram(graph_path, len(column_keys))
                     elif self.type == GraphBlock.TYPE['XY']:
                         self.plotXYGraph(graph_path, len(column_keys))
+                else:
+                    logging.debug("Using graph %s from cache" % graph_path)
                 
                 # Render the HTML!
                 html = self.renderHTML(pivot_table, column_keys, row_keys, graph_hash, aggregates)
@@ -704,7 +714,7 @@ class GraphBlock(Block):
         elif self.type == GraphBlock.TYPE['SCATTER']:
             # XXX TODO: this cache key doesn't work; we should implement a
             # cache key method on DataTable
-            graph_hash = str(abs(hash(str(id(self)) + self.x + self.y)))
+            graph_hash = str(abs(hash(self.cache_key_base)))
             graph_path = os.path.join(settings.GRAPH_CACHE_DIR, graph_hash)
 
             grouping = (self.series != '-1')
@@ -714,6 +724,7 @@ class GraphBlock(Block):
             if os.path.exists(graph_path + '.csv'):
                 csv_last_modified = os.path.getmtime(graph_path + '.csv')
             if csv_last_modified <= data_table.lastModified:
+                logging.debug("Regenerating graph %s" % graph_path)
                 # Render the CSV. We assume the data has confidence intervals
                 # - if not, we just emit the same value three times,
                 # so in gnuplot we can always use the same code.
@@ -738,6 +749,8 @@ class GraphBlock(Block):
 
                 # Plot the graph
                 self.plotScatterGraph(graph_path, series=group_values)
+            else:
+                logging.debug("Using graph %s from cache" % graph_path)
             
             html = ['<object width=100% height=50% data="graph/' + graph_hash + '.svg" type="image/svg+xml"></object>' + \
                     '<p>Download: ' + \
