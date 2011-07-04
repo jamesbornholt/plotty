@@ -106,7 +106,7 @@ class DataTable:
 
         dir_path = os.path.join(settings.BM_LOG_DIR, log)
         csv_dir = os.path.join(settings.CACHE_ROOT, "csv")
-        csv_file = os.path.join(csv_dir, log + ".csv")
+        csv_file = os.path.join(csv_dir, log + ".csv.gz")
         if not os.path.exists(csv_dir):
           os.mkdir(csv_dir)
 
@@ -129,7 +129,8 @@ class DataTable:
         else:
             logging.debug("Valid CSV already exists for " + dir_path + ", skipping retabulation.")
 
-        reader = csv.DictReader(open(csv_file, 'rb'))
+        gunzip_process = subprocess.Popen(["gunzip", "-c", csv_file], stdout=subprocess.PIPE)
+        reader = csv.DictReader(gunzip_process.stdout)
         reader.fieldnames = map(str.lower, reader.fieldnames)
         for line in reader:
             key = line.pop('key')

@@ -4,7 +4,7 @@ import re
 import subprocess
 from cStringIO import StringIO
 
-def extract_csv(log, csv_file, write_status=None):
+def extract_csv(log, csvgz_file, write_status=None):
   entries = [ f for f in os.listdir(log) if re.search(".log.gz$", f) ]
   progress = 0
   if write_status != None:
@@ -83,7 +83,9 @@ def extract_csv(log, csv_file, write_status=None):
   else:
     scenariokeys = scenario.keys()
 
-  csv = open(csv_file, 'w')
+  csv_compressed = open(csvgz_file, 'w')
+  gzip_process = subprocess.Popen(['gzip'], stdin=subprocess.PIPE, stdout=csv_compressed)
+  csv = gzip_process.stdin
 
   for key in scenariokeys:
     csv.write(key + ',')
@@ -190,6 +192,8 @@ def extract_csv(log, csv_file, write_status=None):
       f.flush()
 
   csv.close()
+  gzip_process.wait()
+  csv_compressed.close()
   if write_status != None:
     f.close()
 
