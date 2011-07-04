@@ -107,10 +107,10 @@ def pipeline(request, pipeline):
       msg_output = '<div class="messages"><h1>Messages</h1>'
 
       for (t,e) in msg.warnings():
-        msg_output += '<img src="static/warning.gif"/> <span class="message-warning-main">' + t + '</span> <span class="message-warning-extra">' + e + '</span><br/>'
+        msg_output += '<img src="static/error.png"/> <span class="message-warning-main">' + t + '</span> <span class="message-warning-extra">' + e + '</span><br/>'
 
       for (t,e) in msg.infos():
-        msg_output += '<img src="static/information.gif"/> <span class="message-information-main">' + t + '</span> <span class="message-information-extra">' + e + '</span><br/>'
+        msg_output += '<img src="static/information.png"/> <span class="message-information-main">' + t + '</span> <span class="message-information-extra">' + e + '</span><br/>'
 
       msg_output += '</div>'
       output += msg_output

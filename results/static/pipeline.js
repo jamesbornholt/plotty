@@ -1940,7 +1940,7 @@ var Pipeline = {
     init: function() {
         // Add the debug link if needed
         if ( Pipeline.DEBUG ) {
-            $('#pipeline-new-go').after('<button id="pipeline-debug-go" class="debug-button"></button>');
+            $('#pipeline-new-go').after('<input type="image" id="pipeline-debug-go" class="debug-button" src="static/bug.png"/>');
             $('#pipeline-debug-go').click(function() {
                 window.location.href = 'list/' + Pipeline.hash + '?debug';
             });
@@ -2181,7 +2181,7 @@ var Pipeline = {
         });
         addBlock.append('<div class="pipeline-footer"></div>');
         $('.pipeline-header', addBlock).html("Insert Block");
-        $('.pipeline-header-right', addBlock).html('<button type="button" class="remove-button"></button>');
+        $('.pipeline-header-right', addBlock).html('<input type="image" class="remove-button" src="static/cross.png"/>');
         $('.remove-button', addBlock).click(function() {
             $(this).parents('#pipeline-insert').remove();
         });

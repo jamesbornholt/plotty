@@ -28,32 +28,14 @@ div {
     background-color: white;
 }
 
-.add-row, .remove-row, .debug-button, .new-button, .load-button, .remove-button, .insert-button {
-    width: 20px;
-    height: 20px;
-    margin: 1px;
-    cursor: pointer;
+input:image {
+    vertical-align:middle;
 }
-.add-row {
-    background-image:url('add.gif');
-}
-.remove-row {
-    background-image:url('remove.gif');
-}
-.remove-button {
-    background-image:url('del.gif');
-}
-.insert-button {
-    background-image:url('add.gif');
-}
-.debug-button {
-    background-image:url('debug.gif');
-}
-.load-button {
-    background-image:url('load.gif');
-}
-.new-button {
-    background-image:url('new.gif');
+
+.pipeline-add-button {
+    font-size: 70%;
+    padding: 2px;
+    vertical-align:middle;
 }
 
 .odd {
