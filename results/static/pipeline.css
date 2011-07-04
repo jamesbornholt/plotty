@@ -28,7 +28,7 @@ div {
     background-color: white;
 }
 
-.remove-button {
+.remove-button, .insert-button {
     width: 20px;
     height: 20px;
     float: right;
@@ -79,6 +79,9 @@ div {
     background: #ddd;
     border-bottom: 1px solid black;
     margin-bottom: 20px;
+}
+#pipeline-insert {
+    background: #ddd;
 }
 #pipeline-values {
     background: #eee;

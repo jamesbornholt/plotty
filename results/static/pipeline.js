@@ -201,16 +201,20 @@ var Block = Base.extend({
             return;
         }
         
-        if ( existingBlocks.length > 0 ) {
-            existingBlocks.eq(insertIndex - 1).after(newBlock);
+        if ( existingBlocks.length == 0 || insertIndex == existingBlocks.length ) {
+            newBlock.insertBefore('#pipeline-add');
         }
         else {
-            newBlock.insertBefore('#pipeline-add');
+            existingBlocks.eq(insertIndex).before(newBlock);
         }
         
         // Hook the remove button
         $(".remove-button", newBlock).click({block: this}, function(e) {
             Pipeline.removeBlock(e.data.block);
+        });
+        // Hook the insert button
+        $(".insert-button", newBlock).click({block: this}, function(e) {
+            Pipeline.showInsertButtons(e.data.block.element);
         });
         
         this.element = newBlock;
@@ -2105,9 +2109,17 @@ var Pipeline = {
      * TODO: Add blocks at any index.
      *
      * @param block Block The block class to instantiate
+     * @param indexBlock Block The block to insert before
      */
-    createBlock: function(block) {
-        Pipeline.blocks.push(new block(Pipeline.blocks.length));
+    createBlock: function(block, indexBlock) {
+        var index;
+        if ( typeof indexBlock === 'undefined' ) {
+            index = Pipeline.blocks.length;
+        }
+        else {
+            index = $(indexBlock).prevAll('.pipeline-block').length;
+        }
+        Pipeline.blocks.push(new block(index));
         Pipeline.refresh(Pipeline.constants.CASCADE_REASON_BLOCK_ADDED);
     },
     
@@ -2120,6 +2132,52 @@ var Pipeline = {
         Pipeline.blocks.remove(block);
         block.removeBlock();
         Pipeline.refresh(Pipeline.constants.CASCADE_REASON_BLOCK_REMOVED);
+    },
+
+    /**
+     * Show the insert block buttons at the given index in the pipeline.
+     *
+     * @param block The block that triggered this; we should insert before it
+     */
+    showInsertButtons: function(block) {
+        // Remove any existing ones
+        $('#pipeline-insert').remove();
+        // Clone the add block div, modify it slightly
+        var addBlock = $("#pipeline-add").clone();
+        addBlock.attr('id', 'pipeline-insert');
+        addBlock.find('button').each(function() {
+            $(this).unbind();
+            $(this).attr('id', $(this).attr('id').replace("add-", "insert-"));
+        });
+        // XXX TODO no reason to duplicate this code vs the handlers for
+        // the add buttons
+        $('#insert-filter', addBlock).click(function() {
+            $(this).parents("#pipeline-insert").remove();
+            Pipeline.createBlock(Blocks.FilterBlock, block);
+        });
+        $('#insert-aggregate', addBlock).click(function() {
+            $(this).parents("#pipeline-insert").remove();
+            Pipeline.createBlock(Blocks.AggregateBlock, block);
+        });
+        $('#insert-normalise', addBlock).click(function() {
+            $(this).parents("#pipeline-insert").remove();
+            Pipeline.createBlock(Blocks.NormaliseBlock, block);
+        });
+        $('#insert-graph', addBlock).click(function() {
+            $(this).parents("#pipeline-insert").remove();
+            Pipeline.createBlock(Blocks.GraphBlock, block);
+        });
+        $('#insert-valuefilter', addBlock).click(function() {
+            $(this).parents("#pipeline-insert").remove();
+            Pipeline.createBlock(Blocks.ValueFilterBlock, block);
+        });
+        addBlock.append('<div class="pipeline-footer"></div>');
+        addBlock.prepend('<button type="button" class="remove-button">X</button>');
+        $('.remove-button', addBlock).click(function() {
+            $(this).parent('#pipeline-insert').remove();
+        });
+        $('.pipeline-header', addBlock).html("Insert Block");
+        $(block).before(addBlock);
     },
     
     /**

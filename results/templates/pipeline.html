@@ -21,7 +21,7 @@
 <body>
 	<div id="pipeline-templates">
 		<div id="pipeline-filter-template" class="pipeline filter pipeline-block">
-			<button type="button" class="remove-button">X</button>
+			<button type="button" class="remove-button">×</button><button type="button" class="insert-button">+</button>
 			<div class="pipeline-content">
 				<span class="pipeline-header">Filter</span> <br />
 				<table class="pipeline-filter-table">
@@ -43,7 +43,7 @@
 			<div class="pipeline-footer"></div>
 		</div>
 		<div id="pipeline-valuefilter-template" class="pipeline valuefilter pipeline-block">
-			<button type="button" class="remove-button">X</button>
+			<button type="button" class="remove-button">X</button><button type="button" class="insert-button">+</button>
 			<div class="pipeline-content">
 				<span class="pipeline-header">ValueFilter</span> <br />
 				<table class="pipeline-valuefilter-table">
@@ -68,7 +68,7 @@
 			<div class="pipeline-footer"></div>
 		</div>
 		<div id="pipeline-aggregate-template" class="pipeline aggregate pipeline-block">
-			<button type="button" class="remove-button">X</button>
+			<button type="button" class="remove-button">X</button><button type="button" class="insert-button">+</button>
 			<div class="pipeline-content">
 				<span class="pipeline-header">Aggregate</span> <br />
 				<select class="select-aggregate-type" name="aggregate[0]['type']"><option value="1">mean</option><option value="2">geomean</option></select> over <select class="select-aggregate-column scenario-column" name="aggregate[0]['col']"><option></option></select>
@@ -76,7 +76,7 @@
 			<div class="pipeline-footer"></div>
 		</div>
 		<div id="pipeline-normalise-template" class="pipeline normalise pipeline-block">
-			<button type="button" class="remove-button">X</button>
+			<button type="button" class="remove-button">X</button><button type="button" class="insert-button">+</button>
 			<div class="pipeline-content">
 				<span class="pipeline-header">Normalise</span> <br />
 				<label><input type="radio" name="normalise-type" value="1" checked="checked"/> to specific value</label> <br />
@@ -102,7 +102,7 @@
 			<div class="pipeline-footer"></div>
 		</div>
 		<div id="pipeline-graph-template" class="pipeline graph pipeline-block">
-			<button type="button" class="remove-button">X</button>
+			<button type="button" class="remove-button">X</button><button type="button" class="insert-button">+</button>
 			<div class="pipeline-content">
 				<span class="pipeline-header">Graph</span> <br />
 				Type: <select class="select-graph-type"><option value="1">Histogram</option><option value="2">XY</option><option value="3">Scatter</option></select>
