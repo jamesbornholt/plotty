@@ -1940,7 +1940,7 @@ var Pipeline = {
     init: function() {
         // Add the debug link if needed
         if ( Pipeline.DEBUG ) {
-            $('#pipeline-new-go').after('<button id="pipeline-debug-go" class="pipeline-button"><img src="static/bug.png"/> Debug</button>');
+            $('#pipeline-new-go').after('<button id="pipeline-debug-go" class="pipeline-button">Debug</button>');
             $('#pipeline-debug-go').click(function() {
                 window.location.href = 'list/' + Pipeline.hash + '?debug';
             });
@@ -1964,10 +1964,12 @@ var Pipeline = {
                      ' + ajaxSettings.url + '</a>';
             // Try to get the python exception
             //html += '<br />Traceback:<pre>' + jqXHR.responseText.length + '</pre>';
-            var exceptionHTML = $(jqXHR.responseText);
-            var exceptionTrace = exceptionHTML.find('#traceback_area');
-            if ( exceptionTrace.length > 0 ) {
-                html += '<br />Traceback:<pre>' + exceptionTrace.val() + '</pre>';
+            if ( Pipeline.DEBUG ) {
+                var exceptionHTML = $(jqXHR.responseText);
+                var exceptionTrace = exceptionHTML.find('#traceback_area');
+                if ( exceptionTrace.length > 0 ) {
+                    html += '<br />Traceback:<pre>' + exceptionTrace.val() + '</pre>';
+                }
             }
             html += '</div>';
             $('#output').prepend(html);

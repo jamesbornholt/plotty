@@ -76,6 +76,9 @@ input:disabled {
 #pipeline-save-go {
     background-image: url('page_save.png');
 }
+#pipeline-debug-go {
+    background-image: url('bug.png');
+}
 
 .odd {
     background: #eee;
