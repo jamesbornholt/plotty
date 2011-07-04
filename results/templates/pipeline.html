@@ -136,9 +136,9 @@
                     <option value="{{ pipeline.encoded }}">{{ pipeline.name }}</option>
                     {% endfor %}
                 </select>
-                <button id="pipeline-load-go" class="pipeline-button"><img src="static/page_go.png"/> Load</button>
-                <button id="pipeline-delete-go" class="pipeline-button"><img src="static/page_delete.png"/> Delete</button>
-                <button id="pipeline-new-go" class="pipeline-button"><img src="static/page_lightning.png"/> New</button>
+                <button id="pipeline-load-go" class="pipeline-button">Load</button>
+                <button id="pipeline-delete-go" class="pipeline-button">Delete</button>
+                <button id="pipeline-new-go" class="pipeline-button">New</button>
                 </span>
             </div>
         </div>
@@ -187,11 +187,11 @@
             <div class="pipeline-content">
                 <span class="pipeline-header"><img src="static/brick.png"/> Add Block</span>
                 <span class="pipeline-header-right"></span> <br/>
-                <button class="pipeline-button" type="button" id="add-filter"><img src="static/world_delete.png"/> Filter</button>
-                <button class="pipeline-button" type="button" id="add-valuefilter"><img src="static/key_delete.png"/> Value Filter</button>
-                <button class="pipeline-button" type="button" id="add-aggregate"><img src="static/sum.png"/> Aggregate</button>
-                <button class="pipeline-button" type="button" id="add-normalise"><img src="static/table_relationship.png"/> Normalise</button>
-                <button class="pipeline-button" type="button" id="add-graph"><img src="static/chart_line.png"/>Graph</button>
+                <button class="pipeline-button" type="button" id="add-filter">Filter</button>
+                <button class="pipeline-button" type="button" id="add-valuefilter">Value Filter</button>
+                <button class="pipeline-button" type="button" id="add-aggregate">Aggregate</button>
+                <button class="pipeline-button" type="button" id="add-normalise">Normalise</button>
+                <button class="pipeline-button" type="button" id="add-graph">Graph</button>
             </div>
         </div>
         <div id="pipeline-save" class="pipeline">
@@ -199,7 +199,7 @@
                 <span class="pipeline-header"><img src="static/disk.png"/> Save Pipeline</span> <br />
                 <form id="pipeline-save-form">
                     <input type="text" id="pipeline-save-name" disabled="disabled" />
-                    <button id="pipeline-save-go" class="pipeline-button" disabled="disabled"><img src="static/page_save.png"/> Save</button>
+                    <button id="pipeline-save-go" class="pipeline-button" disabled="disabled">Save</button>
                 </form>
             </div>
         </div>

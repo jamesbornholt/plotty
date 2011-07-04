@@ -28,14 +28,50 @@ div {
     background-color: white;
 }
 
-input:image {
-    vertical-align:middle;
+.pipeline-button {
+    padding: 4px 4px 4px 25px;
+    font-size: 12px;
+    line-height: 16px;
+    background-repeat: no-repeat;
+    background-position: 4px center;
+    border: 1px solid #bbb;
+    border-bottom: 1px solid #999;
+    border-right: 1px solid #999;
+    background-color: #eee;
+}
+.pipeline-button:active {
+    background-color: #888;
+    border: 1px solid #999;
+    border-top: 1px solid #666;
+    border-left: 1px solid #666;
 }
 
-.pipeline-button {
-    font-size: 70%;
-    padding: 2px;
-    vertical-align:middle;
+#pipeline-load-go {
+    background-image: url('page_go.png');
+}
+#pipeline-delete-go {
+    background-image: url('page_delete.png');
+}
+#pipeline-new-go {
+    background-image: url('page_lightning.png');
+}
+#add-filter, #insert-filter {
+    background-image: url('world_delete.png');
+}
+#add-valuefilter, #insert-valuefilter {
+    background-image: url('key_delete.png');
+}
+#add-aggregate, #insert-aggregate {
+    background-image: url('sum.png');
+}
+#add-normalise, #insert-normalise {
+    background-image: url('table_relationship.png');
+}
+#add-graph, #insert-graph {
+    background-image: url('chart_line.png');
+}
+#pipeline-save-go {
+    background-image: url('page_save.png');
 }
 
 .odd {
