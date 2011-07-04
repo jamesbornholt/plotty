@@ -14,11 +14,8 @@
   the original data (DataTypes.py:128)
 * Add option to turn off the cross-product logic for graphs, and just produce
   a single graph
-* Purge the graph cache, probably in the plotting code since the slowdown would
-  barely be noticable there
 * If a log file no longer exists, and we try to load a pipeline involving it,
   an AJAX error occurs
-* gzip CSV files when they're created
 
 == Other stuff ==
 The filter block probably needs to be more flexible. As a first step it would
