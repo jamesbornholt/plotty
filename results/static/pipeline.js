@@ -2180,7 +2180,7 @@ var Pipeline = {
             Pipeline.createBlock(Blocks.ValueFilterBlock, block);
         });
         addBlock.append('<div class="pipeline-footer"></div>');
-        $('.pipeline-header', addBlock).html("Insert Block");
+        $('.pipeline-header', addBlock).html("<img src='static/brick_add.png'/> Insert Block");
         $('.pipeline-header-right', addBlock).html('<input type="image" class="remove-button" src="static/cross.png"/>');
         $('.remove-button', addBlock).click(function() {
             $(this).parents('#pipeline-insert').remove();
