@@ -18,6 +18,7 @@
   barely be noticable there
 * If a log file no longer exists, and we try to load a pipeline involving it,
   an AJAX error occurs
+* gzip CSV files when they're created
 
 == Other stuff ==
 The filter block probably needs to be more flexible. As a first step it would

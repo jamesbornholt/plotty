@@ -2172,7 +2172,7 @@ var Pipeline = {
             Pipeline.createBlock(Blocks.ValueFilterBlock, block);
         });
         addBlock.append('<div class="pipeline-footer"></div>');
-        addBlock.prepend('<button type="button" class="remove-button">X</button>');
+        addBlock.prepend('<button type="button" class="remove-button">&times;</button>');
         $('.remove-button', addBlock).click(function() {
             $(this).parent('#pipeline-insert').remove();
         });
