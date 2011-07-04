@@ -1765,12 +1765,12 @@ var OptionsTable = Base.extend({
         var rows = $('tr', this.element);
         if ( rows.length > 1 ) {
             $('.remove-row', rows).removeAttr('disabled');
-            $('.add-row', rows).css('display', 'none');
+            $('.add-row', rows).hide();
         }
         else {
             $('.remove-row', rows).attr('disabled', 'disabled');
         }
-        $('tr:last-child .add-row', this.element).css('display', 'block');
+        $('tr:last-child .add-row', this.element).show();
     },
     
     /**
