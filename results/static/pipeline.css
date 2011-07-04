@@ -34,8 +34,13 @@ div {
     float: right;
     display: block;
     margin: 1px;
-    border: 1px;
     cursor: pointer;
+}
+.remove-button {
+    background-image:url('del.gif');
+}
+.insert-button {
+    background-image:url('add.gif');
 }
 
 .odd {
@@ -53,7 +58,7 @@ div {
 .pipeline-content {
     border: 1px solid black;
     border-bottom: 0;
-    padding: 20px;
+    padding: 8px;
     background: transparent;
 }
 

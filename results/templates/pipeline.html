@@ -21,9 +21,9 @@
 <body>
     <div id="pipeline-templates">
         <div id="pipeline-filter-template" class="pipeline filter pipeline-block">
-            <button type="button" class="remove-button">&times;</button><button type="button" class="insert-button">+</button>
             <div class="pipeline-content">
-                <span class="pipeline-header">Filter</span> <br />
+                <span class="pipeline-header">Filter</span>
+                <span class="pipeline-header-right"><button type="button" class="remove-button"></button><button type="button" class="insert-button"></button></span>
                 <table class="pipeline-filter-table">
                     <tr>
                         <td>
@@ -43,9 +43,9 @@
             <div class="pipeline-footer"></div>
         </div>
         <div id="pipeline-valuefilter-template" class="pipeline valuefilter pipeline-block">
-            <button type="button" class="remove-button">&times;</button><button type="button" class="insert-button">+</button>
             <div class="pipeline-content">
-                <span class="pipeline-header">ValueFilter</span> <br />
+                <span class="pipeline-header">Value Filter</span>
+                <span class="pipeline-header-right"><button type="button" class="remove-button"></button><button type="button" class="insert-button"></button></span>
                 <table class="pipeline-valuefilter-table">
                     <tr>
                         <td>
@@ -68,17 +68,17 @@
             <div class="pipeline-footer"></div>
         </div>
         <div id="pipeline-aggregate-template" class="pipeline aggregate pipeline-block">
-            <button type="button" class="remove-button">&times;</button><button type="button" class="insert-button">+</button>
             <div class="pipeline-content">
-                <span class="pipeline-header">Aggregate</span> <br />
+                <span class="pipeline-header">Aggregate</span>
+                <span class="pipeline-header-right"><button type="button" class="remove-button"></button><button type="button" class="insert-button"></button></span>
                 <select class="select-aggregate-type" name="aggregate[0]['type']"><option value="1">mean</option><option value="2">geomean</option></select> over <select class="select-aggregate-column scenario-column" name="aggregate[0]['col']"><option></option></select>
             </div>
             <div class="pipeline-footer"></div>
         </div>
         <div id="pipeline-normalise-template" class="pipeline normalise pipeline-block">
-            <button type="button" class="remove-button">&times;</button><button type="button" class="insert-button">+</button>
             <div class="pipeline-content">
-                <span class="pipeline-header">Normalise</span> <br />
+                <span class="pipeline-header">Normalise</span>
+                <span class="pipeline-header-right"><button type="button" class="remove-button"></button><button type="button" class="insert-button"></button></span>
                 <label><input type="radio" name="normalise-type" value="1" checked="checked"/> to specific value</label> <br />
                 <table class="pipeline-normalise-table">
                     <tr>
@@ -102,9 +102,9 @@
             <div class="pipeline-footer"></div>
         </div>
         <div id="pipeline-graph-template" class="pipeline graph pipeline-block">
-            <button type="button" class="remove-button">&times;</button><button type="button" class="insert-button">+</button>
             <div class="pipeline-content">
-                <span class="pipeline-header">Graph</span> <br />
+                <span class="pipeline-header">Graph</span>
+                <span class="pipeline-header-right"><button type="button" class="remove-button"></button><button type="button" class="insert-button"></button></span>
                 Type: <select class="select-graph-type"><option value="1">Histogram</option><option value="2">XY</option><option value="3">Scatter</option></select>
                 <div class="graph-histogram pipeline-graph-type-options">
                     Column (series): <select class="select-graph-column scenario-column"><option></option></select> <br />
@@ -129,14 +129,14 @@
     <div id="pipeline">
         <div id="pipeline-load" class="pipeline">
             <div class="pipeline-content">
-                <span class="pipeline-header">Load Saved Pipeline</span> <br />
+                <span class="pipeline-header">Pipeline
                 <select id="pipeline-load-select">
                     <option value="-1" selected></option>
                     {% for pipeline in pipelines %}
                     <option value="{{ pipeline.encoded }}">{{ pipeline.name }}</option>
                     {% endfor %}
-                </select> <button type="button" id="pipeline-load-go">Load</button><button type="button" id="pipeline-delete-go">Delete</button><br />
-                <a href="." id="pipeline-new-link">New pipeline</a>
+                </select> <button type="button" id="pipeline-load-go">Load</button><button type="button" id="pipeline-delete-go">Delete</button><a href id="pipeline-new-link">Reset</a>
+                </span>
             </div>
         </div>
         <div id="pipeline-log" class="pipeline">
@@ -183,7 +183,7 @@
         <div id="pipeline-add" class="pipeline">
             <div class="pipeline-content">
                 <span class="pipeline-header">Add Block</span> <br />
-                <button type="button" id="add-filter">Filter</button><button type="button" id="add-valuefilter">ValueFilter</button><button type="button" id="add-aggregate">Aggregate</button><button type="button" id="add-normalise">Normalise</button><button type="button" id="add-graph">Graph</button>
+                <button type="button" id="add-filter">Filter</button><button type="button" id="add-valuefilter">Value Filter</button><button type="button" id="add-aggregate">Aggregate</button><button type="button" id="add-normalise">Normalise</button><button type="button" id="add-graph">Graph</button>
             </div>
         </div>
         <div id="pipeline-save" class="pipeline">
