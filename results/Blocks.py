@@ -173,15 +173,20 @@ class ValueFilterBlock(Block):
         # Everything past the first part is a filter
         for filt_str in parts[1:]:
             settings = filt_str.split(PipelineEncoder.PARAM_SEPARATOR)
-            # Must be exactly three parts - scenario, is, value
+            # Must be exactly four parts - value column, is, lower bound, upper bound
             if len(settings) != 4:
-                logging.debug("valueFilter invalid: not enough parts in %s" % filt_str)
+                logging.debug("ValueFilter invalid: not enough parts in %s" % filt_str)
                 continue
+            try:
+                lowerbound = float(settings[2])
+                upperbound = float(settings[3])
+            except ValueError:
+                raise PipelineError("Invalid lower (%s) or upper (%s) bound for ValueFilter - bounds must be valid Python floats (including +inf and -inf)" % (settings[2], settings[3]))
             self.filters.append({
-                'column': settings[0],
-                'is':       (settings[1] == FilterBlock.TYPE['IS']),
-                'lowerbound':    float(settings[2]),
-                'upperbound':    float(settings[3])
+                'column':       settings[0],
+                'is':           (settings[1] == ValueFilterBlock.TYPE['IS']),
+                'lowerbound':   lowerbound,
+                'upperbound':   upperbound
             })
 
     def apply(self, data_table):

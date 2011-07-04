@@ -1483,8 +1483,8 @@ var Blocks = {
             // Create the option table
             this.optionsTable = new OptionsTable($('.pipeline-valuefilter-table', this.element), removeClosure, Pipeline.refresh, addClosure);
             
-            // Hook the dropdowns
-            $(this.element).delegate('select', 'change', function() {
+            // Hook the dropdowns and text inputs
+            $(this.element).delegate('select, input', 'change', function() {
                 thisBlock.readState();
                 Pipeline.refresh(Pipeline.constants.CASCADE_REASON_SELECTION_CHANGED);
             });
@@ -1513,7 +1513,7 @@ var Blocks = {
                 if ( settings.length != 4 ) {
                     console.debug("ValueFilter invalid: not enough parts in ", filter);
                 }
-                thisBlock.filters.push({scenario: settings[0], is: settings[1], lowerbound: parseFloat(settings[2]), upperbound: parseFloat(settings[3])});
+                thisBlock.filters.push({column: settings[0], is: settings[1], lowerbound: settings[2], upperbound: settings[3]});
             });
         },
         
@@ -1549,8 +1549,8 @@ var Blocks = {
                 thisBlock.filters.push({
                     column: columnSelect.val(),
                     is: isSelect.val(),
-                    lowerbound: parseFloat(lowerboundText.val()),
-                    upperbound: parseFloat(upperboundText.val()),
+                    lowerbound: lowerboundText.val(),
+                    upperbound: upperboundText.val(),
                 });
             });
         },
@@ -1884,7 +1884,7 @@ var Pipeline = {
             2: Blocks.AggregateBlock,
             3: Blocks.NormaliseBlock,
             4: Blocks.GraphBlock,
-            4: Blocks.ValueFilterBlock
+            5: Blocks.ValueFilterBlock
         }
     },
     

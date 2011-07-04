@@ -22,6 +22,9 @@ class PipelineError(Exception):
     def __init__(self, msg, block=-1):
         self.block = block
         self.msg = msg
+    def __str__(self):
+        #return "Block %d: %s" % (self.block, self.msg)
+        return self.msg
 
 class LogTabulateStarted(Exception):
     def __init__(self, logFile, pid):
