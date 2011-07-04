@@ -1940,7 +1940,10 @@ var Pipeline = {
     init: function() {
         // Add the debug link if needed
         if ( Pipeline.DEBUG ) {
-            $('#pipeline-new-link').after('&nbsp;<a href="list/" id="pipeline-debug-link">Debug</a>');
+            $('#pipeline-new-go').after('<button id="pipeline-debug-go" class="debug-button"></button>');
+            $('#pipeline-debug-go').click(function() {
+                window.location.href = 'list/' + Pipeline.hash + '?debug';
+            });
         }
         else {
             console.debug = function() { return; };
@@ -2076,6 +2079,11 @@ var Pipeline = {
             }
         });
 
+        // Hook the load button for loading pipelines
+        $("#pipeline-new-go").click(function() {
+            window.location = ".";
+        });
+
         $("#pipeline-delete-go").click(function() {
             var select = $('#pipeline-load-select');
             if ( select.val() != '-1' ) {
@@ -2172,11 +2180,11 @@ var Pipeline = {
             Pipeline.createBlock(Blocks.ValueFilterBlock, block);
         });
         addBlock.append('<div class="pipeline-footer"></div>');
-        addBlock.prepend('<button type="button" class="remove-button">&times;</button>');
-        $('.remove-button', addBlock).click(function() {
-            $(this).parent('#pipeline-insert').remove();
-        });
         $('.pipeline-header', addBlock).html("Insert Block");
+        $('.pipeline-header-right', addBlock).html('<button type="button" class="remove-button"></button>');
+        $('.remove-button', addBlock).click(function() {
+            $(this).parents('#pipeline-insert').remove();
+        });
         $(block).before(addBlock);
     },
     
@@ -2198,8 +2206,6 @@ var Pipeline = {
             console.debug("Pipeline.refresh: Pipeline valid: " + encoded);
             // Push the new state onto the history stack
             Pipeline.pushState(encoded);
-            // Update the debug link
-            $('#pipeline-debug-link').attr('href', 'list/' + encoded + '?debug');
             // Enable the save pipeline fields
             $('#pipeline-save-name, #pipeline-save-go').removeAttr('disabled');
             Pipeline.ajax.pipeline(encoded, function(data) {

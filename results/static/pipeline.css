@@ -28,19 +28,32 @@ div {
     background-color: white;
 }
 
-.remove-button, .insert-button {
+.add-row, .remove-row, .debug-button, .new-button, .load-button, .remove-button, .insert-button {
     width: 20px;
     height: 20px;
-    float: right;
-    display: block;
     margin: 1px;
     cursor: pointer;
+}
+.add-row {
+    background-image:url('add.gif');
+}
+.remove-row {
+    background-image:url('remove.gif');
 }
 .remove-button {
     background-image:url('del.gif');
 }
 .insert-button {
     background-image:url('add.gif');
+}
+.debug-button {
+    background-image:url('debug.gif');
+}
+.load-button {
+    background-image:url('load.gif');
+}
+.new-button {
+    background-image:url('new.gif');
 }
 
 .odd {

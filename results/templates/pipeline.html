@@ -35,8 +35,8 @@
                         <td>
                             <select class="select-filter-value scenario-column-values"><option></option></select>
                         </td>
-                        <td><button type="button" class="remove-row" disabled="disabled">-</button></td>
-                        <td><button type="button" class="add-row">+</button></td>
+                        <td><button type="button" class="remove-row"></button></td>
+                        <td><button type="button" class="add-row"></button></td>
                     </tr>
                 </table>
             </div>
@@ -60,8 +60,8 @@
                         <td>
                             <input type="text" class="text-valuefilter-upperbound" value="+inf"/>
                         </td>
-                        <td><button type="button" class="remove-row" disabled="disabled">-</button></td>
-                        <td><button type="button" class="add-row">+</button></td>
+                        <td><button type="button" class="remove-row" disabled="disabled"></button></td>
+                        <td><button type="button" class="add-row"></button></td>
                     </tr>
                 </table>
             </div>
@@ -91,8 +91,8 @@
                         <td>
                             <select class="select-normalise-value scenario-column-values"><option></option></select>
                         </td>
-                        <td><button type="button" class="remove-row" disabled="disabled">-</button></td>
-                        <td><button type="button" class="add-row">+</button></td>
+                        <td><button type="button" class="remove-row" disabled="disabled"></button></td>
+                        <td><button type="button" class="add-row"></button></td>
                     </tr>
                 </table>
                 <label><input type="radio" name="normalise-type" value="2" /> to best value in group</label> <br />
@@ -135,7 +135,10 @@
                     {% for pipeline in pipelines %}
                     <option value="{{ pipeline.encoded }}">{{ pipeline.name }}</option>
                     {% endfor %}
-                </select> <button type="button" id="pipeline-load-go">Load</button><button type="button" id="pipeline-delete-go">Delete</button><a href id="pipeline-new-link">Reset</a>
+                </select>
+                <button type="button" id="pipeline-load-go" class="load-button"></button>
+                <button type="button" id="pipeline-delete-go" class="remove-button"></button>
+                <button type="button" id="pipeline-new-go" class="new-button"></button>
                 </span>
             </div>
         </div>
@@ -152,8 +155,8 @@
                                 {% endfor %}
                             </select>
                         </td>
-                        <td><button type="button" class="remove-row" disabled="disabled">-</button></td>
-                        <td><button type="button" class="add-row">+</button></td>
+                        <td><button type="button" class="remove-row" disabled="disabled"></button></td>
+                        <td><button type="button" class="add-row"></button></td>
                     </tr>
                 </table>
             </div>
@@ -173,8 +176,8 @@
                         <td>
                             <input type="text" class="pipeline-derived-value-field" />
                         </td>
-                        <td><button type="button" class="remove-row" disabled="disabled">-</button></td>
-                        <td><button type="button" class="add-row">+</button></td>
+                        <td><button type="button" class="remove-row" disabled="disabled"></button></td>
+                        <td><button type="button" class="add-row"></button></td>
                     </tr>
                 </table>
             </div>
@@ -182,7 +185,8 @@
         </div>
         <div id="pipeline-add" class="pipeline">
             <div class="pipeline-content">
-                <span class="pipeline-header">Add Block</span> <br />
+                <span class="pipeline-header">Add Block</span>
+                <span class="pipeline-header-right"></span> <br/>
                 <button type="button" id="add-filter">Filter</button><button type="button" id="add-valuefilter">Value Filter</button><button type="button" id="add-aggregate">Aggregate</button><button type="button" id="add-normalise">Normalise</button><button type="button" id="add-graph">Graph</button>
             </div>
         </div>
