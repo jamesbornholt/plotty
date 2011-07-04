@@ -159,9 +159,9 @@ class ValueFilterBlock(Block):
 
 
     def decode(self, param_string, cache_key):
-        """ Decode a filter block from an encoded pipeline string.
-            Filter blocks are encoded in the form:
-            filter1scenario^filter1is^filter1value&filter2scenario^...
+        """ Decode a value filter block from an encoded pipeline string.
+            ValueFilter blocks are encoded in the form:
+            filter1column^filter1is^filter1lowerbound^filter1upperbound&filter2column^...
         """
         parts = param_string.split(PipelineEncoder.GROUP_SEPARATOR)
         # There must be at least two - a flagword and one filter
@@ -174,50 +174,29 @@ class ValueFilterBlock(Block):
         for filt_str in parts[1:]:
             settings = filt_str.split(PipelineEncoder.PARAM_SEPARATOR)
             # Must be exactly three parts - scenario, is, value
-            if len(settings) != 3:
-                logging.debug("Filter invalid: not enough parts in %s" % filt_str)
+            if len(settings) != 4:
+                logging.debug("valueFilter invalid: not enough parts in %s" % filt_str)
                 continue
             self.filters.append({
-                'scenario': settings[0],
+                'column': settings[0],
                 'is':       (settings[1] == FilterBlock.TYPE['IS']),
-                'value':    settings[2]
+                'lowerbound':    float(settings[2]),
+                'upperbound':    float(settings[3])
             })
 
     def apply(self, data_table):
         """ Apply this block to the given data table.
         """
         new_rows = []
-        removed_scenario_cols = set()
-        for filt in self.filters:
-            if filt['is']:
-                removed_scenario_cols.add(filt['scenario'])
-
         for row in data_table:
             add = True
             for filt in self.filters:
-                if filt['is']:
-                    if filt['scenario'] not in row.scenario or row.scenario[filt['scenario']] != filt['value']:
-                        add = False
-                        break
-                else:
-                    if filt['scenario'] in row.scenario and row.scenario[filt['scenario']] == filt['value']:
-                        add = False
-                        break
+              if add:
+                in_data = filt['column'] in row.values
+                in_bounds = in_data and (row.values[filt['column']] >= filt['lowerbound'] and row.values[filt['column']] <= filt['upperbound'])
+                add = in_data and (bool(in_bounds) == bool(filt['is']))
             if add:
-                # Delete the scenario columns
-                for col in removed_scenario_cols:
-                    if col in row.scenario:
-                        del row.scenario[col]
                 new_rows.append(row)
-
-        # We do it this way because calling .remove(x) on a set raises a key
-        # value error if it wasn't in the set
-        removed_scenario_cols = set()
-        for filt in self.filters:
-            if filt['is']:
-                removed_scenario_cols.add(filt['scenario'])
-        
-        data_table.scenarioColumns -= removed_scenario_cols
         data_table.rows = new_rows
 
 

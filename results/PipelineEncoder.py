@@ -47,7 +47,7 @@ def decode_valuefilter_block(data):
     filters = []
     for filter_string in filter_strings:
         split = filter_string.split(FILTER_PARAM_SEPARATOR)
-        filter_dict = {'column': split[0], 'value': split[2]}
+        filter_dict = {'column': split[0], 'lowerbound': split[2], 'upperbound': split[3]}
         if split[1] == '0':
             filter_dict['is'] = False
         else:
@@ -121,7 +121,7 @@ def encode_valuefilter_block(data):
             is_type = '1'
         else:
             is_type = '0'
-        filter_strings.append(FILTER_PARAM_SEPARATOR.join([filter_dict['column'], is_type, filter_dict['value']]))
+        filter_strings.append(FILTER_PARAM_SEPARATOR.join([filter_dict['column'], is_type, filter_dict['lowerbound'], filter_dict['upperbound']]))
     return GROUP_SEPARATOR.join(filter_strings)
 
 def encode_filter_block(data):

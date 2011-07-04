@@ -1,3 +1,4 @@
+
 /**
  * Debugging stuff
  */
@@ -1451,7 +1452,7 @@ var Blocks = {
         /**
          * The currently valid filters
          */
-        filters: [{scenario: -1, is: 1, value: -1}],
+        filters: [{column: -1, is: 1, lowerbound: '-inf', upperbound: '+inf'}],
         
         /**
          * The options table for selecting filters
@@ -1475,7 +1476,7 @@ var Blocks = {
                 thisBlock.removeFilter.call(thisBlock, row); 
             };
             var addClosure = function(row) {
-                thisBlock.filters.push({scenario: -1, is: 1, value: -1});
+                thisBlock.filters.push({column: -1, is: 1, lowerbound: '-inf', upperbound: '+inf'});
                 Pipeline.refresh(Pipeline.constants.CASCADE_REASON_SELECTION_CHANGED);
             };
             
@@ -1508,11 +1509,11 @@ var Blocks = {
             var thisBlock = this;
             jQuery.each(filts, function(i ,filter) {
                 var settings = filter.split(Pipeline.encoder.PARAM_SEPARATOR);
-                // Exactly three parts - scenario, is, value
-                if ( settings.length != 3 ) {
+                // Exactly four parts - column, is, lowerbound, upperbound
+                if ( settings.length != 4 ) {
                     console.debug("ValueFilter invalid: not enough parts in ", filter);
                 }
-                thisBlock.filters.push({scenario: settings[0], is: settings[1], value: settings[2]});
+                thisBlock.filters.push({scenario: settings[0], is: settings[1], lowerbound: parseFloat(settings[2]), upperbound: parseFloat(settings[3])});
             });
         },
         
@@ -1522,9 +1523,11 @@ var Blocks = {
         encode: function() {
             var strs = [this.flags];
             jQuery.each(this.filters, function(i, filter) {
-                if ( filter.scenario != -1 && filter.value != -1 ) {
-                    strs.push(filter.scenario + Pipeline.encoder.PARAM_SEPARATOR
-                              + filter.is + Pipeline.encoder.PARAM_SEPARATOR + filter.value);
+                if ( filter.scenario != -1 ) {
+                    strs.push(filter.column + Pipeline.encoder.PARAM_SEPARATOR
+                              + filter.is + Pipeline.encoder.PARAM_SEPARATOR
+                              + filter.lowerbound + Pipeline.encoder.PARAM_SEPARATOR
+                              + filter.upperbound);
                 }
             });
             return strs.join(Pipeline.encoder.GROUP_SEPARATOR);
@@ -1538,14 +1541,16 @@ var Blocks = {
             this.filters = [];
             var thisBlock = this;
             $('tr', this.element).each(function() {
-                var scenarioSelect = $('.select-valuefilter-column', this);
+                var columnSelect = $('.select-valuefilter-column', this);
                 var isSelect = $('.select-valuefilter-is', this);
-                var valueSelect = $('.select-valuefilter-value', this);
+                var lowerboundText = $('.text-valuefilter-lowerbound', this);
+                var upperboundText = $('.text-valuefilter-upperbound', this);
 
                 thisBlock.filters.push({
-                    scenario: scenarioSelect.val(),
+                    column: columnSelect.val(),
                     is: isSelect.val(),
-                    value: valueSelect.val()
+                    lowerbound: parseFloat(lowerboundText.val()),
+                    upperbound: parseFloat(upperboundText.val()),
                 });
             });
         },
@@ -1562,22 +1567,18 @@ var Blocks = {
             var thisBlock = this;
             jQuery.each(this.filters, function(i, filter) {
                 var row = thisBlock.optionsTable.addRow();
-                var scenarioSelect = $('.select-valuefilter-column', row);
+                var columnSelect = $('.select-valuefilter-column', row);
                 var isSelect = $('.select-valuefilter-is', row);
-                var valueSelect = $('.select-valuefilter-value', row);
+                var lowerboundText = $('.text-valuefilter-lowerbound', row);
+                var upperboundText = $('.text-valuefilter-upperbound', row);
                 
                 // Note here we assume the scenario dropdown has already been
                 // updated, and the value cache is also up to date with new
                 // logs.
-                scenarioSelect.val(filter.scenario);
+                columnSelect.val(filter.column);
                 isSelect.val(filter.is);
-                if ( filter.scenario != -1 ) {
-                    Utilities.updateSelect(valueSelect, Pipeline.valueCache[filter.scenario]);
-                }
-                else {
-                    Utilities.updateSelect(valueSelect, []);
-                }
-                valueSelect.val(filter.value);
+                lowerboundText.val(filter.lowerbound);
+                upperboundText.val(filter.upperbound);
             });
         },
         
@@ -1589,32 +1590,18 @@ var Blocks = {
             var thisBlock = this;
             var changed = false;
             
-            // Update the scenario columns
+            // Update the value columns
             $('.select-valuefilter-column', this.element).each(function() {
-                Utilities.updateSelect(this, scenarioCols, true);
+                Utilities.updateSelect(this, valueCols, true);
             });
             
             jQuery.each(this.filters, function(i, filter) {
                 // If the selected scenario isn't in the new available ones,
                 // reset this row
-                if ( jQuery.inArray(filter.scenario, scenarioCols) == -1 ) {
-                    filter.scenario = -1;
-                    filter.value = -1;
+                if ( jQuery.inArray(filter.column, valueCols) == -1 ) {
+                    filter.column = -1;
                     changed = true;
                     return;
-                }
-                
-                // Check that the value is still in the valueCache
-                if ( jQuery.inArray(filter.value, Pipeline.valueCache[filter.scenario]) == -1 ) {
-                    filter.value = -1;
-                    changed = true;
-                    return;
-                }
-                
-                // We now have valid scenario and value. Remove the scenario
-                // from scenarioCols
-                if ( filter.is == thisBlock.TYPE.IS ) {
-                    scenarioCols.remove(filter.scenario);
                 }
             });
             
@@ -1659,11 +1646,12 @@ var Blocks = {
          *   the selection is incomplete
          */
         filterValue: function(row) {
-            var scenario = $('.select-valuefilter-column', row).val();
-            var is       = $('.select-valuefilter-is', row).val();
-            var value    = $('.select-valuefilter-value', row).val();
+            var column     = $('.select-valuefilter-column', row).val();
+            var is         = $('.select-valuefilter-is', row).val();
+            var lowerbound = $('.text-valuefilter-lowerbound', row).val();
+            var upperbound = $('.text-valuefilter-upperbound', row).val();
             
-            return {scenario: scenario, is: is, value: value};
+            return {column: column, is: is, lowerbound: lowerbound, upperbound: upperbound};
         }
     }),
 };
@@ -1895,7 +1883,8 @@ var Pipeline = {
             1: Blocks.FilterBlock,
             2: Blocks.AggregateBlock,
             3: Blocks.NormaliseBlock,
-            4: Blocks.GraphBlock
+            4: Blocks.GraphBlock,
+            4: Blocks.ValueFilterBlock
         }
     },
     

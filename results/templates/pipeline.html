@@ -49,14 +49,17 @@
 				<table class="pipeline-valuefilter-table">
 				    <tr>
 				        <td>
-				            <select class="select-valuefilter-column scenario-column scenario-column-values-select"><option></option></select>
+				            <select class="select-valuefilter-is"><option value="1" selected="selected">in</option><option value="2">not in</option></select>
 				        </td>
+                                        <td>
+                                            <input type="text" class="text-valuefilter-lowerbound" value="-inf"/>
+                                        </td>
 				        <td>
-				            <select class="select-valuefilter-is"><option value="1" selected="selected">is</option><option value="2">is not</option></select>
+				            <select class="select-valuefilter-column value-column value-column-values-select"><option></option></select>
 				        </td>
-				        <td>
-				            <select class="select-valuefilter-value scenario-column-values"><option></option></select>
-				        </td>
+                                        <td>
+                                            <input type="text" class="text-valuefilter-upperbound" value="+inf"/>
+                                        </td>
 				        <td><button type="button" class="remove-row" disabled="disabled">-</button></td>
 				        <td><button type="button" class="add-row">+</button></td>
 				    </tr>

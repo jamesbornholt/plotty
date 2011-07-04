@@ -97,7 +97,7 @@ div {
     background: #efd3f2;
 }
 .valuefilter {
-    background: #efd3f2;
+    background: #ffb3c2;
 }
 .aggregate {
     background: #c5f5c1;
@@ -124,6 +124,13 @@ div {
     width: 250px;
 }
 
+.text-valuefilter-lowerbound {
+    width: 60px;
+}
+
+.text-valuefilter-upperbound {
+    width: 60px;
+}
 #select-scenario-cols, #select-value-cols, .select-normalise-group {
     width: 100%;
     height: 100px;
