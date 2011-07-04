@@ -19,193 +19,193 @@
     <script type="text/javascript" charset="utf-8" src="static/pipeline.js"></script>
 </head>
 <body>
-	<div id="pipeline-templates">
-		<div id="pipeline-filter-template" class="pipeline filter pipeline-block">
-			<button type="button" class="remove-button">&times;</button><button type="button" class="insert-button">+</button>
-			<div class="pipeline-content">
-				<span class="pipeline-header">Filter</span> <br />
-				<table class="pipeline-filter-table">
-				    <tr>
-				        <td>
-				            <select class="select-filter-column scenario-column scenario-column-values-select"><option></option></select>
-				        </td>
-				        <td>
-				            <select class="select-filter-is"><option value="1" selected="selected">is</option><option value="2">is not</option></select>
-				        </td>
-				        <td>
-				            <select class="select-filter-value scenario-column-values"><option></option></select>
-				        </td>
-				        <td><button type="button" class="remove-row" disabled="disabled">-</button></td>
-				        <td><button type="button" class="add-row">+</button></td>
-				    </tr>
-				</table>
-			</div>
-			<div class="pipeline-footer"></div>
-		</div>
-		<div id="pipeline-valuefilter-template" class="pipeline valuefilter pipeline-block">
-			<button type="button" class="remove-button">&times;</button><button type="button" class="insert-button">+</button>
-			<div class="pipeline-content">
-				<span class="pipeline-header">ValueFilter</span> <br />
-				<table class="pipeline-valuefilter-table">
-				    <tr>
-				        <td>
-				            <select class="select-valuefilter-is"><option value="1" selected="selected">in</option><option value="2">out</option></select>
-				        </td>
+    <div id="pipeline-templates">
+        <div id="pipeline-filter-template" class="pipeline filter pipeline-block">
+            <button type="button" class="remove-button">&times;</button><button type="button" class="insert-button">+</button>
+            <div class="pipeline-content">
+                <span class="pipeline-header">Filter</span> <br />
+                <table class="pipeline-filter-table">
+                    <tr>
+                        <td>
+                            <select class="select-filter-column scenario-column scenario-column-values-select"><option></option></select>
+                        </td>
+                        <td>
+                            <select class="select-filter-is"><option value="1" selected="selected">is</option><option value="2">is not</option></select>
+                        </td>
+                        <td>
+                            <select class="select-filter-value scenario-column-values"><option></option></select>
+                        </td>
+                        <td><button type="button" class="remove-row" disabled="disabled">-</button></td>
+                        <td><button type="button" class="add-row">+</button></td>
+                    </tr>
+                </table>
+            </div>
+            <div class="pipeline-footer"></div>
+        </div>
+        <div id="pipeline-valuefilter-template" class="pipeline valuefilter pipeline-block">
+            <button type="button" class="remove-button">&times;</button><button type="button" class="insert-button">+</button>
+            <div class="pipeline-content">
+                <span class="pipeline-header">ValueFilter</span> <br />
+                <table class="pipeline-valuefilter-table">
+                    <tr>
+                        <td>
+                            <select class="select-valuefilter-is"><option value="1" selected="selected">in</option><option value="2">out</option></select>
+                        </td>
                         <td>
                             <input type="text" class="text-valuefilter-lowerbound" value="-inf"/>
                         </td>
-				        <td>
-				            <select class="select-valuefilter-column value-column value-column-values-select"><option></option></select>
-				        </td>
+                        <td>
+                            <select class="select-valuefilter-column value-column value-column-values-select"><option></option></select>
+                        </td>
                         <td>
                             <input type="text" class="text-valuefilter-upperbound" value="+inf"/>
                         </td>
-				        <td><button type="button" class="remove-row" disabled="disabled">-</button></td>
-				        <td><button type="button" class="add-row">+</button></td>
-				    </tr>
-				</table>
-			</div>
-			<div class="pipeline-footer"></div>
-		</div>
-		<div id="pipeline-aggregate-template" class="pipeline aggregate pipeline-block">
-			<button type="button" class="remove-button">&times;</button><button type="button" class="insert-button">+</button>
-			<div class="pipeline-content">
-				<span class="pipeline-header">Aggregate</span> <br />
-				<select class="select-aggregate-type" name="aggregate[0]['type']"><option value="1">mean</option><option value="2">geomean</option></select> over <select class="select-aggregate-column scenario-column" name="aggregate[0]['col']"><option></option></select>
-			</div>
-			<div class="pipeline-footer"></div>
-		</div>
-		<div id="pipeline-normalise-template" class="pipeline normalise pipeline-block">
-			<button type="button" class="remove-button">&times;</button><button type="button" class="insert-button">+</button>
-			<div class="pipeline-content">
-				<span class="pipeline-header">Normalise</span> <br />
-				<label><input type="radio" name="normalise-type" value="1" checked="checked"/> to specific value</label> <br />
-				<table class="pipeline-normalise-table">
-				    <tr>
-				        <td>
-				            <select class="select-normalise-column scenario-column scenario-column-values-select"><option></option></select>
-				        </td>
-				        <td>
-				            =
-				        </td>
-				        <td>
-				            <select class="select-normalise-value scenario-column-values"><option></option></select>
-				        </td>
-				        <td><button type="button" class="remove-row" disabled="disabled">-</button></td>
-				        <td><button type="button" class="add-row">+</button></td>
-				    </tr>
-				</table>
-				<label><input type="radio" name="normalise-type" value="2" /> to best value in group</label> <br />
-				<strong>Grouping</strong><br />
+                        <td><button type="button" class="remove-row" disabled="disabled">-</button></td>
+                        <td><button type="button" class="add-row">+</button></td>
+                    </tr>
+                </table>
+            </div>
+            <div class="pipeline-footer"></div>
+        </div>
+        <div id="pipeline-aggregate-template" class="pipeline aggregate pipeline-block">
+            <button type="button" class="remove-button">&times;</button><button type="button" class="insert-button">+</button>
+            <div class="pipeline-content">
+                <span class="pipeline-header">Aggregate</span> <br />
+                <select class="select-aggregate-type" name="aggregate[0]['type']"><option value="1">mean</option><option value="2">geomean</option></select> over <select class="select-aggregate-column scenario-column" name="aggregate[0]['col']"><option></option></select>
+            </div>
+            <div class="pipeline-footer"></div>
+        </div>
+        <div id="pipeline-normalise-template" class="pipeline normalise pipeline-block">
+            <button type="button" class="remove-button">&times;</button><button type="button" class="insert-button">+</button>
+            <div class="pipeline-content">
+                <span class="pipeline-header">Normalise</span> <br />
+                <label><input type="radio" name="normalise-type" value="1" checked="checked"/> to specific value</label> <br />
+                <table class="pipeline-normalise-table">
+                    <tr>
+                        <td>
+                            <select class="select-normalise-column scenario-column scenario-column-values-select"><option></option></select>
+                        </td>
+                        <td>
+                            =
+                        </td>
+                        <td>
+                            <select class="select-normalise-value scenario-column-values"><option></option></select>
+                        </td>
+                        <td><button type="button" class="remove-row" disabled="disabled">-</button></td>
+                        <td><button type="button" class="add-row">+</button></td>
+                    </tr>
+                </table>
+                <label><input type="radio" name="normalise-type" value="2" /> to best value in group</label> <br />
+                <strong>Grouping</strong><br />
                 <select name="select-normalise-group" class="select-normalise-group" multiple="multiple"><option></option></select>
-			</div>
-			<div class="pipeline-footer"></div>
-		</div>
-		<div id="pipeline-graph-template" class="pipeline graph pipeline-block">
-			<button type="button" class="remove-button">&times;</button><button type="button" class="insert-button">+</button>
-			<div class="pipeline-content">
-				<span class="pipeline-header">Graph</span> <br />
-				Type: <select class="select-graph-type"><option value="1">Histogram</option><option value="2">XY</option><option value="3">Scatter</option></select>
-				<div class="graph-histogram pipeline-graph-type-options">
-				    Column (series): <select class="select-graph-column scenario-column"><option></option></select> <br />
-				    Row (x-axis): <select class="select-graph-row scenario-column"><option></option></select> <br />
-				    Value (y-axis): <select class="select-graph-value value-column"><option></option></select> <br />
-				</div>
-				<div class="graph-xy pipeline-graph-type-options">
-				    Column (series): <select class="select-graph-column scenario-column"><option></option></select> <br />
-				    Row (x-axis): <select class="select-graph-row scenario-column"><option></option></select> <br />
-				    Value (y-axis): <select class="select-graph-value value-column"><option></option></select> <br />
-				</div>
-				<div class="graph-scatter pipeline-graph-type-options">
-					Series: <select class="select-graph-series scenario-column"><option></option></select> <br />
-				    x-axis: <select class="select-graph-x value-column"><option></option></select> <br />
-				    y-axis: <select class="select-graph-y value-column"><option></option></select> <br />
-				</div>
-				<label title="Shows errorbars on plots"><input type="checkbox" class="graph-enable-errorbars" checked="true" /> Show errorbars</label>
-			</div>
-			<div class="pipeline-footer"></div>
-		</div>
-	</div>
-	<div id="pipeline">
-		<div id="pipeline-load" class="pipeline">
-			<div class="pipeline-content">
-				<span class="pipeline-header">Load Saved Pipeline</span> <br />
-				<select id="pipeline-load-select">
-				    <option value="-1" selected></option>
-				    {% for pipeline in pipelines %}
-				    <option value="{{ pipeline.encoded }}">{{ pipeline.name }}</option>
-				    {% endfor %}
-				</select> <button type="button" id="pipeline-load-go">Load</button><button type="button" id="pipeline-delete-go">Delete</button><br />
-				<a href="." id="pipeline-new-link">New pipeline</a>
-			</div>
-		</div>
-		<div id="pipeline-log" class="pipeline">
-			<div class="pipeline-content">
-				<span class="pipeline-header">Log Files</span> <br />
-				<table id="pipeline-log-table">
-				    <tr>
-				        <td>
-				            <select class="select-log">
-				                <option value="-1" selected></option>
-				                {% for log in logs %}
-				                <option value="{{ log }}">{{ log }}</option>
-				                {% endfor %}
-				            </select>
-				        </td>
-				        <td><button type="button" class="remove-row" disabled="disabled">-</button></td>
-				        <td><button type="button" class="add-row">+</button></td>
-				    </tr>
-				</table>
-			</div>
-			<div class="pipeline-footer"></div>
-		</div>
-		<div id="pipeline-values" class="pipeline">
-			<div class="pipeline-content">
-			    <span class="pipeline-header">Scenario Columns</span><span class="pipeline-header-right"><a href="" id="select-scenario-cols-all">[all]</a> <a href="" id="select-scenario-cols-none">[none]</a></span> <br />
-			    <select id="select-scenario-cols" multiple="multiple">
-			    </select> <br />
-				<span class="pipeline-header">Value Columns</span> <br />
-				<select id="select-value-cols" multiple="multiple">
-				</select> <br />
-				<span class="pipeline-header">Derived Value Columns</span> <br />
-				<table id="pipeline-derived-value-cols">
-				    <tr>
-				        <td>
-				            <input type="text" class="pipeline-derived-value-field" />
-				        </td>
-				        <td><button type="button" class="remove-row" disabled="disabled">-</button></td>
-				        <td><button type="button" class="add-row">+</button></td>
-				    </tr>
-				</table>
-			</div>
-			<div class="pipeline-footer"></div>
-		</div>
-		<div id="pipeline-add" class="pipeline">
-			<div class="pipeline-content">
-				<span class="pipeline-header">Add Block</span> <br />
-				<button type="button" id="add-filter">Filter</button><button type="button" id="add-valuefilter">ValueFilter</button><button type="button" id="add-aggregate">Aggregate</button><button type="button" id="add-normalise">Normalise</button><button type="button" id="add-graph">Graph</button>
-			</div>
-		</div>
-		<div id="pipeline-save" class="pipeline">
-		    <div class="pipeline-content">
-		        <span class="pipeline-header">Save Pipeline</span> <br />
-		        <form id="pipeline-save-form">
-		            <input type="text" id="pipeline-save-name" disabled="disabled" /> <button type="button" id="pipeline-save-go" disabled="disabled">Save</button>
-		        </form>
-		    </div>
-		</div>
-	</div>
-	<div id="header">
-	    <div id="header-config">
-	        <label title="Stops automatic loading of pipeline results"><input type="checkbox" id="pause-loading" /> Pause automatic loading</label>
-	    </div>
-	    <div id="tabulate-progress"><img src="static/loading.gif" /> Tabulating <span class="tabulate-logfile">[LOGFILE]</span> (<span class="tabulate-percent"></span>% complete)</div>
-	    <div id="loading-indicator"><img src="static/loading.gif" /> Loading...</div>
-	    <div id="large-table-confirm">
-	        There are <span>0</span> rows of results for this pipeline. Rendering the table may hang your browser temporarily. <button type="button" id="load-large-table">Load anyway</button>
-	    </div>
-	</div>
-	<div id="output">
+            </div>
+            <div class="pipeline-footer"></div>
+        </div>
+        <div id="pipeline-graph-template" class="pipeline graph pipeline-block">
+            <button type="button" class="remove-button">&times;</button><button type="button" class="insert-button">+</button>
+            <div class="pipeline-content">
+                <span class="pipeline-header">Graph</span> <br />
+                Type: <select class="select-graph-type"><option value="1">Histogram</option><option value="2">XY</option><option value="3">Scatter</option></select>
+                <div class="graph-histogram pipeline-graph-type-options">
+                    Column (series): <select class="select-graph-column scenario-column"><option></option></select> <br />
+                    Row (x-axis): <select class="select-graph-row scenario-column"><option></option></select> <br />
+                    Value (y-axis): <select class="select-graph-value value-column"><option></option></select> <br />
+                </div>
+                <div class="graph-xy pipeline-graph-type-options">
+                    Column (series): <select class="select-graph-column scenario-column"><option></option></select> <br />
+                    Row (x-axis): <select class="select-graph-row scenario-column"><option></option></select> <br />
+                    Value (y-axis): <select class="select-graph-value value-column"><option></option></select> <br />
+                </div>
+                <div class="graph-scatter pipeline-graph-type-options">
+                    Series: <select class="select-graph-series scenario-column"><option></option></select> <br />
+                    x-axis: <select class="select-graph-x value-column"><option></option></select> <br />
+                    y-axis: <select class="select-graph-y value-column"><option></option></select> <br />
+                </div>
+                <label title="Shows errorbars on plots"><input type="checkbox" class="graph-enable-errorbars" checked="true" /> Show errorbars</label>
+            </div>
+            <div class="pipeline-footer"></div>
+        </div>
+    </div>
+    <div id="pipeline">
+        <div id="pipeline-load" class="pipeline">
+            <div class="pipeline-content">
+                <span class="pipeline-header">Load Saved Pipeline</span> <br />
+                <select id="pipeline-load-select">
+                    <option value="-1" selected></option>
+                    {% for pipeline in pipelines %}
+                    <option value="{{ pipeline.encoded }}">{{ pipeline.name }}</option>
+                    {% endfor %}
+                </select> <button type="button" id="pipeline-load-go">Load</button><button type="button" id="pipeline-delete-go">Delete</button><br />
+                <a href="." id="pipeline-new-link">New pipeline</a>
+            </div>
+        </div>
+        <div id="pipeline-log" class="pipeline">
+            <div class="pipeline-content">
+                <span class="pipeline-header">Log Files</span> <br />
+                <table id="pipeline-log-table">
+                    <tr>
+                        <td>
+                            <select class="select-log">
+                                <option value="-1" selected></option>
+                                {% for log in logs %}
+                                <option value="{{ log }}">{{ log }}</option>
+                                {% endfor %}
+                            </select>
+                        </td>
+                        <td><button type="button" class="remove-row" disabled="disabled">-</button></td>
+                        <td><button type="button" class="add-row">+</button></td>
+                    </tr>
+                </table>
+            </div>
+            <div class="pipeline-footer"></div>
+        </div>
+        <div id="pipeline-values" class="pipeline">
+            <div class="pipeline-content">
+                <span class="pipeline-header">Scenario Columns</span><span class="pipeline-header-right"><a href="" id="select-scenario-cols-all">[all]</a> <a href="" id="select-scenario-cols-none">[none]</a></span> <br />
+                <select id="select-scenario-cols" multiple="multiple">
+                </select> <br />
+                <span class="pipeline-header">Value Columns</span> <br />
+                <select id="select-value-cols" multiple="multiple">
+                </select> <br />
+                <span class="pipeline-header">Derived Value Columns</span> <br />
+                <table id="pipeline-derived-value-cols">
+                    <tr>
+                        <td>
+                            <input type="text" class="pipeline-derived-value-field" />
+                        </td>
+                        <td><button type="button" class="remove-row" disabled="disabled">-</button></td>
+                        <td><button type="button" class="add-row">+</button></td>
+                    </tr>
+                </table>
+            </div>
+            <div class="pipeline-footer"></div>
+        </div>
+        <div id="pipeline-add" class="pipeline">
+            <div class="pipeline-content">
+                <span class="pipeline-header">Add Block</span> <br />
+                <button type="button" id="add-filter">Filter</button><button type="button" id="add-valuefilter">ValueFilter</button><button type="button" id="add-aggregate">Aggregate</button><button type="button" id="add-normalise">Normalise</button><button type="button" id="add-graph">Graph</button>
+            </div>
+        </div>
+        <div id="pipeline-save" class="pipeline">
+            <div class="pipeline-content">
+                <span class="pipeline-header">Save Pipeline</span> <br />
+                <form id="pipeline-save-form">
+                    <input type="text" id="pipeline-save-name" disabled="disabled" /> <button type="button" id="pipeline-save-go" disabled="disabled">Save</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div id="header">
+        <div id="header-config">
+            <label title="Stops automatic loading of pipeline results"><input type="checkbox" id="pause-loading" /> Pause automatic loading</label>
+        </div>
+        <div id="tabulate-progress"><img src="static/loading.gif" /> Tabulating <span class="tabulate-logfile">[LOGFILE]</span> (<span class="tabulate-percent"></span>% complete)</div>
+        <div id="loading-indicator"><img src="static/loading.gif" /> Loading...</div>
+        <div id="large-table-confirm">
+            There are <span>0</span> rows of results for this pipeline. Rendering the table may hang your browser temporarily. <button type="button" id="load-large-table">Load anyway</button>
+        </div>
+    </div>
+    <div id="output">
         
     </div>
 </body>
