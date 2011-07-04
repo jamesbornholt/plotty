@@ -78,7 +78,7 @@
         <div id="pipeline-normalise-template" class="pipeline normalise pipeline-block">
             <div class="pipeline-content">
                 <span class="pipeline-header"><img src="static/table_relationship.png"/> Normalise</span>
-                <span class="pipeline-header-right"><input type="image" class="insert-button" src="static/brick_add.png"/><input type="image" class="remove-button" src="static/cross.png"/></span>
+                <span class="pipeline-header-right"><input type="image" class="insert-button" src="static/brick_add.png"/><input type="image" class="remove-button" src="static/cross.png"/></span> <br/>
                 <label><input type="radio" name="normalise-type" value="1" checked="checked"/> to specific value</label> <br />
                 <table class="pipeline-normalise-table">
                     <tr>
@@ -104,7 +104,7 @@
         <div id="pipeline-graph-template" class="pipeline graph pipeline-block">
             <div class="pipeline-content">
                 <span class="pipeline-header"><img src="static/chart_line.png"/> Graph</span>
-                <span class="pipeline-header-right"><input type="image" class="insert-button" src="static/brick_add.png"/><input type="image" class="remove-button" src="static/cross.png"/></span>
+                <span class="pipeline-header-right"><input type="image" class="insert-button" src="static/brick_add.png"/><input type="image" class="remove-button" src="static/cross.png"/></span> <br/>
                 Type: <select class="select-graph-type"><option value="1">Histogram</option><option value="2">XY</option><option value="3">Scatter</option></select>
                 <div class="graph-histogram pipeline-graph-type-options">
                     Column (series): <select class="select-graph-column scenario-column"><option></option></select> <br />
@@ -136,9 +136,9 @@
                     <option value="{{ pipeline.encoded }}">{{ pipeline.name }}</option>
                     {% endfor %}
                 </select>
-                <input type="image" id="pipeline-load-go" src="static/page_go.png" class="load-button"/ >
-                <input type="image" id="pipeline-delete-go" class="remove-button" src="static/page_delete.png"/></button>
-                <input type="image" id="pipeline-new-go" class="new-button" src="static/page_lightning.png"/></button>
+                <button id="pipeline-load-go" class="pipeline-button"><img src="static/page_go.png"/> Load</button>
+                <button id="pipeline-delete-go" class="pipeline-button"><img src="static/page_delete.png"/> Delete</button>
+                <button id="pipeline-new-go" class="pipeline-button"><img src="static/page_lightning.png"/> New</button>
                 </span>
             </div>
         </div>
@@ -187,18 +187,19 @@
             <div class="pipeline-content">
                 <span class="pipeline-header"><img src="static/brick.png"/> Add Block</span>
                 <span class="pipeline-header-right"></span> <br/>
-                <button class="pipeline-add-button" type="button" id="add-filter"><img src="static/world_delete.png"/> Filter</button>
-                <button class="pipeline-add-button" type="button" id="add-valuefilter"><img src="static/key_delete.png"/> Value Filter</button>
-                <button class="pipeline-add-button" type="button" id="add-aggregate"><img src="static/sum.png"/> Aggregate</button>
-                <button class="pipeline-add-button" type="button" id="add-normalise"><img src="static/table_relationship.png"/> Normalise</button>
-                <button class="pipeline-add-button" type="button" id="add-graph"><img src="static/chart_line.png"/>Graph</button>
+                <button class="pipeline-button" type="button" id="add-filter"><img src="static/world_delete.png"/> Filter</button>
+                <button class="pipeline-button" type="button" id="add-valuefilter"><img src="static/key_delete.png"/> Value Filter</button>
+                <button class="pipeline-button" type="button" id="add-aggregate"><img src="static/sum.png"/> Aggregate</button>
+                <button class="pipeline-button" type="button" id="add-normalise"><img src="static/table_relationship.png"/> Normalise</button>
+                <button class="pipeline-button" type="button" id="add-graph"><img src="static/chart_line.png"/>Graph</button>
             </div>
         </div>
         <div id="pipeline-save" class="pipeline">
             <div class="pipeline-content">
                 <span class="pipeline-header"><img src="static/disk.png"/> Save Pipeline</span> <br />
                 <form id="pipeline-save-form">
-                    <input type="text" id="pipeline-save-name" disabled="disabled" /> <input type="image" id="pipeline-save-go" src="static/page_save.png" disabled="disabled"/>
+                    <input type="text" id="pipeline-save-name" disabled="disabled" />
+                    <button id="pipeline-save-go" class="pipeline-button" disabled="disabled"><img src="static/page_save.png"/> Save</button>
                 </form>
             </div>
         </div>
