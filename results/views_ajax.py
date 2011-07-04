@@ -122,34 +122,6 @@ def save_pipeline(request):
         return HttpResponse(json.dumps({'error': True}))
     return HttpResponse(json.dumps({'error': False}))
     
-def csv_table(request, pipeline):
-    try:
-        dt, graph_outputs = execute_pipeline(pipeline, csv_graphs=True)
-    except Exception as e:
-        return HttpResponse("The pipeline is invalid: " + e.msg)
-
-    output = dt.renderToCSV()
-    filename = 'table_output_' + datetime.now().replace(microsecond=0).isoformat('_') + '.csv'
-    resp = HttpResponse(output, mimetype='text/csv')
-    resp['Content-Disposition'] = 'attachment; filename=' + filename
-    return resp
-
-def csv_graph(request, pipeline, index, graph):
-    try:
-        dt, graph_outputs = execute_pipeline(pipeline, csv_graphs=True)
-    except Exception as e:
-        return HttpResponse("The pipeline is invalid: " + e.msg)
-    index = int(index)
-
-    if len(graph_outputs) < int(index) or graph not in graph_outputs[int(index)]:
-        return HttpResponse("The specified graph doesn't exist.<br />graph = %s<br />graph_outputs = %s<br />index = %d" % (graph, graph_outputs, index))
-    
-    output = graph_outputs[int(index)][graph]
-    filename = 'graph_output_' + graph.replace(' ', '') + '_' + datetime.now().replace(microsecond=0).isoformat('_') + '.csv'
-    resp = HttpResponse(output, mimetype='text/csv')
-    resp['Content-Disposition'] = 'attachment; filename=' + filename
-    return resp
-
 def tabulate_progress(request, pid):
     if not os.path.exists(os.path.join(settings.CACHE_ROOT, pid + ".status")):
         return HttpResponse(json.dumps({'complete': True, 'reason': 'file'}))
