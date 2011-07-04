@@ -194,6 +194,7 @@ def extract_csv(log, csvgz_file, write_status=None):
   csv.close()
   gzip_process.wait()
   csv_compressed.close()
+  os.chmod(csvgz_file, 0777)
   if write_status != None:
     f.close()
 

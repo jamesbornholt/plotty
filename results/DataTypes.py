@@ -1,5 +1,5 @@
 from django.core.cache import cache
-import logging, sys, csv, os, math, re, string, subprocess, time
+import logging, sys, csv, os, math, re, string, subprocess, time, stat
 from plotty import settings
 from plotty.results.Utilities import present_value, present_value_csv, scenario_hash, length_cmp
 from plotty.results.Tabulate import extract_csv
@@ -74,6 +74,16 @@ class DataTable:
                     e.length = len(logs)
                     raise e
                 ret = cache.set(log, {'last_modified': lastModified, 'rows': rows, 'scenarioColumns': scenarioColumns, 'valueColumns': valueColumns, 'messages': messages})
+                # Hack! Hack! Hack!
+                # Alternative: find the user owning this instance, chown to them,
+                # and set a+rx u+rxw?
+                cache_file = cache._key_to_file(log)
+                # Cache files are three directories deep, so chmod all 3 levels
+                # (file, inner, outer dir, 'cache/log'). 
+                for i in xrange(4):
+                    os.chmod(cache_file, 0777)
+                    cache_file, _ = os.path.split(cache_file)
+                
                 logging.debug('For log %s: cache empty or expired, stored %d rows to cache.' % (log, len(rows)))
             else:
                 lastModified = cached_vals['last_modified']
@@ -108,7 +118,9 @@ class DataTable:
         csv_dir = os.path.join(settings.CACHE_ROOT, "csv")
         csv_file = os.path.join(csv_dir, log + ".csv.gz")
         if not os.path.exists(csv_dir):
-          os.mkdir(csv_dir)
+            os.mkdir(csv_dir)
+            os.chmod(csv_dir, 0777)
+
 
         # Store the log's last modified date
         lastModified = os.path.getmtime(dir_path)

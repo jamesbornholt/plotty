@@ -1,7 +1,7 @@
 # Django settings for django_site project.
 import sys, os
 
-DEBUG = False
+DEBUG = True
 TEMPLATE_DEBUG = DEBUG
 
 # Two-tailed confidence level (i.e. this value will be halved for calls to
@@ -47,7 +47,7 @@ DEBUG_TOOLBAR_PANELS = (
     #'debug_toolbar.panels.request_vars.RequestVarsDebugPanel',
     #'debug_toolbar.panels.sql.SQLDebugPanel',
     'debug_toolbar.panels.template.TemplateDebugPanel',
-    'debug_toolbar.panels.cache.CacheDebugPanel',
+    #'debug_toolbar.panels.cache.CacheDebugPanel',
     'debug_toolbar.panels.signals.SignalDebugPanel',
     'debug_toolbar.panels.logger.LoggingPanel',
 )
