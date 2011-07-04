@@ -45,6 +45,9 @@ div {
     border-top: 1px solid #666;
     border-left: 1px solid #666;
 }
+input:disabled {
+    opacity: 0.3;
+}
 
 #pipeline-load-go {
     background-image: url('page_go.png');
