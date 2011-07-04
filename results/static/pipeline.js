@@ -2119,7 +2119,7 @@ var Pipeline = {
         else {
             index = $(indexBlock).prevAll('.pipeline-block').length;
         }
-        Pipeline.blocks.push(new block(index));
+        Pipeline.blocks.splice(index, 0, new block(index));
         Pipeline.refresh(Pipeline.constants.CASCADE_REASON_BLOCK_ADDED);
     },
     
