@@ -4,7 +4,7 @@ Every block is a subclass of the Block class, which defines two basic methods
 which it describes.
 """
 
-import math, copy, os
+import math, copy, os, time
 from plotty.results.DataTypes import DataRow, DataAggregate
 from plotty.results.Utilities import present_value, present_value_csv_graph, scenario_hash
 from plotty.results.Exceptions import PipelineAmbiguityException, PipelineError, PipelineBlockException
@@ -730,6 +730,14 @@ class GraphBlock(Block):
 
     def apply(self, data_table, messages):
         """ Render the graph to HTML, including images """
+        def do_cleanup():
+          # Clean up graph directory.
+          one_week_ago = time.time() - 60*60*24*7
+          for graph_entry in os.listdir(settings.GRAPH_CACHE_DIR):
+            graph_file = os.path.join(settings.GRAPH_CACHE_DIR, graph_entry)
+            if os.path.getmtime(graph_file) < one_week_ago:
+              os.unlink(graph_file)
+
         if self.type == GraphBlock.TYPE['HISTOGRAM'] or self.type == GraphBlock.TYPE['XY']:
             sets, scenario_keys = self.group(data_table)
             graphs = {}
@@ -761,6 +769,7 @@ class GraphBlock(Block):
                     csv_last_modified = os.path.getmtime(graph_path + '.csv')
                 if csv_last_modified <= data_table.lastModified:
                     logging.debug("Regenerating graph %s" % graph_path)
+                    do_cleanup()
                     # Render the CSV
                     csv = self.renderCSV(pivot_table, column_keys, row_keys, aggregates, for_gnuplot=True)
                     csv_file = open(graph_path + '.csv', "w")
@@ -799,6 +808,7 @@ class GraphBlock(Block):
                 csv_last_modified = os.path.getmtime(graph_path + '.csv')
             if csv_last_modified <= data_table.lastModified:
                 logging.debug("Regenerating graph %s" % graph_path)
+                do_cleanup()
                 # Render the CSV. We assume the data has confidence intervals
                 # - if not, we just emit the same value three times,
                 # so in gnuplot we can always use the same code.
