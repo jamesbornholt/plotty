@@ -83,12 +83,15 @@ def pipeline(request, pipeline):
             ambiguity = True
             ambiguityIndex = e.block
             dt = e.dataTable
+            msg = e.messages
             graph_outputs = e.graph_outputs
     else:
         output = ''
         ambiguity = False
         ambiguityIndex = -1
         dt = p.dataTable
+        msg = p.messages
+
     
     if len(graph_outputs) > 0:
         for i, graph_set in enumerate(graph_outputs, start=1):
@@ -99,6 +102,18 @@ def pipeline(request, pipeline):
         output += '<div class="foldable"><h1>Table</h1>' + dt.renderToTable() + '</div>'
     else:
         output += dt.renderToTable()
+
+    if not msg.empty():
+      msg_output = '<div class="messages"><h1>Messages</h1>'
+
+      for (t,e) in msg.warnings():
+        msg_output += '<img src="static/warning.gif"/> <span class="message-warning-main">' + t + '</span> <span class="message-warning-extra">' + e + '</span><br/>'
+
+      for (t,e) in msg.infos():
+        msg_output += '<img src="static/information.gif"/> <span class="message-information-main">' + t + '</span> <span class="message-information-extra">' + e + '</span><br/>'
+
+      msg_output += '</div>'
+      output += msg_output
     
     return HttpResponse(json.dumps({'error': False, 'ambiguity': ambiguity, 'index': ambiguityIndex, 'html': output, 'rows': len(dt.rows), 'graph': len(graph_outputs) > 0}))
 

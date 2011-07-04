@@ -1,5 +1,5 @@
 import plotty.results.PipelineEncoder
-from plotty.results.DataTypes import DataTable, DataRow, DataAggregate
+from plotty.results.DataTypes import DataTable, DataRow, DataAggregate, Messages
 from plotty.results.Blocks import *
 from plotty.results.Exceptions import *
 import plotty.results.PipelineEncoder as PipelineEncoder
@@ -31,6 +31,7 @@ class Pipeline(object):
         self.derivedValueCols = set()
         self.blocks = []
         self.dataTable = None
+        self.messages = None
         self.webClient = web_client
 
     def decode(self, encoded):
@@ -79,6 +80,7 @@ class Pipeline(object):
         
         try:
             self.dataTable = DataTable(logs=self.logs, wait=not self.webClient)
+            self.messages = self.dataTable.messages
             self.dataTable.selectScenarioColumns(self.scenarioCols)
             self.dataTable.selectValueColumns(self.valueCols, self.derivedValueCols)
         except LogTabulateStarted:
@@ -95,7 +97,7 @@ class Pipeline(object):
 
         for i,block in enumerate(self.blocks):
             try:
-                ret = block.apply(self.dataTable)
+                ret = block.apply(self.dataTable, self.messages)
             except PipelineAmbiguityException as e:
                 e.block = i
                 # Remove this block + the rest of the pipeline, and try again
@@ -104,6 +106,7 @@ class Pipeline(object):
                 del self.blocks[i:]
                 graph_outputs = self.apply()
                 e.dataTable = self.dataTable
+                e.messages = self.messages
                 e.graph_outputs = graph_outputs
                 raise e
             except PipelineError:

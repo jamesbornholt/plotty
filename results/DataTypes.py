@@ -8,6 +8,31 @@ import tempfile
 from scipy import stats
 import Image, ImageDraw, StringIO, urllib
 
+class Messages(object):
+
+  def __init__(self):
+    self.info_messages = list()
+    self.warn_messages = list()
+
+  def extend(self, other):
+    self.info_messages.extend(other.info_messages)
+    self.warn_messages.extend(other.warn_messages)
+
+  def info(self, text, extra=""):
+    self.info_messages.append((text, extra))
+
+  def warn(self, text, extra=""):
+    self.warn_messages.append((text, extra))
+
+  def empty(self):
+    return (len(self.info_messages) + len(self.warn_messages)) == 0
+
+  def infos(self):
+    return self.info_messages
+
+  def warnings(self):
+    return self.warn_messages
+
 
 class DataTable:
     """ The core data structure. DataTable has one property, DataTable.rows.
@@ -35,6 +60,7 @@ class DataTable:
         self.rows = []
         self.scenarioColumns = set()
         self.valueColumns = set()
+        self.messages = Messages()
         self.lastModified = 0
         for i,log in enumerate(logs):
             dir_path = os.path.join(settings.BM_LOG_DIR, log)
@@ -42,22 +68,24 @@ class DataTable:
             file_last_modified = os.path.getmtime(dir_path)
             if cached_vals == None or cached_vals['last_modified'] < file_last_modified:
                 try:
-                    rows, lastModified, scenarioColumns, valueColumns = self.loadCSV(log, wait)
+                    rows, lastModified, scenarioColumns, valueColumns, messages = self.loadCSV(log, wait)
                 except LogTabulateStarted as e:
                     e.index = i
                     e.length = len(logs)
                     raise e
-                ret = cache.set(log, {'last_modified': lastModified, 'rows': rows, 'scenarioColumns': scenarioColumns, 'valueColumns': valueColumns})
+                ret = cache.set(log, {'last_modified': lastModified, 'rows': rows, 'scenarioColumns': scenarioColumns, 'valueColumns': valueColumns, 'messages': messages})
                 logging.debug('For log %s: cache empty or expired, stored %d rows to cache.' % (log, len(rows)))
             else:
                 lastModified = cached_vals['last_modified']
                 rows = cached_vals['rows']
                 scenarioColumns = cached_vals['scenarioColumns']
                 valueColumns = cached_vals['valueColumns']
+                messages = cached_vals['messages']
                 logging.debug('For log %s: loaded %d rows from cache (dir last modified: %d, cache last modified: %d)' % (log, len(rows), file_last_modified, cached_vals['last_modified']))
             self.rows.extend(rows)
             self.scenarioColumns |= scenarioColumns
             self.valueColumns |= valueColumns
+            self.messages.extend(messages)
             if self.lastModified < lastModified: 
                 self.lastModified = lastModified
 
@@ -74,6 +102,7 @@ class DataTable:
         """
         scenarios = {}
         value_cols = set()
+        messages = Messages()
 
         dir_path = os.path.join(settings.BM_LOG_DIR, log)
         csv_dir = os.path.join(settings.CACHE_ROOT, "csv")
@@ -123,15 +152,13 @@ class DataTable:
             try:
               scenarios[schash].values[key_clean] = float(value)
             except:
-              pass
-              # todo: we may want to warn users?
-              # raise PipelineError("Invalid value, %s is not a number" % value)
+              messages.warn("'%s' not numeric" % value, str(line))
         
         logging.debug('Parsed %d rows from CSV' % len(scenarios))
         scenario_cols = reader.fieldnames
         scenario_cols.remove('key')
         scenario_cols.remove('value')
-        return scenarios.values(), lastModified, set(scenario_cols), value_cols
+        return scenarios.values(), lastModified, set(scenario_cols), value_cols, messages
 
     def headers(self):
         """ Returns the headers that would be used to output a table of

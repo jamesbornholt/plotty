@@ -299,6 +299,33 @@ th.headerSortDown {
     background: transparent url(arrow-ambiguous.gif) center top no-repeat;
 }
 
+.messages {
+    padding: 0.2em;
+    border: 1px solid #abcdef;
+    background: #D4E9FF;
+    white-space: nowrap;
+}
+.messages h1 {
+    font-size: 110%;
+    padding: 0;
+    margin: 0;
+}
+
+.message-warning-main {
+    font-weight: bold;
+}
+
+.message-warning-extra {
+    font-size: 50%;
+}
+
+.message-information-main {
+}
+
+.message-information-extra {
+    font-size: 50%;
+}
+
 .ambiguity {
     background-color: #ffbc80;
     border: 1px solid #ff8c26;

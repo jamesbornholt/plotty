@@ -1,7 +1,7 @@
 # Django settings for django_site project.
 import sys, os
 
-DEBUG = False
+DEBUG = True
 TEMPLATE_DEBUG = DEBUG
 
 # Two-tailed confidence level (i.e. this value will be halved for calls to

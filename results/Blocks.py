@@ -28,7 +28,7 @@ class Block(object):
             caching results or calculations for reuse. """
         pass
     
-    def apply(self, data_table):
+    def apply(self, data_table, messages):
         """ Apply this block to the data_table. data_table is passed by reference,
             so this method does not return.
 
@@ -93,7 +93,7 @@ class FilterBlock(Block):
                 'value':    settings[2]
             })
 
-    def apply(self, data_table):
+    def apply(self, data_table, messages):
         """ Apply this block to the given data table.
         """
         new_rows = []
@@ -189,7 +189,7 @@ class ValueFilterBlock(Block):
                 'upperbound':   upperbound
             })
 
-    def apply(self, data_table):
+    def apply(self, data_table, messages):
         """ Apply this block to the given data table.
         """
         new_rows = []
@@ -251,7 +251,7 @@ class AggregateBlock(Block):
         self.type = settings[0]
         self.column = settings[1]
 
-    def apply(self, data_table):
+    def apply(self, data_table, messages):
         """ Apply this block to the given data table.
         """
         groups = {}
@@ -358,7 +358,7 @@ class NormaliseBlock(Block):
                     'value':    elements[1]
                 })
     
-    def apply(self, data_table):
+    def apply(self, data_table, messages):
         """ Apply this block to the given data table.
         """
 
@@ -728,7 +728,7 @@ class GraphBlock(Block):
 
         return output
 
-    def apply(self, data_table):
+    def apply(self, data_table, messages):
         """ Render the graph to HTML, including images """
         if self.type == GraphBlock.TYPE['HISTOGRAM'] or self.type == GraphBlock.TYPE['XY']:
             sets, scenario_keys = self.group(data_table)
