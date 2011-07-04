@@ -9,7 +9,8 @@ BLOCK_MAPPINGS = {
     '1': FilterBlock,
     '2': AggregateBlock,
     '3': NormaliseBlock,
-    '4': GraphBlock
+    '4': GraphBlock,
+    '5': ValueFilterBlock
 }
 
 class Pipeline(object):
@@ -134,6 +135,8 @@ def execute_pipeline(encoded_string, csv_graphs=False):
                 AggregateBlock().process(dt, **block['params'])
             elif block['type'] == 'filter':
                 FilterBlock().process(dt, block['filters'])
+            elif block['type'] == 'valuefilter':
+                ValueFilterBlock().process(dt, block['filters'])
             elif block['type'] == 'normalise':
                 NormaliseBlock().process(dt, **block['params'])
             elif block['type'] == 'graph':

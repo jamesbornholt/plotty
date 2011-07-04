@@ -130,6 +130,96 @@ class FilterBlock(Block):
         data_table.scenarioColumns -= removed_scenario_cols
         data_table.rows = new_rows
 
+class ValueFilterBlock(Block):
+    """ Filters the datatable by including or excluding particular rows based
+        on value criteria. The rows that do not match every filter are thrown out 
+        (that is, the list of filters is ANDed together). """
+
+    TYPE = {
+        'IS': '1',
+        'IS_NOT': '2'
+    }
+
+    def __init__(self):
+        """ Define the single instance variable of a ValueFilterBlock.
+        
+        filters:  An array of dictionaries describing the filters to be applied.
+        Each filter has three properties:
+         * column -- the scenario column to be checked (string)
+         * value  -- the value the specified scenario column should
+                     take
+         * is     -- if true, each row must have the specified scenario
+                     column set to the specified value. If false, each
+                     row must *not* have the specified column set to
+                     the specified value.
+        """
+        super(ValueFilterBlock, self).__init__()
+
+        self.filters = []
+
+
+    def decode(self, param_string, cache_key):
+        """ Decode a filter block from an encoded pipeline string.
+            Filter blocks are encoded in the form:
+            filter1scenario^filter1is^filter1value&filter2scenario^...
+        """
+        parts = param_string.split(PipelineEncoder.GROUP_SEPARATOR)
+        # There must be at least two - a flagword and one filter
+        if len(parts) < 2:
+            raise PipelineError("ValueFilter block invalid: not enough parts")
+        
+        self.flags = int(parts[0])
+
+        # Everything past the first part is a filter
+        for filt_str in parts[1:]:
+            settings = filt_str.split(PipelineEncoder.PARAM_SEPARATOR)
+            # Must be exactly three parts - scenario, is, value
+            if len(settings) != 3:
+                logging.debug("Filter invalid: not enough parts in %s" % filt_str)
+                continue
+            self.filters.append({
+                'scenario': settings[0],
+                'is':       (settings[1] == FilterBlock.TYPE['IS']),
+                'value':    settings[2]
+            })
+
+    def apply(self, data_table):
+        """ Apply this block to the given data table.
+        """
+        new_rows = []
+        removed_scenario_cols = set()
+        for filt in self.filters:
+            if filt['is']:
+                removed_scenario_cols.add(filt['scenario'])
+
+        for row in data_table:
+            add = True
+            for filt in self.filters:
+                if filt['is']:
+                    if filt['scenario'] not in row.scenario or row.scenario[filt['scenario']] != filt['value']:
+                        add = False
+                        break
+                else:
+                    if filt['scenario'] in row.scenario and row.scenario[filt['scenario']] == filt['value']:
+                        add = False
+                        break
+            if add:
+                # Delete the scenario columns
+                for col in removed_scenario_cols:
+                    if col in row.scenario:
+                        del row.scenario[col]
+                new_rows.append(row)
+
+        # We do it this way because calling .remove(x) on a set raises a key
+        # value error if it wasn't in the set
+        removed_scenario_cols = set()
+        for filt in self.filters:
+            if filt['is']:
+                removed_scenario_cols.add(filt['scenario'])
+        
+        data_table.scenarioColumns -= removed_scenario_cols
+        data_table.rows = new_rows
+
 
 class AggregateBlock(Block):
     """ Aggregates the rows in the DataTable by grouping them based on a

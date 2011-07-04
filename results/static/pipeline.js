@@ -1415,6 +1415,257 @@ var Blocks = {
             }
         }
     }),
+
+    /**
+     * The value filter block allows certain filters to be specified that will
+     * remove rows from the data.
+     */
+    ValueFilterBlock: Block.extend({
+        /**
+         ** Static fields
+         **/
+
+        /**
+         * The ID of the template for this filter
+         */
+        TEMPLATE_ID: "#pipeline-valuefilter-template",
+
+        /**
+         * The ID of this block for encoding (the inverse of the mapping in
+         * Pipeline.encoder.MAPPINGS)
+         */
+        ID: 5,
+
+        /**
+         * The type of filter
+         */
+        TYPE: {
+            IS: 1,
+            IS_NOT: 2
+        },
+        
+        /**
+         ** Object fields
+         **/
+
+        /**
+         * The currently valid filters
+         */
+        filters: [{scenario: -1, is: 1, value: -1}],
+        
+        /**
+         * The options table for selecting filters
+         */
+        optionsTable: null,
+        
+        /**
+         ** Object methods
+         **/
+
+        /**
+         * Creates a new block. See Block.constructor for parameters.
+         */
+        constructor: function(insertIndex) {
+            this.base(insertIndex);
+            
+            // Create a closure to use as the callback for removing objects.
+            // This way, the scope of this block is maintained.
+            var thisBlock = this;
+            var removeClosure = function(row) {
+                thisBlock.removeFilter.call(thisBlock, row); 
+            };
+            var addClosure = function(row) {
+                thisBlock.filters.push({scenario: -1, is: 1, value: -1});
+                Pipeline.refresh(Pipeline.constants.CASCADE_REASON_SELECTION_CHANGED);
+            };
+            
+            // Create the option table
+            this.optionsTable = new OptionsTable($('.pipeline-valuefilter-table', this.element), removeClosure, Pipeline.refresh, addClosure);
+            
+            // Hook the dropdowns
+            $(this.element).delegate('select', 'change', function() {
+                thisBlock.readState();
+                Pipeline.refresh(Pipeline.constants.CASCADE_REASON_SELECTION_CHANGED);
+            });
+        },
+        
+        /**
+        * Decode a parameter string and set this block's configuration according
+        * to those parameters.
+         */
+        decode: function(params) {
+            this.filters = [];
+            var parts = params.split(Pipeline.encoder.GROUP_SEPARATOR);
+            // There must be at least two - a flagword and one filter
+            if ( parts.length < 2 ) {
+                console.debug("ValueFilter block invalid: not enough parts");
+                return;
+            }
+
+            this.flags = parseInt(parts[0]);
+
+            var filts = parts.slice(1);
+            var thisBlock = this;
+            jQuery.each(filts, function(i ,filter) {
+                var settings = filter.split(Pipeline.encoder.PARAM_SEPARATOR);
+                // Exactly three parts - scenario, is, value
+                if ( settings.length != 3 ) {
+                    console.debug("ValueFilter invalid: not enough parts in ", filter);
+                }
+                thisBlock.filters.push({scenario: settings[0], is: settings[1], value: settings[2]});
+            });
+        },
+        
+        /**
+         * Encode this block into a parameter string based on its configuration.
+         */
+        encode: function() {
+            var strs = [this.flags];
+            jQuery.each(this.filters, function(i, filter) {
+                if ( filter.scenario != -1 && filter.value != -1 ) {
+                    strs.push(filter.scenario + Pipeline.encoder.PARAM_SEPARATOR
+                              + filter.is + Pipeline.encoder.PARAM_SEPARATOR + filter.value);
+                }
+            });
+            return strs.join(Pipeline.encoder.GROUP_SEPARATOR);
+        },
+
+        /**
+         * Take this block's HTML values and load them into local
+         * configuration.
+         */
+        readState: function() {
+            this.filters = [];
+            var thisBlock = this;
+            $('tr', this.element).each(function() {
+                var scenarioSelect = $('.select-valuefilter-column', this);
+                var isSelect = $('.select-valuefilter-is', this);
+                var valueSelect = $('.select-valuefilter-value', this);
+
+                thisBlock.filters.push({
+                    scenario: scenarioSelect.val(),
+                    is: isSelect.val(),
+                    value: valueSelect.val()
+                });
+            });
+        },
+
+        /**
+         * Take this block's local configuration and load it into the
+         * HTML.
+         */
+        loadState: function() {
+            // Get rid of all but the first row
+            this.optionsTable.reset();
+            
+            // Create new rows for each filter
+            var thisBlock = this;
+            jQuery.each(this.filters, function(i, filter) {
+                var row = thisBlock.optionsTable.addRow();
+                var scenarioSelect = $('.select-valuefilter-column', row);
+                var isSelect = $('.select-valuefilter-is', row);
+                var valueSelect = $('.select-valuefilter-value', row);
+                
+                // Note here we assume the scenario dropdown has already been
+                // updated, and the value cache is also up to date with new
+                // logs.
+                scenarioSelect.val(filter.scenario);
+                isSelect.val(filter.is);
+                if ( filter.scenario != -1 ) {
+                    Utilities.updateSelect(valueSelect, Pipeline.valueCache[filter.scenario]);
+                }
+                else {
+                    Utilities.updateSelect(valueSelect, []);
+                }
+                valueSelect.val(filter.value);
+            });
+        },
+        
+        /**
+         * Visit this block and cascade the available scenario and value 
+         * columns. See Block.cascade for parameters and return.
+         */
+        cascade: function(scenarioCols, valueCols, reason) {
+            var thisBlock = this;
+            var changed = false;
+            
+            // Update the scenario columns
+            $('.select-valuefilter-column', this.element).each(function() {
+                Utilities.updateSelect(this, scenarioCols, true);
+            });
+            
+            jQuery.each(this.filters, function(i, filter) {
+                // If the selected scenario isn't in the new available ones,
+                // reset this row
+                if ( jQuery.inArray(filter.scenario, scenarioCols) == -1 ) {
+                    filter.scenario = -1;
+                    filter.value = -1;
+                    changed = true;
+                    return;
+                }
+                
+                // Check that the value is still in the valueCache
+                if ( jQuery.inArray(filter.value, Pipeline.valueCache[filter.scenario]) == -1 ) {
+                    filter.value = -1;
+                    changed = true;
+                    return;
+                }
+                
+                // We now have valid scenario and value. Remove the scenario
+                // from scenarioCols
+                if ( filter.is == thisBlock.TYPE.IS ) {
+                    scenarioCols.remove(filter.scenario);
+                }
+            });
+            
+            // If the values have changed, or the logs have changed (and thus
+            // the valueCache), we have to reload the HTML.
+            if ( changed || reason == Pipeline.constants.CASCADE_REASON_LOGS_CHANGED ) {
+                this.loadState();
+            }
+            
+            if ( changed ) {
+                return false;
+            }
+            else {
+                return [scenarioCols, valueCols];
+            }
+        },
+        
+        /**
+         * A row is about to be removed from the OptionsTable. We need to
+         * clean it up here.
+         *
+         * @param row Element The table row to be removed
+         */
+        removeFilter: function(row) {
+            var value = this.filterValue(row);
+            
+            for ( var i = 0; i < this.filters.length; i++ ) {
+                if ( this.filters[i].scenario == value.scenario
+                     && this.filters[i].is == value.is
+                     && this.filters[i].value == value.value ) {
+                    this.filters.splice(i, 1);
+                    break;
+                }
+            }
+        },
+        
+        /**
+         * Turns a <tr> in the OptionsTable into a dictionary
+         *
+         * @param row Element The table row to gather values from
+         * @return dict|boolean The values in the given row, or false if
+         *   the selection is incomplete
+         */
+        filterValue: function(row) {
+            var scenario = $('.select-valuefilter-column', row).val();
+            var is       = $('.select-valuefilter-is', row).val();
+            var value    = $('.select-valuefilter-value', row).val();
+            
+            return {scenario: scenario, is: is, value: value};
+        }
+    }),
 };
 
 
@@ -1769,6 +2020,9 @@ var Pipeline = {
         });
         $('#add-graph').click(function() {
             Pipeline.createBlock(Blocks.GraphBlock);
+        });
+        $('#add-valuefilter').click(function() {
+            Pipeline.createBlock(Blocks.ValueFilterBlock);
         });
 
         // Hook the button for showing large tables

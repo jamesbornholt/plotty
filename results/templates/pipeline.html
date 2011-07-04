@@ -42,6 +42,28 @@
 			</div>
 			<div class="pipeline-footer"></div>
 		</div>
+		<div id="pipeline-valuefilter-template" class="pipeline valuefilter pipeline-block">
+			<button type="button" class="remove-button">X</button>
+			<div class="pipeline-content">
+				<span class="pipeline-header">ValueFilter</span> <br />
+				<table class="pipeline-valuefilter-table">
+				    <tr>
+				        <td>
+				            <select class="select-valuefilter-column scenario-column scenario-column-values-select"><option></option></select>
+				        </td>
+				        <td>
+				            <select class="select-valuefilter-is"><option value="1" selected="selected">is</option><option value="2">is not</option></select>
+				        </td>
+				        <td>
+				            <select class="select-valuefilter-value scenario-column-values"><option></option></select>
+				        </td>
+				        <td><button type="button" class="remove-row" disabled="disabled">-</button></td>
+				        <td><button type="button" class="add-row">+</button></td>
+				    </tr>
+				</table>
+			</div>
+			<div class="pipeline-footer"></div>
+		</div>
 		<div id="pipeline-aggregate-template" class="pipeline aggregate pipeline-block">
 			<button type="button" class="remove-button">X</button>
 			<div class="pipeline-content">
@@ -158,7 +180,7 @@
 		<div id="pipeline-add" class="pipeline">
 			<div class="pipeline-content">
 				<span class="pipeline-header">Add Block</span> <br />
-				<button type="button" id="add-filter">Filter</button><button type="button" id="add-aggregate">Aggregate</button><button type="button" id="add-normalise">Normalise</button><button type="button" id="add-graph">Graph</button>
+				<button type="button" id="add-filter">Filter</button><button type="button" id="add-valuefilter">ValueFilter</button><button type="button" id="add-aggregate">Aggregate</button><button type="button" id="add-normalise">Normalise</button><button type="button" id="add-graph">Graph</button>
 			</div>
 		</div>
 		<div id="pipeline-save" class="pipeline">
