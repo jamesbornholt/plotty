@@ -2093,6 +2093,11 @@ var Pipeline = {
             window.location = ".";
         });
 
+        // Hook the load button for loading pipelines
+        $("#pipeline-purgecache-go").click(function() {
+            Pipeline.purgeCache();
+        });
+
         $("#pipeline-delete-go").click(function() {
             var select = $('#pipeline-load-select');
             if ( select.val() != '-1' ) {
@@ -2676,6 +2681,15 @@ var Pipeline = {
     },
 
     /**
+     * Purge the cache on the server. Also resets the pipeline
+     */
+    purgeCache: function() {
+        Pipeline.ajax.purgeCache(function(data, textStatus, xhr) {
+            window.location = ".";
+        });
+    },
+
+    /**
      * Save this pipeline to the server.
      */
     savePipeline: function() {
@@ -2766,6 +2780,14 @@ var Pipeline = {
          */
         deletePipeline: function(name, callback) {
             $.post('ajax/delete-pipeline/', {'name': name}, callback, 'json');
+        },
+
+        /**
+         * ajax/purge-cache/ purge cache files on the server
+         *
+         */
+        purgeCache: function(callback) {
+            $.post('ajax/purge-cache/', {}, callback, 'json');
         },
 
         /**

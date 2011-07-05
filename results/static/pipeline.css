@@ -79,6 +79,9 @@ input:disabled {
 #pipeline-debug-go {
     background-image: url('bug.png');
 }
+#pipeline-purgecache-go {
+    background-image: url('bin.png');
+}
 
 .odd {
     background: #eee;
@@ -134,6 +137,11 @@ input:disabled {
     margin-bottom: 20px;
 }
 #pipeline-save {
+    background: white;
+    border-bottom: 1px solid black;
+    margin-bottom: 20px;
+}
+#pipeline-tools {
     background: white;
     border-bottom: 1px solid black;
     margin-bottom: 20px;

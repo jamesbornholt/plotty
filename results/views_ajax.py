@@ -7,7 +7,7 @@ from plotty.results.Blocks import *
 from plotty.results.models import SavedPipeline
 from plotty.results.Pipeline import *
 from plotty import settings
-import json, csv, logging, os
+import json, csv, logging, os, shutil
 from datetime import datetime
 
 def filter_values(request, logs, col):
@@ -135,6 +135,20 @@ def save_pipeline(request):
         new.save()
     except:
         return HttpResponse(json.dumps({'error': True}))
+    return HttpResponse(json.dumps({'error': False}))
+    
+def purge_cache(request):
+    try:
+      for cache_part in ('log', 'csv', 'graph'):
+        dir_path = os.path.join(settings.CACHE_ROOT, cache_part)
+        for entry in os.listdir(dir_path):
+          entry_path = os.path.join(dir_path, entry) 
+          if os.path.isdir(entry_path):
+            shutil.rmtree(entry_path)
+          else:
+            os.unlink(entry_path)
+    except:
+      return HttpResponse(json.dumps({'error': True}))
     return HttpResponse(json.dumps({'error': False}))
     
 def tabulate_progress(request, pid):
