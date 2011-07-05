@@ -1718,10 +1718,10 @@ var OptionsTable = Base.extend({
             this.addCallback = addCallback;
         }
         // Hook elements on the table
-        $(".add-row", element).live("click", {table: this}, function(e) {
+        this.element.delegate(".add-row", "click", {table: this}, function(e) {
             e.data.table._addBlockTableRow.call(e.data.table);
         });
-        $(".remove-row", element).live("click", {table: this}, function(e) {
+        this.element.delegate(".remove-row", "click", {table: this}, function(e) {
             // Strange IE bug where disabled buttons still fire click events 
             if ( this.disabled ) return;
             e.data.table._removeBlockTableRow.call(e.data.table, this);
