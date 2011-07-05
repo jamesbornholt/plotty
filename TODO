@@ -21,3 +21,124 @@
 The filter block probably needs to be more flexible. As a first step it would
 be helpful to toggle between "meets all these criteria" and "meets at least
 one criteria" - that is between AND and OR relations.
+
+== Tabulate profile ==
+> python -m cProfile results/Tabulate.py log/tiejun-mole-2011-06-29-Wed-233845 out.csv
+Tabulating log/tiejun-mole-2011-06-29-Wed-233845 to out.csv (pid 15694)
+         137281224 function calls (137281099 primitive calls) in 121.895 seconds
+
+   Ordered by: standard name
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    0.002    0.002  121.895  121.895 Tabulate.py:1(<module>)
+     1800    0.058    0.000   22.827    0.013 Tabulate.py:17(gzip_open_zcat)
+   520853    2.658    0.000    2.658    0.000 Tabulate.py:30(build_result)
+     9900    0.095    0.000    0.186    0.000 Tabulate.py:42(extract_scenario)
+        1   31.204   31.204  121.887  121.887 Tabulate.py:7(extract_csv)
+        1    0.000    0.000    0.000    0.000 pickle.py:1261(_EmptyClass)
+        1    0.000    0.000    0.000    0.000 pickle.py:171(Pickler)
+        1    0.002    0.002    0.002    0.002 pickle.py:25(<module>)
+        1    0.000    0.000    0.000    0.000 pickle.py:58(PickleError)
+        1    0.000    0.000    0.000    0.000 pickle.py:62(PicklingError)
+        1    0.000    0.000    0.000    0.000 pickle.py:69(UnpicklingError)
+        1    0.000    0.000    0.000    0.000 pickle.py:82(_Stop)
+        1    0.000    0.000    0.000    0.000 pickle.py:827(Unpickler)
+     1800    0.009    0.000    0.011    0.000 posixpath.py:60(join)
+      117    0.000    0.000    0.001    0.000 re.py:134(match)
+      900    0.001    0.000    0.003    0.000 re.py:139(search)
+       15    0.000    0.000    0.005    0.000 re.py:188(compile)
+     1032    0.001    0.000    0.006    0.000 re.py:229(_compile)
+       16    0.000    0.000    0.000    0.000 sre_compile.py:178(_compile_charset)
+       16    0.000    0.000    0.000    0.000 sre_compile.py:207(_optimize_charset)
+       35    0.000    0.000    0.000    0.000 sre_compile.py:24(_identityfunction)
+        3    0.000    0.000    0.000    0.000 sre_compile.py:258(_mk_bitmap)
+    57/17    0.001    0.000    0.001    0.000 sre_compile.py:32(_compile)
+       18    0.000    0.000    0.000    0.000 sre_compile.py:354(_simple)
+       17    0.000    0.000    0.001    0.000 sre_compile.py:361(_compile_info)
+       34    0.000    0.000    0.000    0.000 sre_compile.py:474(isstring)
+       17    0.000    0.000    0.002    0.000 sre_compile.py:480(_code)
+       17    0.000    0.000    0.005    0.000 sre_compile.py:495(compile)
+       96    0.000    0.000    0.000    0.000 sre_parse.py:126(__len__)
+        6    0.000    0.000    0.000    0.000 sre_parse.py:128(__delitem__)
+      358    0.000    0.000    0.000    0.000 sre_parse.py:130(__getitem__)
+       18    0.000    0.000    0.000    0.000 sre_parse.py:134(__setitem__)
+      506    0.000    0.000    0.000    0.000 sre_parse.py:138(append)
+    75/35    0.000    0.000    0.001    0.000 sre_parse.py:140(getwidth)
+       17    0.000    0.000    0.000    0.000 sre_parse.py:178(__init__)
+      622    0.001    0.000    0.001    0.000 sre_parse.py:182(__next)
+      105    0.000    0.000    0.000    0.000 sre_parse.py:195(match)
+      577    0.000    0.000    0.001    0.000 sre_parse.py:201(get)
+        2    0.000    0.000    0.000    0.000 sre_parse.py:225(_class_escape)
+       15    0.000    0.000    0.000    0.000 sre_parse.py:257(_escape)
+    28/17    0.000    0.000    0.002    0.000 sre_parse.py:301(_parse_sub)
+    37/26    0.001    0.000    0.002    0.000 sre_parse.py:379(_parse)
+       17    0.000    0.000    0.003    0.000 sre_parse.py:663(parse)
+       17    0.000    0.000    0.000    0.000 sre_parse.py:67(__init__)
+       11    0.000    0.000    0.000    0.000 sre_parse.py:72(opengroup)
+       11    0.000    0.000    0.000    0.000 sre_parse.py:83(closegroup)
+       57    0.000    0.000    0.000    0.000 sre_parse.py:90(__init__)
+     1800    0.011    0.000    0.030    0.000 subprocess.py:1009(_get_handles)
+     1800    0.016    0.000    0.046    0.000 subprocess.py:1054(_set_cloexec_flag)
+     1800    0.285    0.000    3.012    0.002 subprocess.py:1078(_execute_child)
+     1800    0.006    0.000    0.009    0.000 subprocess.py:1205(_handle_exitstatus)
+     1800    0.002    0.000    0.002    0.000 subprocess.py:1219(_internal_poll)
+     1800    0.020    0.000    0.049    0.000 subprocess.py:1239(wait)
+        1    0.004    0.004    0.007    0.007 subprocess.py:389(<module>)
+        1    0.000    0.000    0.000    0.000 subprocess.py:401(CalledProcessError)
+     1800    0.002    0.000    0.002    0.000 subprocess.py:453(_cleanup)
+     3600    0.021    0.000    2.096    0.001 subprocess.py:468(_eintr_retry_call)
+        1    0.000    0.000    0.000    0.000 subprocess.py:611(Popen)
+     1800    0.158    0.000    3.258    0.002 subprocess.py:612(__init__)
+     1800    0.048    0.000    0.049    0.000 subprocess.py:702(__del__)
+     1800    0.040    0.000   19.508    0.011 subprocess.py:713(communicate)
+        1    0.000    0.000    0.000    0.000 traceback.py:1(<module>)
+       17    0.000    0.000    0.000    0.000 {_sre.compile}
+    97157    0.020    0.000    0.020    0.000 {built-in method group}
+ 54051046   14.409    0.000   14.409    0.000 {built-in method match}
+ 67188673   44.431    0.000   44.431    0.000 {built-in method search}
+    53908    0.505    0.000    0.505    0.000 {built-in method split}
+     1800    0.003    0.000    0.003    0.000 {cStringIO.StringIO}
+        1    0.000    0.000    0.000    0.000 {dir}
+     3600    0.030    0.000    0.030    0.000 {fcntl.fcntl}
+     1800    0.000    0.000    0.000    0.000 {gc.disable}
+     1800    0.008    0.000    0.008    0.000 {gc.enable}
+     1800    0.000    0.000    0.000    0.000 {gc.isenabled}
+        1    0.000    0.000    0.000    0.000 {getattr}
+        1    0.000    0.000    0.000    0.000 {hasattr}
+     4009    0.013    0.000    0.013    0.000 {isinstance}
+1790/1767    0.000    0.000    0.000    0.000 {len}
+       11    0.000    0.000    0.000    0.000 {max}
+   523036    0.067    0.000    0.067    0.000 {method 'append' of 'list' objects}
+      900    0.245    0.000    0.245    0.000 {method 'close' of 'cStringIO.StringI' objects}
+     1801    0.037    0.000    0.037    0.000 {method 'close' of 'file' objects}
+     1800    0.002    0.000    0.002    0.000 {method 'count' of 'list' objects}
+        1    0.000    0.000    0.000    0.000 {method 'disable' of '_lsprof.Profiler' objects}
+     1800    0.001    0.000    0.001    0.000 {method 'endswith' of 'str' objects}
+       20    0.000    0.000    0.000    0.000 {method 'extend' of 'list' objects}
+     1056    0.000    0.000    0.000    0.000 {method 'get' of 'dict' objects}
+       17    0.000    0.000    0.000    0.000 {method 'items' of 'dict' objects}
+        1    0.000    0.000    0.000    0.000 {method 'keys' of 'dict' objects}
+   520873    0.198    0.000    0.198    0.000 {method 'pop' of 'list' objects}
+     1800   19.381    0.011   19.381    0.011 {method 'read' of 'file' objects}
+ 13543452    4.843    0.000    4.843    0.000 {method 'readline' of 'cStringIO.StringI' objects}
+       11    0.000    0.000    0.000    0.000 {method 'remove' of 'list' objects}
+     9900    0.014    0.000    0.014    0.000 {method 'split' of 'str' objects}
+     1800    0.002    0.000    0.002    0.000 {method 'startswith' of 'str' objects}
+   161793    0.027    0.000    0.027    0.000 {method 'strip' of 'str' objects}
+   520696    0.276    0.000    0.276    0.000 {method 'write' of 'file' objects}
+      125    0.000    0.000    0.000    0.000 {min}
+        1    0.000    0.000    0.000    0.000 {open}
+      480    0.000    0.000    0.000    0.000 {ord}
+     1800    0.001    0.000    0.001    0.000 {posix.WEXITSTATUS}
+     1800    0.000    0.000    0.000    0.000 {posix.WIFEXITED}
+     1800    0.002    0.000    0.002    0.000 {posix.WIFSIGNALED}
+     5400    0.037    0.000    0.037    0.000 {posix.close}
+     1800    0.055    0.000    0.055    0.000 {posix.fdopen}
+     1800    0.537    0.000    0.537    0.000 {posix.fork}
+        1    0.000    0.000    0.000    0.000 {posix.getpid}
+        1    0.001    0.001    0.001    0.001 {posix.listdir}
+     3600    0.029    0.000    0.029    0.000 {posix.pipe}
+     1800    2.060    0.001    2.060    0.001 {posix.read}
+        1    0.000    0.000    0.000    0.000 {posix.sysconf}
+     1800    0.016    0.000    0.016    0.000 {posix.waitpid}
+        8    0.000    0.000    0.000    0.000 {range}
