@@ -1,0 +1,67 @@
+#!/bin/bash
+
+if [ -z "$1" ]; then
+    echo "usage: update-plotty project-name [user-name]"
+    echo ""
+    echo "Updates a plotty instance in your home folder, named project-name."
+    echo "If user-name was specified, the instance will be created in that user's home."
+    echo "This will then be accessible from http://squirrel/plotty/user-name/project-name/"
+    exit
+fi
+
+PROJECT_NAME=$1
+
+USER=""
+if [  -z "$2" ]; then
+    USER=`whoami`
+else
+    USER=$2
+fi
+
+USER_HOME="/home/$USER"
+if [[ !( -d $USER_HOME ) ]]; then
+    echo "ERROR: invalid user $USER"
+    exit
+fi
+
+if [[ !( -d $USER_HOME/plotty ) ]]; then
+    mkdir $USER_HOME/plotty
+fi
+
+PLOTTY_ROOT=$USER_HOME/plotty/$PROJECT_NAME
+
+if [[ ! -d $PLOTTY_ROOT ]]; then
+    echo "ERROR: project $PROJECT_NAME already exists for user $USER"
+    exit
+fi
+
+echo "---> Clearing cache for $PLOTTY_ROOT"
+
+cp $PLOTTY_ROOT/cache/database.sqlite3 $PLOTTY_ROOT/database.sqlite3.temp
+rm -rf $PLOTTY_ROOT/cache/*
+mkdir $PLOTTY_ROOT/cache/logs
+mkdir $PLOTTY_ROOT/cache/graphs
+mv $PLOTTY_ROOT/database.sqlite3.temp $PLOTTY_ROOT/cache/database.sqlite3
+
+echo "---> Updating source code in $PLOTTY_ROOT"
+hg pull --update -r default -R $PLOTTY_ROOT/app/plotty ssh://squirrel.moma//home/mercurial/all/shared/plotty > /dev/null
+if [[ $? -ne 0 ]]; then
+    echo "ERROR: failed to check code out from mercurial"
+    exit
+fi
+
+echo "---> Updating server.wsgi "
+cp $PLOTTY_ROOT/app/plotty/server.wsgi $PLOTTY_ROOT/app/server.wsgi
+
+echo "---> Synchronizing database "
+(cd $PLOTTY_ROOT/app/plotty; PLOTTY_ROOT="$PLOTTY_ROOT" python manage.py syncdb) > /dev/null
+
+echo "---> Checking permissions for apache"
+chmod -R a+r $PLOTTY_ROOT
+chmod -R a+rw $PLOTTY_ROOT/cache
+#chmod -R a+r $PLOTTY_ROOT/log
+
+echo ""
+echo "Done!"
+echo "The plotty instance is at $PLOTTY_ROOT"
+echo "Visit http://squirrel.anu.edu.au/plotty/$USER/$PROJECT_NAME/"

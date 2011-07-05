@@ -74,7 +74,7 @@ def pipeline(request):
     }, context_instance=RequestContext(request))
 
 def debug_clear_cache(request):
-    path = os.path.join(settings.CACHE_ROOT, 'logs/')
+    path = os.path.join(settings.CACHE_ROOT, 'log/')
     shutil.rmtree(path)
     os.mkdir(path)
     return HttpResponse('Purged cache in ' + path)

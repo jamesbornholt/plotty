@@ -48,7 +48,7 @@ mkdir $PLOTTY_ROOT/cache/logs
 mkdir $PLOTTY_ROOT/cache/graphs
 
 echo "---> Checking out source code to $PLOTTY_ROOT"
-hg clone ssh://squirrel.moma//home/mercurial/all/shared/plotty $PLOTTY_ROOT/app/plotty > /dev/null
+hg clone -r default ssh://squirrel.moma//home/mercurial/all/shared/plotty $PLOTTY_ROOT/app/plotty > /dev/null
 if [[ $? -ne 0 ]]; then
     echo "ERROR: failed to check code out from mercurial"
     exit
