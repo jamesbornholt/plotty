@@ -10,7 +10,7 @@ def extract_csv(log, csvgz_file, write_status=None):
     pid = str(os.getpid())
     file_path = os.path.join(write_status, pid + ".status")
     f = open(file_path, 'w')
-    f.write(str(4 * len(entries)) + "\r\n")
+    f.write(str(3 * len(entries)) + "\r\n")
     f.flush()
 
   def build_result(scenariokeys, scenario, key, value) :
@@ -99,19 +99,23 @@ def extract_csv(log, csvgz_file, write_status=None):
     error = 0
     gunzip_process = subprocess.Popen(["gunzip", "-c", os.path.join(log, entry)], stdout=subprocess.PIPE)
     e = gunzip_process.stdout
-    l = e.readline()
+    lines = e.readlines()
+    line_count = len(lines)
+    line = 0 
     while 1:
       # Read a line
 
-      def eat_error(l):
+      def eat_error(line):
         while 1:
-          if not l or re_timedrun.search(l):
+          if line >= line_count or re_timedrun.search(lines[line]):
             break;
-          l = e.readline()
-        return l
+          line += 1
+        return line
 
-      if not l:
+      if line >= line_count:
         break
+
+      l = lines[line]
 
       if re_timedrun.search(l):
         if subentry >= 0 and error == 0:
@@ -129,7 +133,7 @@ def extract_csv(log, csvgz_file, write_status=None):
         subentry = subentry + 1
       elif re_err.search(l):
         error = 1
-        l = eat_error(l)
+        line = eat_error(line)
         continue
       elif l.startswith('='):
         m = re_scenario.match(l)
@@ -148,7 +152,7 @@ def extract_csv(log, csvgz_file, write_status=None):
                 results.append(build_result(scenariokeys, scenario, key, val))
           else:
             error = 1
-            l = eat_error(l)
+            line = eat_error(line)
             continue
         elif re_mmtkstats.match(l):
           headerline = e.readline()
@@ -166,7 +170,7 @@ def extract_csv(log, csvgz_file, write_status=None):
             results.append(build_result(scenariokeys, scenario, 'time', totaltime))
           else:
             error = 1
-            l = eat_error(l)
+            line = eat_error(line)
             continue
         else:
           m = re_passed.search(l)
@@ -187,14 +191,14 @@ def extract_csv(log, csvgz_file, write_status=None):
                 results.append(build_result(scenariokeys, scenario, "bmtime", msec))
                 iteration = iteration + 1
                 scenario["iteration"] = iteration
-      l = e.readline()
+      line += 1
 
     e.close()
     gunzip_process.wait()
     if subentry >= 0 and error == 0:
       for r in results:
         csv.write(r)
-    progress += 3
+    progress += 2 
     if write_status != None:
       f.write(str(progress) + "\r\n")
       f.flush()
