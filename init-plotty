@@ -44,8 +44,9 @@ ln -s $LOG_DIR $PLOTTY_ROOT/log
 
 mkdir $PLOTTY_ROOT/app
 mkdir $PLOTTY_ROOT/cache
-mkdir $PLOTTY_ROOT/cache/logs
-mkdir $PLOTTY_ROOT/cache/graphs
+mkdir $PLOTTY_ROOT/cache/log
+mkdir $PLOTTY_ROOT/cache/graph
+mkdir $PLOTTY_ROOT/cache/csv
 
 echo "---> Checking out source code to $PLOTTY_ROOT"
 hg clone -r default ssh://squirrel.moma//home/mercurial/all/shared/plotty $PLOTTY_ROOT/app/plotty > /dev/null
@@ -61,7 +62,6 @@ cp $PLOTTY_ROOT/app/plotty/database.sqlite3.default $PLOTTY_ROOT/cache/database.
 echo "---> Fixing permissions for apache"
 chmod -R a+r $PLOTTY_ROOT
 chmod -R a+rw $PLOTTY_ROOT/cache
-#chmod -R a+r $PLOTTY_ROOT/log
 
 echo ""
 echo "Done!"

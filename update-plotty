@@ -31,7 +31,7 @@ fi
 PLOTTY_ROOT=$USER_HOME/plotty/$PROJECT_NAME
 
 if [[ ! -d $PLOTTY_ROOT ]]; then
-    echo "ERROR: project $PROJECT_NAME already exists for user $USER"
+    echo "ERROR: project $PROJECT_NAME does not exist for user $USER"
     exit
 fi
 
@@ -39,8 +39,9 @@ echo "---> Clearing cache for $PLOTTY_ROOT"
 
 cp $PLOTTY_ROOT/cache/database.sqlite3 $PLOTTY_ROOT/database.sqlite3.temp
 rm -rf $PLOTTY_ROOT/cache/*
-mkdir $PLOTTY_ROOT/cache/logs
-mkdir $PLOTTY_ROOT/cache/graphs
+mkdir $PLOTTY_ROOT/cache/log
+mkdir $PLOTTY_ROOT/cache/graph
+mkdir $PLOTTY_ROOT/cache/csv
 mv $PLOTTY_ROOT/database.sqlite3.temp $PLOTTY_ROOT/cache/database.sqlite3
 
 echo "---> Updating source code in $PLOTTY_ROOT"
