@@ -2,7 +2,6 @@ import sys
 import os
 import re
 import subprocess
-from cStringIO import StringIO
 
 def extract_csv(log, csvgz_file, write_status=None):
   entries = [ f for f in os.listdir(log) if re.search(".log.gz$", f) ]
@@ -11,21 +10,8 @@ def extract_csv(log, csvgz_file, write_status=None):
     pid = str(os.getpid())
     file_path = os.path.join(write_status, pid + ".status")
     f = open(file_path, 'w')
-    f.write(str(2 * len(entries)) + "\r\n")
+    f.write(str(4 * len(entries)) + "\r\n")
     f.flush()
-
-  def gzip_open_zcat(path):
-    """ the gzip module has terrible performance pre-Python 2.7, and still
-        generally awful performance post 2.7. Here we call out to zcat,
-        ugly as it is, store the result in a StringIO buffer which we can then
-        treat as a file object. So, this method is a drop-in replacement for
-        gzip.open. """
-    # zcat has been bugged on OS X since... forever.
-    exe = 'zcat' if sys.platform != 'darwin' else 'gzcat'
-    p = subprocess.Popen([exe, path], stdout=subprocess.PIPE)
-    f = StringIO(p.communicate()[0])
-    assert p.returncode == 0
-    return f
 
   def build_result(scenariokeys, scenario, key, value) :
     r = ''
@@ -67,8 +53,9 @@ def extract_csv(log, csvgz_file, write_status=None):
 
   for entry in entries:
       extract_scenario(legacy_scenario, entry)
-      e = gzip_open_zcat(os.path.join(log, entry))
-      for l in e:
+      gunzip_process = subprocess.Popen(["gunzip", "-c", os.path.join(log, entry)], stdout=subprocess.PIPE)
+      e = gunzip_process.stdout
+      for l in e.readlines():
         m = re_scenario.match(l)
         if (m):
           legacy_mode = False
@@ -77,6 +64,8 @@ def extract_csv(log, csvgz_file, write_status=None):
       if write_status != None:
         f.write(str(progress) + "\r\n")
         f.flush()
+      e.close()
+      gunzip_process.wait()
 
   if legacy_mode:
     scenariokeys = legacy_scenario.keys()
@@ -108,15 +97,23 @@ def extract_csv(log, csvgz_file, write_status=None):
     invocation = 0
     subentry = -1
     error = 0
-    e = gzip_open_zcat(os.path.join(log, entry))
+    gunzip_process = subprocess.Popen(["gunzip", "-c", os.path.join(log, entry)], stdout=subprocess.PIPE)
+    e = gunzip_process.stdout
+    l = e.readline()
     while 1:
-      l = e.readline()
+      # Read a line
+
+      def eat_error(l):
+        while 1:
+          if not l or re_timedrun.search(l):
+            break;
+          l = e.readline()
+        return l
+
       if not l:
         break
-      m = re_scenario.match(l)
-      if m:
-        scenario[m.group(1)] = m.group(2)
-      elif re_timedrun.search(l):
+
+      if re_timedrun.search(l):
         if subentry >= 0 and error == 0:
           for r in results:
             csv.write(r)
@@ -130,63 +127,74 @@ def extract_csv(log, csvgz_file, write_status=None):
         scenario['iteration'] = iteration
         error = 0
         subentry = subentry + 1
-      elif error == 0:
-        if re_err.search(l):
-            error = 1
-        else:
-          if re_tabulate.match(l):
-            headerline = e.readline()
-            dataline = e.readline()
-            if re_nonwhitespace.match(headerline) and re_digit.match(dataline):
-              keys = re_whitespace.split(headerline)
-              vals = re_whitespace.split(dataline)
-              for key in keys:
-                key = key.strip()
-                val = vals.pop(0)
-                if not key == '':
-                  results.append(build_result(scenariokeys, scenario, key, val))
-            else:
-              error = 1
-          elif re_mmtkstats.match(l):
-            headerline = e.readline()
-            dataline = e.readline()
-            if re_nonwhitespace.match(headerline) and re_digit.match(dataline):
-              keys = re_whitespace.split(headerline)
-              vals = re_whitespace.split(dataline)
-              totaltime = 0.0
-              for key in keys:
-                val = vals.pop(0)
-                if key == 'time.mu' or key == 'time.gc':
-                  totaltime = float(totaltime) + float(val)
-                if not key == '':
-                  results.append(build_result(scenariokeys, scenario, key, val))
-              results.append(build_result(scenariokeys, scenario, 'time', totaltime))
-            else:
-              error = 1
+      elif re_err.search(l):
+        error = 1
+        l = eat_error(l)
+        continue
+      elif l.startswith('='):
+        m = re_scenario.match(l)
+        if m:
+          scenario[m.group(1)] = m.group(2)
+        elif re_tabulate.match(l):
+          headerline = e.readline()
+          dataline = e.readline()
+          if re_nonwhitespace.match(headerline) and re_digit.match(dataline):
+            keys = re_whitespace.split(headerline)
+            vals = re_whitespace.split(dataline)
+            for key in keys:
+              key = key.strip()
+              val = vals.pop(0)
+              if not key == '':
+                results.append(build_result(scenariokeys, scenario, key, val))
           else:
-            m = re_passed.search(l)
+            error = 1
+            l = eat_error(l)
+            continue
+        elif re_mmtkstats.match(l):
+          headerline = e.readline()
+          dataline = e.readline()
+          if re_nonwhitespace.match(headerline) and re_digit.match(dataline):
+            keys = re_whitespace.split(headerline)
+            vals = re_whitespace.split(dataline)
+            totaltime = 0.0
+            for key in keys:
+              val = vals.pop(0)
+              if key == 'time.mu' or key == 'time.gc':
+                totaltime = float(totaltime) + float(val)
+              if not key == '':
+                results.append(build_result(scenariokeys, scenario, key, val))
+            results.append(build_result(scenariokeys, scenario, 'time', totaltime))
+          else:
+            error = 1
+            l = eat_error(l)
+            continue
+        else:
+          m = re_passed.search(l)
+          if m:
+            results.append(build_result(scenariokeys, scenario, "bmtime", m.group(1)))
+            iteration = iteration + 1
+            scenario["iteration"] = iteration
+          else:
+            m = re_warmup.search(l)
             if m:
               results.append(build_result(scenariokeys, scenario, "bmtime", m.group(1)))
               iteration = iteration + 1
               scenario["iteration"] = iteration
             else:
-              m = re_warmup.search(l)
-              if m:
-                results.append(build_result(scenariokeys, scenario, "bmtime", m.group(1)))
+              m = re_finished.search(l)
+              if m and not re_998.search(l):
+                msec = float(m.group(1)) * 1000.0
+                results.append(build_result(scenariokeys, scenario, "bmtime", msec))
                 iteration = iteration + 1
                 scenario["iteration"] = iteration
-              else:
-                m = re_finished.search(l)
-                if m and not re_998.search(l):
-                  msec = float(m.group(1)) * 1000.0
-                  results.append(build_result(scenariokeys, scenario, "bmtime", msec))
-                  iteration = iteration + 1
-                  scenario["iteration"] = iteration
+      l = e.readline()
+
     e.close()
+    gunzip_process.wait()
     if subentry >= 0 and error == 0:
       for r in results:
         csv.write(r)
-    progress += 1
+    progress += 3
     if write_status != None:
       f.write(str(progress) + "\r\n")
       f.flush()

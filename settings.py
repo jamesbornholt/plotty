@@ -1,6 +1,9 @@
 # Django settings for django_site project.
 import sys, os
 
+# Files created by plotty are globally read/write
+os.umask(0)
+
 DEBUG = False
 TEMPLATE_DEBUG = DEBUG
 

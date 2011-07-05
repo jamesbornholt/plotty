@@ -1947,7 +1947,7 @@ var Pipeline = {
     init: function() {
         // Add the debug link if needed
         if ( Pipeline.DEBUG ) {
-            $('#pipeline-new-go').after('<button id="pipeline-debug-go" class="pipeline-button">Debug</button>');
+            $('#pipeline-new-go').after(' <button id="pipeline-debug-go" class="pipeline-button">Debug</button>');
             $('#pipeline-debug-go').click(function() {
                 window.location.href = 'list/' + Pipeline.hash + '?debug';
             });
