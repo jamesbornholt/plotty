@@ -363,12 +363,15 @@ var Blocks = {
         /**
          * The currently valid filters
          */
-        filters: [{scenario: -1, is: 1, value: -1}],
+        filters: null,
         
         /**
          * The options table for selecting filters
          */
         optionsTable: null,
+
+        removeClosure: null,
+        addClosure: null,
         
         /**
          ** Object methods
@@ -379,20 +382,22 @@ var Blocks = {
          */
         constructor: function(insertIndex) {
             this.base(insertIndex);
+
+            this.filters = [{scenario: -1, is: 1, value: -1}];
             
             // Create a closure to use as the callback for removing objects.
             // This way, the scope of this block is maintained.
             var thisBlock = this;
-            var removeClosure = function(row) {
+            this.removeClosure = function(row) {
                 thisBlock.removeFilter.call(thisBlock, row); 
             };
-            var addClosure = function(row) {
+            this.addClosure = function(row) {
                 thisBlock.filters.push({scenario: -1, is: 1, value: -1});
                 Pipeline.refresh(Pipeline.constants.CASCADE_REASON_SELECTION_CHANGED);
             };
             
             // Create the option table
-            this.optionsTable = new OptionsTable($('.pipeline-filter-table', this.element), removeClosure, Pipeline.refresh, addClosure);
+            this.optionsTable = new OptionsTable($('.pipeline-filter-table', this.element), this.removeClosure, Pipeline.refresh, this.addClosure);
             
             // Hook the dropdowns
             $(this.element).delegate('select', 'change', function() {
@@ -763,14 +768,14 @@ var Blocks = {
          * The scenario that selects the normaliser. This only exists if
          * the type of normaliser is SELECT.
          */
-        normaliser: [{scenario: -1, value: -1}],
+        normaliser: null,
         
         /**
          * The scenario columns used to group the rows before normalising.
          * Scenario columns can appear in either this or normaliser (if type
          * is SELECT), but not both.
          */
-        group: [],
+        group: null,
         
         /**
          ** Object methods
@@ -781,6 +786,9 @@ var Blocks = {
          */
         constructor: function(insertIndex) {
             this.base(insertIndex);
+
+            this.normaliser = [{scenario: -1, value: -1}];
+            this.group = [];
             
             // Create a closure to use as the callback for removing objects.
             // This way, the scope of this block is maintained.
@@ -1120,7 +1128,7 @@ var Blocks = {
         /**
          * The options for the specified graph
          */
-        options: {},
+        options: null,
         
         /**
          ** Object methods
@@ -1132,6 +1140,7 @@ var Blocks = {
         constructor: function(insertIndex) {
             this.base(insertIndex);
             this.type = this.TYPE.HISTOGRAM;
+            this.options = {};
             
             // Hook the dropdowns
             var thisBlock = this;
@@ -1456,7 +1465,7 @@ var Blocks = {
         /**
          * The currently valid filters
          */
-        filters: [{column: -1, is: 1, lowerbound: '-inf', upperbound: '+inf'}],
+        filters: null;
         
         /**
          * The options table for selecting filters
@@ -1472,6 +1481,7 @@ var Blocks = {
          */
         constructor: function(insertIndex) {
             this.base(insertIndex);
+            this.filters = [{column: -1, is: 1, lowerbound: '-inf', upperbound: '+inf'}];
             
             // Create a closure to use as the callback for removing objects.
             // This way, the scope of this block is maintained.
