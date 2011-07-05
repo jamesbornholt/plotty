@@ -1462,7 +1462,7 @@ var Blocks = {
         /**
          * The currently valid filters
          */
-        filters: null;
+        filters: null,
         
         /**
          * The options table for selecting filters
