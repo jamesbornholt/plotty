@@ -55,7 +55,10 @@ def extract_csv(log, csvgz_file, write_status=None):
       extract_scenario(legacy_scenario, entry)
       gunzip_process = subprocess.Popen(["gunzip", "-c", os.path.join(log, entry)], stdout=subprocess.PIPE)
       e = gunzip_process.stdout
-      for l in e.readlines():
+      lines = e.readlines()
+      e.close()
+      gunzip_process.wait()
+      for l in lines:
         m = re_scenario.match(l)
         if (m):
           legacy_mode = False
@@ -64,8 +67,6 @@ def extract_csv(log, csvgz_file, write_status=None):
       if write_status != None:
         f.write(str(progress) + "\r\n")
         f.flush()
-      e.close()
-      gunzip_process.wait()
 
   if legacy_mode:
     scenariokeys = legacy_scenario.keys()
@@ -100,6 +101,8 @@ def extract_csv(log, csvgz_file, write_status=None):
     gunzip_process = subprocess.Popen(["gunzip", "-c", os.path.join(log, entry)], stdout=subprocess.PIPE)
     e = gunzip_process.stdout
     lines = e.readlines()
+    e.close()
+    gunzip_process.wait()
     line_count = len(lines)
     line = 0 
     while 1:
@@ -140,8 +143,9 @@ def extract_csv(log, csvgz_file, write_status=None):
         if m:
           scenario[m.group(1)] = m.group(2)
         elif re_tabulate.match(l):
-          headerline = e.readline()
-          dataline = e.readline()
+          headerline = lines[line+1]
+          dataline = lines[line+2]
+          line += 2
           if re_nonwhitespace.match(headerline) and re_digit.match(dataline):
             keys = re_whitespace.split(headerline)
             vals = re_whitespace.split(dataline)
@@ -155,8 +159,9 @@ def extract_csv(log, csvgz_file, write_status=None):
             line = eat_error(line)
             continue
         elif re_mmtkstats.match(l):
-          headerline = e.readline()
-          dataline = e.readline()
+          headerline = lines[line+1]
+          dataline = lines[line+2]
+          line += 2
           if re_nonwhitespace.match(headerline) and re_digit.match(dataline):
             keys = re_whitespace.split(headerline)
             vals = re_whitespace.split(dataline)
@@ -193,8 +198,6 @@ def extract_csv(log, csvgz_file, write_status=None):
                 scenario["iteration"] = iteration
       line += 1
 
-    e.close()
-    gunzip_process.wait()
     if subentry >= 0 and error == 0:
       for r in results:
         csv.write(r)
@@ -206,7 +209,6 @@ def extract_csv(log, csvgz_file, write_status=None):
   csv.close()
   gzip_process.wait()
   csv_compressed.close()
-  os.chmod(csvgz_file, 0777)
   if write_status != None:
     f.close()
 

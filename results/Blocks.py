@@ -781,9 +781,6 @@ class GraphBlock(Block):
                         self.plotHistogram(graph_path, len(column_keys))
                     elif self.type == GraphBlock.TYPE['XY']:
                         self.plotXYGraph(graph_path, len(column_keys))
-                    # Change the permissions
-                    for ext in ['.csv', '.gpt', '.eps', '.wide.eps', '.pdf', '.wide.pdf', '.svg']:
-                        os.chmod(graph_path + ext, 0777)
                     
                 else:
                     logging.debug("Using graph %s from cache" % graph_path)
@@ -837,9 +834,6 @@ class GraphBlock(Block):
 
                 # Plot the graph
                 self.plotScatterGraph(graph_path, series=group_values)
-                # Change the permissions
-                for ext in ['.csv', '.gpt', '.eps', '.wide.eps', '.pdf', '.wide.pdf', '.svg']:
-                    os.chmod(graph_path + ext, 0777)
             else:
                 logging.debug("Using graph %s from cache" % graph_path)
             
