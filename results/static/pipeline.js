@@ -369,9 +369,6 @@ var Blocks = {
          * The options table for selecting filters
          */
         optionsTable: null,
-
-        removeClosure: null,
-        addClosure: null,
         
         /**
          ** Object methods
@@ -388,16 +385,16 @@ var Blocks = {
             // Create a closure to use as the callback for removing objects.
             // This way, the scope of this block is maintained.
             var thisBlock = this;
-            this.removeClosure = function(row) {
+            var removeClosure = function(row) {
                 thisBlock.removeFilter.call(thisBlock, row); 
             };
-            this.addClosure = function(row) {
+            var addClosure = function(row) {
                 thisBlock.filters.push({scenario: -1, is: 1, value: -1});
                 Pipeline.refresh(Pipeline.constants.CASCADE_REASON_SELECTION_CHANGED);
             };
             
             // Create the option table
-            this.optionsTable = new OptionsTable($('.pipeline-filter-table', this.element), this.removeClosure, Pipeline.refresh, this.addClosure);
+            this.optionsTable = new OptionsTable($('.pipeline-filter-table', this.element), removeClosure, Pipeline.refresh, addClosure);
             
             // Hook the dropdowns
             $(this.element).delegate('select', 'change', function() {
