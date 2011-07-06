@@ -1,13 +1,4 @@
-Before using the configuration script, create the /etc/apache2/sites-plotty/
-directory and then add:
-    Include /etc/apache2/sites-plotty
-to the VirtualHost (probably in /etc/apache2/sites-enabled/000-default).
+Use init-plotty to create a new plotty instance
+Use update-plotty to update a plotty instance
 
-Then to install plotty for a user, mark init-plotty as executable and run
-    ./init-plotty [username]
-
-This will create a new plotty directory in username's home, with everything
-contained below that. It will also dump the config into apache, and reload
-apache config. In theory, then, once this script runs the url:
-    http://server/plotty/username/
-should load the pipeline.
+Silk icons used created by: http://www.famfamfam.com/lab/icons/silk/
