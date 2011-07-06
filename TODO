@@ -1,3 +1,6 @@
+== Bugs ==
+If you remove a column with a filter, the normalise block grouping can get upset.
+
 == Short term ==
 * Output div doesn't expand to contain a wide table ( http://bit.ly/j9e5c1 )
   * We can fix the table, but the real issue is the graph. Not much we can do
