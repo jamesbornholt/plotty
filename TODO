@@ -1,5 +1,4 @@
 == Bugs ==
-If you remove a column with a filter, the normalise block grouping can get upset.
 
 == Short term ==
 * Output div doesn't expand to contain a wide table ( http://bit.ly/j9e5c1 )

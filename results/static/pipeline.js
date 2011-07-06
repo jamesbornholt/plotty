@@ -992,6 +992,7 @@ var Blocks = {
         cascade: function(scenarioCols, valueCols, reason) {
             var thisBlock = this;
             var changed = false;
+            var invalid = false;
 
             // Update all the scenario columns
             $('.select-normalise-column', this.optionsTable.element).each(function() {
@@ -1007,14 +1008,14 @@ var Blocks = {
                     if ( jQuery.inArray(norm.scenario, scenarioCols) == -1 ) {
                         norm.scenario = -1;
                         norm.value = -1;
-                        changed = true;
+                        invalid = true;
                         return;
                     }
                     
                     // Check that the value is still in the value cache
                     if ( jQuery.inArray(norm.value, Pipeline.valueCache[norm.scenario]) == -1 ) {
                         norm.value = -1;
-                        changed = true;
+                        invalid = true;
                         return;
                     }
                 });
@@ -1034,11 +1035,11 @@ var Blocks = {
             
             // If the values have changed, or the logs have changed (and thus
             // the valueCache), we have to reload the HTML.
-            if ( changed || reason == Pipeline.constants.CASCADE_REASON_LOGS_CHANGED ) {
+            if ( changed || invalid || reason == Pipeline.constants.CASCADE_REASON_LOGS_CHANGED ) {
                 this.loadState();
             }
             
-            if ( changed ) {
+            if ( invalid ) {
                 return false;
             }
             else {
