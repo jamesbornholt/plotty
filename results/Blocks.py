@@ -520,7 +520,7 @@ class GraphBlock(Block):
 
         settings = parts[2].split(PipelineEncoder.PARAM_SEPARATOR)
         
-        if self.type == GraphBlock.TYPE['HISTOGRAM'] or self.type == GraphBlock.TYPE['HISTOGRAM']:
+        if self.type == GraphBlock.TYPE['HISTOGRAM'] or self.type == GraphBlock.TYPE['XY']:
             # Exactly three settings: column, row, value
             if len(settings) != 3:
                 raise PipelineError("Graph block invalid: incorrect number of histo/xy settings")
