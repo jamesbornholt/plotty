@@ -18,6 +18,8 @@ def extract_csv(log, csvgz_file, write_status=None):
     for k in scenariokeys:
       if k in scenario:
          r = r + str(scenario[k])
+      else:
+         r = r + "null"
       r = r + ','
     r = r + key + ',' + str(value) + '\n'
     return r
