@@ -5,6 +5,7 @@ which it describes.
 """
 
 import math, copy, os, time
+import subprocess
 from plotty.results.DataTypes import DataRow, DataAggregate
 from plotty.results.Utilities import present_value, present_value_csv_graph, scenario_hash
 from plotty.results.Exceptions import PipelineAmbiguityException, PipelineError, PipelineBlockException
@@ -778,9 +779,9 @@ class GraphBlock(Block):
     
                     # Plot the graph
                     if self.type == GraphBlock.TYPE['HISTOGRAM']:
-                        self.plotHistogram(graph_path, len(column_keys))
+                        self.plotHistogram(graph_hash, graph_path, len(column_keys))
                     elif self.type == GraphBlock.TYPE['XY']:
-                        self.plotXYGraph(graph_path, len(column_keys))
+                        self.plotXYGraph(graph_hash, graph_path, len(column_keys))
                     
                 else:
                     logging.debug("Using graph %s from cache" % graph_path)
@@ -833,7 +834,7 @@ class GraphBlock(Block):
                 csv_file.close()
 
                 # Plot the graph
-                self.plotScatterGraph(graph_path, series=group_values)
+                self.plotScatterGraph(graph_hash, graph_path, series=group_values)
             else:
                 logging.debug("Using graph %s from cache" % graph_path)
             
@@ -855,7 +856,7 @@ class GraphBlock(Block):
             return {'Scatter graph': html_text}
 
     
-    def plotXYGraph(self, graph_path, num_cols):
+    def plotXYGraph(self, graph_hash, graph_path, num_cols):
         """ Plot a histogram csv file with gnuplot.
         
         csv_filename: the csv file where the graph data has been temporarily
@@ -865,7 +866,7 @@ class GraphBlock(Block):
         num_cols = num_cols * 3 - 1
         gnuplot = """
 set terminal svg fname "Arial" fsize 10 size 960,420
-set output '{graph_path}.svg'
+set output '{graph_hash}.svg'
 set datafile separator ","
 set ylabel "{yaxis_title}"
 set xtics out
@@ -893,31 +894,31 @@ set style line 3 lt 1 pt 0 lc rgb '#ADDFFF' lw 1
 """
         if self.errorbars:
           gnuplot += """
-plot for [COL=2:{num_cols}:3] "{graph_path}.csv" u 1:COL:xtic(1) title col(COL) w lines, for [COL=2:{num_cols}:3] "" u 1:COL:COL+1:COL+2 notitle w yerr
+plot for [COL=2:{num_cols}:3] "{graph_hash}.csv" u (column(1)):COL:xtic(1) title col(COL) w lines, for [COL=2:{num_cols}:3] "" u (column(1)):COL:COL+1:COL+2 notitle w yerr
 """
         else:
           gnuplot += """
-plot for [COL=2:{num_cols}:3] "{graph_path}.csv" u COL:xtic(1) lw 3 title col(COL) w lines
+plot for [COL=2:{num_cols}:3] "{graph_hash}.csv" u (column(COL)):xtic(1) lw 3 title col(COL) w lines
 """
         gnuplot += """
 
 set terminal postscript eps solid color "Helvetica" 18 size 5, 2.5
-set output '{graph_path}.eps'
+set output '{graph_hash}.eps'
 replot
 
 set terminal postscript eps solid color "Helvetica" 18 size 10, 2.2
-set output '{graph_path}.wide.eps'
+set output '{graph_hash}.wide.eps'
 replot
 """
         gp_file = open(graph_path + ".gpt", "w")
-        gp_file.write(gnuplot.format(graph_path=graph_path, num_cols=num_cols, yaxis_title=self.value, font_path=settings.GRAPH_FONT_PATH))
+        gp_file.write(gnuplot.format(graph_hash=graph_hash, num_cols=num_cols, yaxis_title=self.value, font_path=settings.GRAPH_FONT_PATH))
         gp_file.close()
-        os.system(settings.GNUPLOT_EXECUTABLE + ' ' + gp_file.name)
+        subprocess.call([settings.GNUPLOT_EXECUTABLE, gp_file.name], cwd=settings.GRAPH_CACHE_DIR)
         os.system("ps2pdf -dEPSCrop " + graph_path + ".wide.eps " + graph_path + ".wide.pdf")
         os.system("ps2pdf -dEPSCrop " + graph_path + ".eps " + graph_path + ".pdf")
 
 
-    def plotHistogram(self, graph_path, num_cols):
+    def plotHistogram(self, graph_hash, graph_path, num_cols):
         """ Plot a histogram csv file with gnuplot.
         
         csv_filename: the csv file where the graph data has been temporarily
@@ -927,7 +928,7 @@ replot
         num_cols = num_cols * 3 - 1
         gnuplot = """
 set terminal svg fname "Arial" fsize 10 size 960,420
-set output '{graph_path}.svg'
+set output '{graph_hash}.svg'
 set datafile separator ","
 set ylabel "{yaxis_title}"
 set xtics out
@@ -955,30 +956,30 @@ set style line 3 lt 1 pt 0 lc rgb '#ADDFFF' lw 1
         if self.errorbars:
           gnuplot += """
 set style histogram errorbars gap 1 lw 0.25
-plot for [COL=2:{num_cols}:3] "{graph_path}.csv" u COL:COL+1:COL+2:xtic(1) title col(COL)
+plot for [COL=2:{num_cols}:3] "{graph_hash}.csv" u (column(COL)):COL+1:COL+2:xtic(1) title col(COL)
 """
         else:
           gnuplot += """
 set style histogram
-plot for [COL=2:{num_cols}:3] "{graph_path}.csv" u COL:xtic(1) title col(COL)
+plot for [COL=2:{num_cols}:3] "{graph_hash}.csv" u (column(COL)):xtic(1) title col(COL)
 """
         gnuplot += """
 set terminal postscript eps solid color "Helvetica" 18 size 5, 2.5
-set output '{graph_path}.eps'
+set output '{graph_hash}.eps'
 replot
 
 set terminal postscript eps solid color "Helvetica" 18 size 10, 2.2
-set output '{graph_path}.wide.eps'
+set output '{graph_hash}.wide.eps'
 replot
 """
         gp_file = open(graph_path + ".gpt", "w")
-        gp_file.write(gnuplot.format(graph_path=graph_path, num_cols=num_cols, yaxis_title=self.value, font_path=settings.GRAPH_FONT_PATH))
+        gp_file.write(gnuplot.format(graph_hash=graph_hash, num_cols=num_cols, yaxis_title=self.value, font_path=settings.GRAPH_FONT_PATH))
         gp_file.close()
-        os.system(settings.GNUPLOT_EXECUTABLE + ' ' + gp_file.name)
+        subprocess.call([settings.GNUPLOT_EXECUTABLE, gp_file.name], cwd=settings.GRAPH_CACHE_DIR)
         os.system("ps2pdf -dEPSCrop " + graph_path + ".wide.eps " + graph_path + ".wide.pdf")
         os.system("ps2pdf -dEPSCrop " + graph_path + ".eps " + graph_path + ".pdf")
     
-    def plotScatterGraph(self, graph_path, series):
+    def plotScatterGraph(self, graph_hash, graph_path, series):
         """ Plot a scatter plot csv file with gnuplot.
 
         graph_path: the path to the graph (append with .csv to get the csv file)
@@ -989,7 +990,7 @@ replot
         series_str = " ".join(series)
         gnuplot = """
 set terminal svg fname "Arial" fsize 10 size 960,420
-set output '{graph_path}.svg'
+set output '{graph_hash}.svg'
 set datafile separator ","
 set xlabel "{xaxis_title}"
 set ylabel "{yaxis_title}"
@@ -1014,17 +1015,17 @@ X="Data"
 
 """
         if self.errorbars:
-          gnuplot += "plot {datafile} u 2:5:3:4:6:7 with xyerrorbars title X"
+          gnuplot += "plot {datafile} u (column(2)):5:3:4:6:7 with xyerrorbars title X"
         else:
-          gnuplot += "plot {datafile} u 2:5 lw 3 title X"
+          gnuplot += "plot {datafile} u (column(2)):5 lw 3 title X"
         gnuplot += """
 
 set terminal postscript eps solid color "Helvetica" 18 size 5, 2.5
-set output '{graph_path}.eps'
+set output '{graph_hash}.eps'
 replot
 
 set terminal postscript eps solid color "Helvetica" 18 size 10, 2.2
-set output '{graph_path}.wide.eps'
+set output '{graph_hash}.wide.eps'
 replot
 """
 
@@ -1033,8 +1034,8 @@ replot
         else:
           datafile = "for [X in \"" + series_str + "\"] '<grep \"^\\\"'.X.'\\\",\" " + graph_path + ".csv'"
         gp_file = open(graph_path + '.gpt', 'w')
-        gp_file.write(gnuplot.format(datafile=datafile, graph_path=graph_path, xaxis_title=self.x, yaxis_title=self.y, font_path=settings.GRAPH_FONT_PATH))
+        gp_file.write(gnuplot.format(datafile=datafile, graph_hash=graph_hash, xaxis_title=self.x, yaxis_title=self.y, font_path=settings.GRAPH_FONT_PATH))
         gp_file.close()
-        os.system(settings.GNUPLOT_EXECUTABLE + ' ' + gp_file.name)
+        subprocess.call([settings.GNUPLOT_EXECUTABLE, gp_file.name], cwd=settings.GRAPH_CACHE_DIR)
         os.system("ps2pdf -dEPSCrop " + graph_path + ".wide.eps " + graph_path + ".wide.pdf")
         os.system("ps2pdf -dEPSCrop " + graph_path + ".eps " + graph_path + ".pdf")
