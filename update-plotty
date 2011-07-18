@@ -10,7 +10,10 @@ if [ -z "$1" ]; then
 fi
 
 PROJECT_NAME=$1
-BRANCH=`hg branch`
+DIR=`dirname $0`
+if [ -z "$BRANCH" ]; then
+    BRANCH=`hg branch -R $DIR`
+fi
 
 USER=""
 if [  -z "$2" ]; then
