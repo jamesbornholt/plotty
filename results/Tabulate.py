@@ -4,6 +4,7 @@ import re
 import subprocess
 
 def extract_csv(log, csvgz_file, write_status=None):
+  log_modified = os.path.getmtime(log)
   entries = [ f for f in os.listdir(log) if re.search(".log.gz$", f) ]
   progress = 0
   if write_status != None:
@@ -213,6 +214,8 @@ def extract_csv(log, csvgz_file, write_status=None):
   csv_compressed.close()
   if write_status != None:
     f.close()
+
+  os.utime(csvgz_file, (-1, log_modified))
 
 if __name__ == "__main__":
     if len(sys.argv) < 3 or len(sys.argv) > 4:

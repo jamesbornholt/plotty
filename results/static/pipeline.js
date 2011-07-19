@@ -1666,6 +1666,202 @@ var Blocks = {
             return {column: column, is: is, lowerbound: lowerbound, upperbound: upperbound};
         }
     }),
+
+    /**
+     * The composite scenario block allows the addition of scenario columns.
+     */
+    CompositeScenarioBlock: Block.extend({
+        /**
+         ** Static fields
+         **/
+
+        /**
+         * The ID of the template for this filter
+         */
+        TEMPLATE_ID: "#pipeline-compositescenario-template",
+
+        /**
+         * The ID of this block for encoding (the inverse of the mapping in
+         * Pipeline.encoder.MAPPINGS)
+         */
+        ID: 6,
+
+        /**
+         ** Object fields
+         **/
+
+        /**
+         * The currently valid filters
+         */
+        columns: null,
+        
+        /**
+         * The options table for selecting filters
+         */
+        optionsTable: null,
+        
+        /**
+         ** Object methods
+         **/
+
+        /**
+         * Creates a new block. See Block.constructor for parameters.
+         */
+        constructor: function(insertIndex) {
+            this.base(insertIndex);
+            this.columns = [-1];
+            
+            // Create a closure to use as the callback for removing objects.
+            // This way, the scope of this block is maintained.
+            var thisBlock = this;
+            var removeClosure = function(row) {
+                thisBlock.removeColumn.call(thisBlock, row); 
+            };
+            var addClosure = function(row) {
+                thisBlock.columns.push(-1);
+                Pipeline.refresh(Pipeline.constants.CASCADE_REASON_SELECTION_CHANGED);
+            };
+            
+            // Create the option table
+            this.optionsTable = new OptionsTable($('.pipeline-compositescenario-table', this.element), removeClosure, Pipeline.refresh, addClosure);
+            
+            // Hook the dropdowns and text inputs
+            $(this.element).delegate('select, input', 'change', function() {
+                thisBlock.readState();
+                Pipeline.refresh(Pipeline.constants.CASCADE_REASON_SELECTION_CHANGED);
+            });
+        },
+        
+        /**
+        * Decode a parameter string and set this block's configuration according
+        * to those parameters.
+         */
+        decode: function(params) {
+            this.columns = [];
+            var parts = params.split(Pipeline.encoder.GROUP_SEPARATOR);
+            // There must be at least two - a flagword and one filter
+            if ( parts.length < 2 ) {
+                console.debug("CompositeScenario block invalid: not enough parts");
+                return;
+            }
+
+            this.flags = parseInt(parts[0]);
+
+            var cols = parts.slice(1);
+            var thisBlock = this;
+            jQuery.each(cols, function(i, column) {
+                var settings = column.split(Pipeline.encoder.PARAM_SEPARATOR);
+                // Exactly four parts - column, is, lowerbound, upperbound
+                if ( settings.length != 1 ) {
+                    console.debug("CompositeScenario block invalid: incorrect number of parts in ", column);
+                }
+                thisBlock.columns.push(settings[0]);
+            });
+        },
+        
+        /**
+         * Encode this block into a parameter string based on its configuration.
+         */
+        encode: function() {
+            var strs = [this.flags];
+            jQuery.each(this.columns, function(i, column) {
+                if ( column != -1) strs.push(column);
+            });
+            return strs.join(Pipeline.encoder.GROUP_SEPARATOR);
+        },
+
+        /**
+         * Take this block's HTML values and load them into local
+         * configuration.
+         */
+        readState: function() {
+            this.columns = [];
+            var thisBlock = this;
+            $('tr', this.element).each(function() {
+                var columnSelect = $('.select-compositescenario-column', this);
+
+                thisBlock.columns.push(columnSelect.val());
+            });
+        },
+
+        /**
+         * Take this block's local configuration and load it into the
+         * HTML.
+         */
+        loadState: function() {
+            // Get rid of all but the first row
+            this.optionsTable.reset();
+            
+            // Create new rows for each filter
+            var thisBlock = this;
+            jQuery.each(this.columns, function(i, column) {
+                var row = thisBlock.optionsTable.addRow();
+                var columnSelect = $('.select-compositescenario-column', row);
+                
+                // Note here we assume the scenario dropdown has already been
+                // updated, and the value cache is also up to date with new
+                // logs.
+                columnSelect.val(column);
+            });
+        },
+        
+        /**
+         * Visit this block and cascade the available scenario and value 
+         * columns. See Block.cascade for parameters and return.
+         */
+        cascade: function(scenarioCols, valueCols, reason) {
+            var thisBlock = this;
+            var changed = false;
+            
+            // Update the scenario columns
+            $('.select-compositescenario-column', this.element).each(function() {
+                Utilities.updateSelect(this, scenarioCols, true);
+            });
+            
+            jQuery.each(this.columns, function(i, column) {
+                // If the selected scenario isn't in the new available ones,
+                // reset this row
+                if ( jQuery.inArray(column, scenarioCols) == -1 ) {
+                    thisBlock.columns[i] = -1;
+                    changed = true;
+                    return;
+                }
+            });
+
+            // Add the new column
+            scenarioCols.push(this.columns.join('-'));
+            
+            // If the values have changed, or the logs have changed (and thus
+            // the valueCache), we have to reload the HTML.
+            if ( changed || reason == Pipeline.constants.CASCADE_REASON_LOGS_CHANGED ) {
+                this.loadState();
+            }
+            
+            if ( changed ) {
+                return false;
+            }
+            else {
+                return [scenarioCols, valueCols];
+            }
+        },
+        
+        /**
+         * A row is about to be removed from the OptionsTable. We need to
+         * clean it up here.
+         *
+         * @param row Element The table row to be removed
+         */
+        removeColumn: function(row) {
+            var value = $('.select-compositescenario-column', row).val();
+            
+            for ( var i = 0; i < this.columns.length; i++ ) {
+                if ( this.columns[i] == value) {
+                    this.columns.splice(i, 1);
+                    break;
+                }
+            }
+        },
+    }),
 };
 
 
@@ -1896,7 +2092,8 @@ var Pipeline = {
             2: Blocks.AggregateBlock,
             3: Blocks.NormaliseBlock,
             4: Blocks.GraphBlock,
-            5: Blocks.ValueFilterBlock
+            5: Blocks.ValueFilterBlock,
+            6: Blocks.CompositeScenarioBlock,
         }
     },
     
@@ -2029,6 +2226,9 @@ var Pipeline = {
         });
         $('#add-valuefilter').click(function() {
             Pipeline.createBlock(Blocks.ValueFilterBlock);
+        });
+        $('#add-compositescenario').click(function() {
+            Pipeline.createBlock(Blocks.CompositeScenarioBlock);
         });
 
         // Hook the button for showing large tables

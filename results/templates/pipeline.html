@@ -67,6 +67,22 @@
             </div>
             <div class="pipeline-footer"></div>
         </div>
+        <div id="pipeline-compositescenario-template" class="pipeline compositescenario pipeline-block">
+            <div class="pipeline-content">
+                <span class="pipeline-header"><img src="static/world_link.png"/> Add Composite Scenario Column</span>
+                <span class="pipeline-header-right"><input type="image" class="insert-button" src="static/brick_add.png"/><input type="image" class="remove-button" src="static/cross.png"/></span>
+                <table class="pipeline-compositescenario-table">
+                    <tr>
+                        <td>
+                            <select class="select-compositescenario-column scenario-column scenario-column-values-select"><option></option></select>
+                        </td>
+                        <td><input type="image" class="remove-row" disabled="disabled" src="static/delete.png"/></td>
+                        <td><input type="image" class="add-row" src="static/add.png"/></td>
+                    </tr>
+                </table>
+            </div>
+            <div class="pipeline-footer"></div>
+        </div>
         <div id="pipeline-aggregate-template" class="pipeline aggregate pipeline-block">
             <div class="pipeline-content">
                 <span class="pipeline-header"><img src="static/sum.png"/> Aggregate</span>
@@ -187,8 +203,9 @@
             <div class="pipeline-content">
                 <span class="pipeline-header"><img src="static/brick.png"/> Add Block</span>
                 <span class="pipeline-header-right"></span> <br/>
+                <button class="pipeline-button" type="button" id="add-compositescenario">Comp. Scenario</button>
                 <button class="pipeline-button" type="button" id="add-filter">Filter</button>
-                <button class="pipeline-button" type="button" id="add-valuefilter">Value Filter</button>
+                <button class="pipeline-button" type="button" id="add-valuefilter">Value Filter</button> <br />
                 <button class="pipeline-button" type="button" id="add-aggregate">Aggregate</button>
                 <button class="pipeline-button" type="button" id="add-normalise">Normalise</button>
                 <button class="pipeline-button" type="button" id="add-graph">Graph</button>

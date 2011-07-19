@@ -41,6 +41,48 @@ class Block(object):
         return bool(self.flags & flag)
 
 
+class CompositeScenarioBlock(Block):
+    """ Allows the introduction of new, logical scenario columns based on existing columns. """
+
+    def __init__(self):
+        """ Define the single instance variable of a CompositeScenarioBlock.
+        
+        columns:  An array of column names describing the columns to combine 
+        """
+        super(CompositeScenarioBlock, self).__init__()
+
+        self.columns = []
+
+
+    def decode(self, param_string, cache_key):
+        """ Decode a block from an encoded pipeline string.
+            scenario1&scenario2...
+        """
+        parts = param_string.split(PipelineEncoder.GROUP_SEPARATOR)
+        # There must be at least two - a flagword and one filter
+        if len(parts) < 2:
+            raise PipelineError("Filter block invalid: not enough parts")
+        
+        self.flags = int(parts[0])
+
+        # Everything past the first part is a filter
+        for filt_str in parts[1:]:
+            settings = filt_str.split(PipelineEncoder.PARAM_SEPARATOR)
+            # Must be exactly three parts - scenario, is, value
+            if len(settings) != 1:
+                logging.debug("CompositeScenarioBlock invalid: incorrect number of parts in %s" % filt_str)
+                continue
+            self.columns.append(settings[0])
+
+    def apply(self, data_table, messages):
+        """ Apply this block to the given data table.
+        """
+        composite_col = '-'.join(self.columns)
+        for row in data_table:
+            row.scenario[composite_col] = '-'.join(row.scenario[x] for x in self.columns) 
+
+        data_table.scenarioColumns.add(composite_col) 
+
 class FilterBlock(Block):
     """ Filters the datatable by including or excluding particular rows based
         on criteria. The rows that do not match every filter are thrown out 

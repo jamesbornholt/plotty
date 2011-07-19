@@ -58,19 +58,28 @@ input:disabled {
 #pipeline-new-go {
     background-image: url('page_lightning.png');
 }
-#add-filter, #insert-filter {
+#add-filter {
+    width: 32%;
     background-image: url('world_delete.png');
 }
-#add-valuefilter, #insert-valuefilter {
+#add-valuefilter{
+    width: 32%;
     background-image: url('key_delete.png');
 }
-#add-aggregate, #insert-aggregate {
+#add-compositescenario{
+    width: 32%;
+    background-image: url('world_link.png');
+}
+#add-aggregate{
+    width: 32%;
     background-image: url('sum.png');
 }
-#add-normalise, #insert-normalise {
+#add-normalise{
+    width: 32%;
     background-image: url('table_relationship.png');
 }
-#add-graph, #insert-graph {
+#add-graph{
+    width: 32%;
     background-image: url('chart_line.png');
 }
 #pipeline-save-go {
@@ -151,6 +160,9 @@ input:disabled {
 }
 .valuefilter {
     background: #ffb3c2;
+}
+.compositescenario {
+    background: #b5f5e1;
 }
 .aggregate {
     background: #c5f5c1;
