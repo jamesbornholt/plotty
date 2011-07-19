@@ -1826,6 +1826,7 @@ var Blocks = {
                     changed = true;
                     return;
                 }
+                scenarioCols.remove(column);
             });
 
             // Add the new column
@@ -2374,6 +2375,10 @@ var Pipeline = {
         });
         // XXX TODO no reason to duplicate this code vs the handlers for
         // the add buttons
+        $('#insert-compositescenario', addBlock).click(function() {
+            $(this).parents("#pipeline-insert").remove();
+            Pipeline.createBlock(Blocks.CompositeScenarioBlock, block);
+        });
         $('#insert-filter', addBlock).click(function() {
             $(this).parents("#pipeline-insert").remove();
             Pipeline.createBlock(Blocks.FilterBlock, block);

@@ -58,27 +58,27 @@ input:disabled {
 #pipeline-new-go {
     background-image: url('page_lightning.png');
 }
-#add-filter {
+#add-filter, #insert-filter {
     width: 32%;
     background-image: url('world_delete.png');
 }
-#add-valuefilter{
+#add-valuefilter, #insert-valuefilter {
     width: 32%;
     background-image: url('key_delete.png');
 }
-#add-compositescenario{
+#add-compositescenario, #insert-compositescenario {
     width: 32%;
     background-image: url('world_link.png');
 }
-#add-aggregate{
+#add-aggregate, #insert-aggregate {
     width: 32%;
     background-image: url('sum.png');
 }
-#add-normalise{
+#add-normalise, #insert-normalise {
     width: 32%;
     background-image: url('table_relationship.png');
 }
-#add-graph{
+#add-graph, #insert-graph {
     width: 32%;
     background-image: url('chart_line.png');
 }
