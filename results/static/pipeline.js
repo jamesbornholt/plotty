@@ -1759,6 +1759,16 @@ var Blocks = {
             });
         },
         
+
+        seed: function(scenarioCols, valueCols) {
+            $('.scenario-column', this.element).each(function() {
+                Utilities.updateSelect(this, scenarioCols);
+            });
+            column = this.columns.join('-');
+            scenarioCols.push(column);
+            Pipeline.valueCache[column] = this.computeValues(this.columns);
+        },
+
         /**
          * Encode this block into a parameter string based on its configuration.
          */
@@ -1830,7 +1840,9 @@ var Blocks = {
             });
 
             // Add the new column
-            scenarioCols.push(this.columns.join('-'));
+            var column = this.columns.join('-');
+            scenarioCols.push(column);
+            Pipeline.valueCache[column] = this.computeValues(this.columns);
             
             // If the values have changed, or the logs have changed (and thus
             // the valueCache), we have to reload the HTML.
@@ -1862,6 +1874,25 @@ var Blocks = {
                 }
             }
         },
+
+        /**
+         * Compute all possible values for this column
+         */
+        computeValues: function(cols) { 
+            var thisBlock = this;
+            var cachedVals = Pipeline.valueCache[cols[0]];
+            if (cols.length == 1) {
+                return cachedVals;
+            }
+            var values = [];
+            jQuery.each(cachedVals, function(i, val) { 
+                subValues = thisBlock.computeValues(cols.slice(1));
+                jQuery.each(subValues, function(i, subval) {
+                    values.push(val + '-' + subval);
+                });
+            });
+            return values;
+        }
     }),
 };
 
@@ -2765,8 +2796,8 @@ var Pipeline = {
                 if ( $.trim(params).length == 0 ) return;
                 var paramString = params.slice(1); // The first character is the block ID
                 var block = new Pipeline.encoder.MAPPINGS[params[0]](Pipeline.blocks.length);
-                block.seed(data.scenarioCols, data.valueCols);
                 block.decode(paramString);
+                block.seed(data.scenarioCols, data.valueCols);
                 block.loadState();
                 Pipeline.blocks.push(block);
             });

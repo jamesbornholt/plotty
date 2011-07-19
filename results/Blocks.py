@@ -80,7 +80,11 @@ class CompositeScenarioBlock(Block):
         composite_col = '-'.join(self.columns)
         for row in data_table:
             row.scenario[composite_col] = '-'.join(row.scenario[x] for x in self.columns) 
+            for col in self.columns:
+                del row.scenario[col]
 
+        for col in self.columns:
+           data_table.scenarioColumns.remove(col)
         data_table.scenarioColumns.add(composite_col) 
 
 class FilterBlock(Block):
