@@ -327,6 +327,15 @@ th.headerSortDown {
     margin: 0;
 }
 
+.incomplete-block .pipeline-content {
+    border: 2px solid red;
+    border-bottom: 0;
+}
+
+.incomplete-block .pipeline-footer {
+    background: transparent url(arrow-incomplete.gif) center top no-repeat;
+}
+
 .error-block {
     background: #FFA6B0;
 }

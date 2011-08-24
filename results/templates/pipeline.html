@@ -111,7 +111,7 @@
                         <td><input type="image" class="add-row" src="static/add.png"/></td>
                     </tr>
                 </table>
-                <label><input type="radio" name="normalise-type" value="2" /> to best value in group</label> <br />
+                <label><input type="radio" name="normalise-type" value="2" /> to best value</label> <br />
                 <strong>Grouping</strong><br />
                 <select name="select-normalise-group" class="select-normalise-group" multiple="multiple"><option></option></select>
             </div>
@@ -123,14 +123,14 @@
                 <span class="pipeline-header-right"><input type="image" class="insert-button" src="static/brick_add.png"/><input type="image" class="remove-button" src="static/cross.png"/></span> <br/>
                 Type: <select class="select-graph-type"><option value="1">Histogram</option><option value="2">XY</option><option value="3">Scatter</option></select>
                 <div class="graph-histogram pipeline-graph-type-options">
-                    Column (series): <select class="select-graph-column scenario-column"><option></option></select> <br />
-                    Row (x-axis): <select class="select-graph-row scenario-column"><option></option></select> <br />
+                    Series (x-axis): <select class="select-graph-column scenario-column"><option></option></select> <br />
+                    Clusters (x-axis): <select class="select-graph-row scenario-column"><option></option></select> <br />
                     Value (y-axis): <select class="select-graph-value value-column"><option></option></select> <br />
                 </div>
                 <div class="graph-xy pipeline-graph-type-options">
-                    Column (series): <select class="select-graph-column scenario-column"><option></option></select> <br />
-                    Row (x-axis): <select class="select-graph-row scenario-column"><option></option></select> <br />
-                    Value (y-axis): <select class="select-graph-value value-column"><option></option></select> <br />
+                    Series: <select class="select-graph-column scenario-column"><option></option></select> <br />
+                    x-axis: <select class="select-graph-row scenario-column"><option></option></select> <br />
+                    y-axis: <select class="select-graph-value value-column"><option></option></select> <br />
                 </div>
                 <div class="graph-scatter pipeline-graph-type-options">
                     Series: <select class="select-graph-series scenario-column"><option></option></select> <br />
@@ -158,7 +158,7 @@
                 </span>
             </div>
         </div>
-        <div id="pipeline-log" class="pipeline">
+        <div id="pipeline-log" class="pipeline incomplete-block">
             <div class="pipeline-content">
                 <span class="pipeline-header"><img src="static/table_multiple.png"/> Log Files</span> <br />
                 <table id="pipeline-log-table">
@@ -178,11 +178,16 @@
             </div>
             <div class="pipeline-footer"></div>
         </div>
-        <div id="pipeline-values" class="pipeline">
+        <div id="pipeline-scenario-cols" class="pipeline">
             <div class="pipeline-content">
                 <span class="pipeline-header"><img src="static/world.png"/> Scenario Columns</span><span class="pipeline-header-right"><a href="" id="select-scenario-cols-all">[all]</a> <a href="" id="select-scenario-cols-none">[none]</a></span> <br />
                 <select id="select-scenario-cols" multiple="multiple">
-                </select> <br />
+                </select> 
+            </div>
+            <div class="pipeline-footer"></div>
+        </div>
+        <div id="pipeline-value-cols" class="pipeline">
+            <div class="pipeline-content">
                 <span class="pipeline-header"><img src="static/key.png"/> Value Columns</span> <br />
                 <select id="select-value-cols" multiple="multiple">
                 </select> <br />

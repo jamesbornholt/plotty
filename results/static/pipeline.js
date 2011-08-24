@@ -78,7 +78,7 @@ var Utilities = {
      * @param selectedList Array|Boolean True to keep the old selection, or
      *   a non-empty array to specify a list of selected elements.
      */
-    updateMultiSelect: function(element, list, selectedList) {
+    updateMultiSelect: function(element, displayList, list, selectedList) {
         var jQElem = $(element);
         // Get the currently selected options if needed
         if ( selectedList === true ) {
@@ -96,7 +96,9 @@ var Utilities = {
         dropdown.className = jQElem.attr('class');
         
         for ( var i = 0; i < list.length; i++ ) {
-            dropdown.options.add(new Option(list[i], list[i]));
+            var o = new Option(list[i], list[i]);
+            o.innerHTML = displayList[i];
+            dropdown.options.add(o);
             if ( jQuery.inArray(list[i], selectedList) > -1 ) {
                 dropdown.options[i].selected = true;
             }
@@ -840,7 +842,7 @@ var Blocks = {
                 Utilities.updateSelect(this, valueCols);
             });
 
-            Utilities.updateMultiSelect($('.select-normalise-group', this.element), scenarioCols, true);
+            Utilities.updateMultiSelect($('.select-normalise-group', this.element), scenarioCols, scenarioCols, true);
         },
         
         /**
@@ -1022,7 +1024,7 @@ var Blocks = {
             }
             
             // Update the groups
-            Utilities.updateMultiSelect($('.select-normalise-group', this.element), scenarioCols, true);
+            Utilities.updateMultiSelect($('.select-normalise-group', this.element), scenarioCols, scenarioCols, true);
             
             // Check that all the groups are in the new scenario cols
             jQuery.each(this.group, function(i, grp) {
@@ -1842,7 +1844,6 @@ var Blocks = {
             // Add the new column
             var column = this.columns.join('-');
             scenarioCols.push(column);
-            Pipeline.valueCache[column] = this.computeValues(this.columns);
             
             // If the values have changed, or the logs have changed (and thus
             // the valueCache), we have to reload the HTML.
@@ -1854,6 +1855,7 @@ var Blocks = {
                 return false;
             }
             else {
+                Pipeline.valueCache[column] = this.computeValues(this.columns);
                 return [scenarioCols, valueCols];
             }
         },
@@ -2241,7 +2243,8 @@ var Pipeline = {
         });
 
         // Hook the checkboxes in the scenario and value column selects
-        $("#pipeline-values").delegate("#select-scenario-cols input, #select-value-cols input", 'change', Pipeline.refresh);
+        $("#pipeline-scenario-cols").delegate("#select-scenario-cols input", 'change', Pipeline.refresh);
+        $("#pipeline-value-cols").delegate("#select-value-cols input", 'change', Pipeline.refresh);
         
         // Hook the add buttons for different blocks
         $('#add-filter').click(function() {
@@ -2596,10 +2599,15 @@ var Pipeline = {
         // columns.
         var valid = true;
         
-        if ( scenarioCols.length == 0 || valueCols.length == 0 ) {
-            console.debug("Pipeline not valid because scenario or value cols empty: [" +  scenarioCols + "], [" + valueCols + "]");
+        if ( scenarioCols.length == 0 ) {
+            console.debug("Pipeline not valid because scenario cols empty: [" +  scenarioCols + "], [" + valueCols + "]");
             valid = false;
-            $('#pipeline-values').addClass('incomplete-block');
+            $('#pipeline-scenario-cols').addClass('incomplete-block');
+        }
+        if ( valueCols.length == 0 ) {
+            console.debug("Pipeline not valid because value cols empty: [" +  scenarioCols + "], [" + valueCols + "]");
+            valid = false;
+            $('#pipeline-value-cols').addClass('incomplete-block');
         }
         
         var ret;
@@ -2777,9 +2785,7 @@ var Pipeline = {
             }
             Pipeline.valueCache = data.scenarioValues;
 
-            // Update scenario and value column selections
-            Utilities.updateMultiSelect($("#select-scenario-cols"), data.scenarioCols, scenarioCols);
-            Utilities.updateMultiSelect($("#select-value-cols"), data.valueCols, valueCols);
+            Pipeline.updateAvailableColumns(data.scenarioCols, data.valueCols, scenarioCols, valueCols);
 
             // Update the derived value cols
             jQuery.each(derivedValueCols, function(index, value) {
@@ -2892,15 +2898,28 @@ var Pipeline = {
     refreshAvailableColumns: function() {
         // Clear the values cache, since a log changed it's invalid now.
         Pipeline.valueCache = {};
-                
+        var foundAny = false;
+        $('.select-log', Pipeline.logFileOptionsTable.element).each(function() {
+            if ( $(this).val() != '-1' ) {
+                foundAny = true
+            }
+        });
+
+        if (!foundAny) {
+            $('#pipeline-log').addClass('incomplete-block');
+            Pipeline.updateAvailableColumns([], [], true, true);
+            Pipeline.refresh(Pipeline.constants.CASCADE_REASON_LOGS_CHANGED);
+            return;
+        }
+
         // Load new columns.
         Pipeline.ajax.logValues(function(data, textStatus, xhr) {
             if ( data.tabulating === true ) {
                 Pipeline.tabulating(data, Pipeline.refreshAvailableColumns);
             }
             else {
-                Pipeline.updateAvailableColumns(data.scenarioCols, data.valueCols);
                 Pipeline.valueCache = data.scenarioValues;
+                Pipeline.updateAvailableColumns(data.scenarioCols, data.valueCols, true, true);
                 Pipeline.refresh(Pipeline.constants.CASCADE_REASON_LOGS_CHANGED);
             }
         });
@@ -2912,9 +2931,15 @@ var Pipeline = {
      * @param scenarioCols Array The available scenario columns
      * @param valueCols Array The available value columns
      */
-    updateAvailableColumns: function(scenarioCols, valueCols) {
-        Utilities.updateMultiSelect($("#select-scenario-cols"), scenarioCols, true);
-        Utilities.updateMultiSelect($("#select-value-cols"), valueCols, true);
+    updateAvailableColumns: function(scenarioCols, valueCols, selectedScenarioCols, selectedValueCols) {
+        var scenarioDisplay = jQuery.map(scenarioCols, function(col) {
+           var colvals = Pipeline.valueCache[col];
+           var numvals = colvals.length;
+           return '<b>' + col + '</b> (' + numvals + ') <font size="-2">[' + colvals.join(', ') + ']</font>';
+        });
+
+        Utilities.updateMultiSelect($("#select-scenario-cols"), scenarioDisplay, scenarioCols, selectedScenarioCols);
+        Utilities.updateMultiSelect($("#select-value-cols"), valueCols, valueCols, selectedValueCols);
     },
 
     /**
