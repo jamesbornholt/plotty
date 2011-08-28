@@ -1,21 +1,8 @@
-import re, copy, string, sys, subprocess, os, collections
+import re, copy, string, sys, subprocess, os
 
 re_filename = re.compile("^(\w+)\.(\d+)\.(\d+)\.([a-zA-Z0-9_\-\.]+)\.log\.gz$")
 re_notdigit = re.compile("^[0-9]")
 re_scenario_kv = re.compile("^([^-]*)-(.*)$")
-
-class REProfiler(object):
-    def __init__(self):
-        self.res = dict()
-        self.ctr = collections.Counter()
-    def compile(self, name, pattern):
-        self.res[name] = re.compile(pattern)
-    def __getitem__(self, key):
-        self.ctr[key] += 1
-        return self.res[key]
-    def counts(self):
-        return self.ctr.most_common()
-
 
 def extract_scenario(scenario, entry):
     m = re_filename.match(entry)
@@ -33,9 +20,8 @@ def extract_scenario(scenario, entry):
             else:
                 scenario[p] = 1
 
-def extract_csv(logpath, outfile):
+def extract_csv(logpath, outfile, write_status=None):
     files = [ f for f in os.listdir(logpath) if f[-7:] == '.log.gz' ]
-    #files = ["hsqldb.3069.390.production_rapl.p-all.rapl.vwr.rn-08.log.gz"]
 
     csv_file = open(outfile, 'w')
     gzip_process = subprocess.Popen(['gzip'], stdin=subprocess.PIPE, stdout=csv_file)
@@ -72,13 +58,11 @@ def extract_csv(logpath, outfile):
     re_finished = re.compile("Finished in (\S+) secs")
     re_998 = re.compile("_997_|_998_")
     
+    # The list of result objects
     results = list()
 
-    num_files = 0
-
     for filename in files:
-        num_files += 1
-
+        # Initialise parsing state
         state = states.NOTHING
         iteration = 0
         scenario = dict()
@@ -91,11 +75,14 @@ def extract_csv(logpath, outfile):
         tabulate_stats_headers = list()
         mmtk_stats_headers = list()
         
+        # Parsed line counter
         n = 0
-        old_results_len = len(results)
         
+        # Open the file for reading
         gunzip_process = subprocess.Popen(["gunzip", "-c", os.path.join(logpath, filename)], stdout=subprocess.PIPE)
         f = gunzip_process.stdout
+        
+        # Read one line at a time
         for l in f:
             n+=1
 
@@ -105,6 +92,7 @@ def extract_csv(logpath, outfile):
                     # Found an invocation
                     state = states.IN_INVOCATION
                     scenario['iteration'] = iteration
+            
             elif state == states.IN_INVOCATION:
                 # Have we finished an invocation?
                 if re_timedrun.match(l):
@@ -126,11 +114,9 @@ def extract_csv(logpath, outfile):
                     iteration = 0
                     scenario['iteration'] = iteration
                     legacy_invocation += 1
-                #elif re_err.search(l):
-                #    # Found an error, bail out
-                #    state = states.IN_ERROR
+
+                # Or is this line some sort of data output?
                 elif l[0] == '=':
-                    # It's a data output of some sort...
                     m = re_scenario.match(l)
                     if m:
                         legacy_mode = False
@@ -174,6 +160,8 @@ def extract_csv(logpath, outfile):
                         # Now check for errors
                         if re_err.search(l):
                             state = states.IN_ERROR
+                
+                # Or is this line an error?
                 elif re_err.search(l):
                     state = states.IN_ERROR
         
@@ -187,6 +175,7 @@ def extract_csv(logpath, outfile):
                     scenario['iteration'] = iteration
                     legacy_invocation += 1 # Make sure the invocation count is right
                     state = states.IN_INVOCATION
+            
             elif state == states.IN_TABULATE_STATS_HEADER:
                 # next line should be a list of headers; check it's valid
                 if re_nonwhitespace.match(l):
@@ -195,6 +184,7 @@ def extract_csv(logpath, outfile):
                 else:
                     # not valid
                     state = IN_ERROR
+            
             elif state == states.IN_TABULATE_STATS_DATA:
                 # next line should be a list of data
                 if re_digit.match(l):
@@ -209,6 +199,7 @@ def extract_csv(logpath, outfile):
                     state = states.IN_INVOCATION
                 else:
                     state = states.IN_ERROR
+            
             elif state == states.IN_MMTK_STATS_HEADER:
                 # next line should be a list of headers; check it's valid
                 if re_nonwhitespace.match(l):
@@ -217,6 +208,7 @@ def extract_csv(logpath, outfile):
                 else:
                     # not valid
                     state = states.IN_ERROR
+            
             elif state == states.IN_MMTK_STATS_DATA:
                 # next line should be a list of data
                 if re_digit.match(l):
@@ -235,7 +227,9 @@ def extract_csv(logpath, outfile):
                     state = states.IN_INVOCATION
                 else:
                     state = states.IN_ERROR
-        
+            # end of state switch
+        # end of line loop
+
         # Write the last set of results, if we didn't finish with an error
         if state == states.IN_INVOCATION:
             if len(value) > 0:
@@ -244,23 +238,24 @@ def extract_csv(logpath, outfile):
                 r.value = copy.copy(value)
                 invocation_results.append(r)
             results.extend(invocation_results)
-
+    # end of file loop
+    
+    # Sort the scenario headers
     scenario_headers = set()
-    value_headers = set()
     for r in results:
         for k in r.scenario.keys():
             if k not in scenario_headers:
                 scenario_headers.add(k)
-
     scenario_headers_sorted = list(scenario_headers)
     scenario_headers_sorted.sort()
     
+    # Print the header row
     for k in scenario_headers_sorted:
         csv_out.write(k)
         csv_out.write(",")
-    
     csv_out.write("key,value\n")
     
+    # Print each result (note: one result is more than one CSV line)
     for r in results:
         scenario_str = ""
         for k in scenario_headers_sorted:
@@ -272,11 +267,10 @@ def extract_csv(logpath, outfile):
             csv_out.write(key + "," + val)
             csv_out.write("\n")
     
+    # Close the files
     csv_out.close()
     gzip_process.wait()
     csv_file.close()
-
-    print "Processed %d log files" % num_files
 
 if __name__ == "__main__":
     if len(sys.argv) < 3 or len(sys.argv) > 4:

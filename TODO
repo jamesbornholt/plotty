@@ -144,3 +144,22 @@ Tabulating log/tiejun-mole-2011-06-29-Wed-233845 to out.csv (pid 15694)
         1    0.000    0.000    0.000    0.000 {posix.sysconf}
      1800    0.016    0.000    0.016    0.000 {posix.waitpid}
         8    0.000    0.000    0.000    0.000 {range}
+
+== regex profile ==
+name: calls (secs)
+re_timedrun: 13488644 (16.759313)
+re_err: 13382681 (37.927366)
+re_starting: 81868 (0.134103)
+re_scenario: 81868 (0.104600)
+re_tabulate: 63888 (0.084614)
+re_whitespace: 53908 (0.625243)
+re_mmtkstats: 45911 (0.056417)
+re_passed: 36934 (0.047655)
+re_notdigit: 35920 (0.050319)
+re_scenario_kv: 35920 (0.051860)
+re_warmup: 31457 (0.041742)
+re_nonwhitespace: 26954 (0.041095)
+re_digit: 26954 (0.046439)
+re_finished: 25977 (0.033268)
+re_filename: 8980 (0.025924)
+re_998: 7000 (0.008002)
