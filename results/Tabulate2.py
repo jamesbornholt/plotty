@@ -24,7 +24,7 @@ def extract_csv(logpath, outfile, write_status=None):
     files = [ f for f in os.listdir(logpath) if f[-7:] == '.log.gz' ]
 
     csv_file = open(outfile, 'w')
-    gzip_process = subprocess.Popen(['gzip'], stdin=subprocess.PIPE, stdout=csv_file)
+    gzip_process = subprocess.Popen(['gzip'], stdin=subprocess.PIPE, stdout=csv_file, bufsize=-1)
     csv_out = gzip_process.stdin
 
     class states(object):
@@ -79,9 +79,9 @@ def extract_csv(logpath, outfile, write_status=None):
         n = 0
         
         # Open the file for reading
-        gunzip_process = subprocess.Popen(["gunzip", "-c", os.path.join(logpath, filename)], stdout=subprocess.PIPE)
+        gunzip_process = subprocess.Popen(["gunzip", "-c", os.path.join(logpath, filename)], stdout=subprocess.PIPE, bufsize=-1)
         f = gunzip_process.stdout
-        
+
         # Read one line at a time
         for l in f:
             n+=1
@@ -238,6 +238,9 @@ def extract_csv(logpath, outfile, write_status=None):
                 r.value = copy.copy(value)
                 invocation_results.append(r)
             results.extend(invocation_results)
+        
+        f.close()
+        gunzip_process.wait()
     # end of file loop
     
     # Sort the scenario headers
