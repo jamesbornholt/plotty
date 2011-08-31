@@ -1,4 +1,5 @@
 == Bugs ==
+* Pipelines that end in zero rows of output should be an error.
 
 == Short term ==
 * Output div doesn't expand to contain a wide table ( http://bit.ly/j9e5c1 )
