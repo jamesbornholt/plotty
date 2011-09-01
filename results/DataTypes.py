@@ -64,7 +64,7 @@ class DataTable:
         self.lastModified = 0
         for i,log in enumerate(logs):
             dir_path = os.path.join(settings.BM_LOG_DIR, log)
-            cached_vals = cache.get(log)
+            cached_vals = cache.get("LOGFILE-" + log)
             file_last_modified = os.path.getmtime(dir_path)
             if cached_vals == None or cached_vals['last_modified'] < file_last_modified:
                 try:
@@ -73,7 +73,7 @@ class DataTable:
                     e.index = i
                     e.length = len(logs)
                     raise e
-                ret = cache.set(log, {'last_modified': lastModified, 'rows': rows, 'scenarioColumns': scenarioColumns, 'valueColumns': valueColumns, 'messages': messages})
+                ret = cache.set("LOGFILE-" + log, {'last_modified': lastModified, 'rows': rows, 'scenarioColumns': scenarioColumns, 'valueColumns': valueColumns, 'messages': messages})
                 
                 logging.debug('For log %s: cache empty or expired, stored %d rows to cache.' % (log, len(rows)))
             else:
