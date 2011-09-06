@@ -20,6 +20,13 @@
 * If a log file no longer exists, and we try to load a pipeline involving it,
   an AJAX error occurs
 
+* Hide stuff on graph views (table, pipeline, top bar?)
+* Short URLs (click button to shorten URL, store pipeline)
+  * Or saved pipelines?
+* Password protection on squirrel
+  * htpasswd same as hg/wiki
+* bug tracker
+
 == Other stuff ==
 The filter block probably needs to be more flexible. As a first step it would
 be helpful to toggle between "meets all these criteria" and "meets at least
