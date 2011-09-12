@@ -21,8 +21,12 @@ BM_LOG_DIR = os.path.join(ROOT_DIR, 'log')
 
 CACHE_ROOT = os.path.join(ROOT_DIR, 'cache')
 
-CACHE_TIMEOUT = 24*60*60 # 24 hours
-CACHE_BACKEND = "file://" + os.path.join(ROOT_DIR, 'cache/log') + ('?timeout=%d' % CACHE_TIMEOUT)
+# 7 days; this is really redundant since we store timeouts for our cache items anyway
+CACHE_TIMEOUT = 7*24*60*60
+CACHE_MAX_ENTRIES = 300
+CACHE_CULL_FRACTION = 2 # delete 1/CACHE_CULL_FRACTION entries when max entries reached
+CACHE_OPTIONS = 'timeout=%d&max_entries=%d&cull_frequency=%d' % (CACHE_TIMEOUT, CACHE_MAX_ENTRIES, CACHE_CULL_FRACTION)
+CACHE_BACKEND = "file://%s?%s" % (os.path.join(ROOT_DIR, 'cache/log'), CACHE_OPTIONS)
 
 GNUPLOT_EXECUTABLE = '/home/web-scripts/plotty-gnuplot/bin/gnuplot'
 GRAPH_CACHE_DIR = os.path.join(ROOT_DIR, 'cache/graph')
