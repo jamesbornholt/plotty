@@ -13,6 +13,7 @@ BLOCK_MAPPINGS = {
     '4': GraphBlock,
     '5': ValueFilterBlock,
     '6': CompositeScenarioBlock,
+    '7': FormatBlock,
 }
 
 class Pipeline(object):

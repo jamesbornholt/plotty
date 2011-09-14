@@ -40,6 +40,39 @@ class Block(object):
         """ Get a flag's value """
         return bool(self.flags & flag)
 
+class FormatBlock(Block):
+    """ Adds configured formatting information to the table for a specified column. """
+
+    def __init__(self):
+        super(FormatBlock, self).__init__()
+        self.column = None
+        self.key = None
+
+    def decode(self, param_string, cache_key):
+        """ Decode a format block from an encoded pipeline string.
+            Format blocks are encoded in the form:
+            column&key
+            where column is the scenario column and key specifies the format.
+        """
+        parts = param_string.split(PipelineEncoder.GROUP_SEPARATOR)
+        # Exactly two parts - flagword and settings
+        if len(parts) != 2:
+            raise PipelineError("Format block invalid: incorrect number of parts")
+
+        self.flags = int(parts[0])
+
+        settings = parts[1].split(PipelineEncoder.PARAM_SEPARATOR)
+        # Exactly two settings - type and column
+        if len(settings) != 2:
+            raise PipelineError("Format block invalid: incorrect number of settings")
+
+        self.column = settings[0]
+        self.key = settings[1]
+
+    def apply(self, data_table, messages):
+        """ Apply this block to the given data table.
+        """
+
 
 class CompositeScenarioBlock(Block):
     """ Allows the introduction of new, logical scenario columns based on existing columns. """

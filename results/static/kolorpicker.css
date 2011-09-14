@@ -1,0 +1,17 @@
+@charset "UTF-8";
+/* CSS Document */
+
+/* kolorpicker palette styles */
+
+div.kolorPicker-wrapper {position:relative !important;}
+input.color { width:80px; position:relative !important;font-family:monospace; }
+
+div.kolorpicker-palette { float: left; margin: 0 0 10px 78px;width:180px;position:relative;display:inline;}
+div.kolorpicker-palette ul { margin:0; padding-left:20px;}
+div.kolorpicker-palette ul li { list-style: none; float: left; width: 42px; height: 12px; background: #D0DFE5; border: 1px solid #666666; font-size: 10px; line-height:12px; text-align: center; margin: 0 3px 0 0; padding: 3px 3px 4px 3px; -moz-border-radius: 4px; -webkit-border-radius: 4px; color: #353448; cursor: pointer; }
+.kolorpicker-palette-select { background: #353448; color: #D0DFE5; }
+div.x-close-box { float: right !important; width: 15px; height: 12px; font-size: 10px; line-height:12px; background: #353448; border: 1px solid #666666; text-align: center; padding: 3px 3px 4px 3px; margin: 0 2px 0 0; display: block;-moz-border-radius: 4px; -webkit-border-radius: 4px; color: #ffffff; cursor: pointer; }
+.kolorPicker-popup { border: 1px solid #353448; margin: 0; background: #f5f9fb; padding: 7px 5px 5px 5px; color: #fff; width: 290px; height: auto; z-index: 1010; position: absolute; top: -8px; left: -8px; cursor:pointer; font: 13px/18px Verdana,Arial,sans-serif;}
+
+
+div#kolorPicker table td.tile {line-height:20px;}

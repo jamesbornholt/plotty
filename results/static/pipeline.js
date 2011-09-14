@@ -390,7 +390,7 @@ var Blocks = {
             var removeClosure = function(row) {
                 thisBlock.removeFilter.call(thisBlock, row); 
             };
-            var addClosure = function(row) {
+            var addClosure = function() {
                 thisBlock.filters.push({scenario: -1, is: 1, value: -1});
                 Pipeline.refresh(Pipeline.constants.CASCADE_REASON_SELECTION_CHANGED);
             };
@@ -795,7 +795,7 @@ var Blocks = {
             var removeClosure = function(row) {
                 thisBlock.removeNormaliser.call(thisBlock, row); 
             };
-            var addClosure = function(row) {
+            var addClosure = function() {
                 thisBlock.normaliser.push({scenario: -1, value: -1});
                 Pipeline.refresh(Pipeline.constants.CASCADE_REASON_SELECTION_CHANGED);
             };
@@ -1489,7 +1489,7 @@ var Blocks = {
             var removeClosure = function(row) {
                 thisBlock.removeFilter.call(thisBlock, row); 
             };
-            var addClosure = function(row) {
+            var addClosure = function() {
                 thisBlock.filters.push({column: -1, is: 1, lowerbound: '-inf', upperbound: '+inf'});
                 Pipeline.refresh(Pipeline.constants.CASCADE_REASON_SELECTION_CHANGED);
             };
@@ -1719,7 +1719,7 @@ var Blocks = {
             var removeClosure = function(row) {
                 thisBlock.removeColumn.call(thisBlock, row); 
             };
-            var addClosure = function(row) {
+            var addClosure = function() {
                 thisBlock.columns.push(-1);
                 Pipeline.refresh(Pipeline.constants.CASCADE_REASON_SELECTION_CHANGED);
             };
@@ -1896,6 +1896,288 @@ var Blocks = {
             return values;
         }
     }),
+    
+    /**
+     * The format block is used to add formatting information 
+     */
+    FormatBlock: Block.extend({
+        /**
+         ** Static fields
+         **/
+
+        /**
+         * The ID of the template for this block
+         */
+        TEMPLATE_ID: "#pipeline-format-template",
+
+        /**
+         * The ID of this block for encoding (the inverse of the mapping in
+         * Pipeline.encoder.MAPPINGS)
+         */
+        ID: 7,
+
+        /**
+         ** Object fields
+         **/
+        
+        /**
+         * The scenario column to format
+         */
+        column: -1,
+        
+        /**
+         * The key of the configured formatting information to use.
+         */
+        key: null,
+
+        /**
+         * The configured formatting information to use.
+         */
+        format: null,
+
+        /**
+         * The entries in the associated popup
+         */
+        popupEntryOptionsTable: null,
+
+        /**
+         ** Object methods
+         **/
+        
+        /**
+         * Creates a new block. See Block.constructor for parameters.
+         */
+        constructor: function(insertIndex) {
+            this.base(insertIndex);
+            
+            var thisBlock = this;
+            // Hook the load button for loading the format
+            $("#pipeline-format-load-go", this.element).click(function() {
+                var col = $('.select-format-column', thisBlock.element).val();
+                var key = $('.select-format-key', thisBlock.element).eq(0).val();
+                
+                thisBlock.updatePopup(col, key);
+
+                $('.filter', thisBlock.element).show();
+                $('.popup', thisBlock.element).show();
+            });
+
+            // Hook up the popup
+            var popup = $('.popup', this.element);
+            bindColorPicker($('.text-format-color', popup));
+            $(".cancel-button", popup).click(function() {
+                $(".popup", thisBlock.element).hide();
+                $('.filter', thisBlock.element).hide();
+
+            });
+            $(".check-group", popup).change(function() {
+                if ($(".check-group", popup).attr("checked")) {
+                    $('.text-format-group', popup).removeAttr('disabled');
+                } else {
+                    $('.text-format-group', popup).attr('disabled', 'disabled');
+                }
+            });
+            $('.text-format-group', popup).attr('disabled', 'disabled');
+            $(".check-color", popup).change(function() {
+                if ($(".check-color", popup).attr("checked")) {
+                    $('.text-format-color', popup).removeAttr('disabled');
+                } else {
+                    $('.text-format-color', popup).attr('disabled', 'disabled');
+                }
+            });
+            $('.text-format-color', popup).attr('disabled', 'disabled');
+            var addClosure = function(row) {
+                $('.text-format-value', row).val('');
+                $('.text-format-display', row).val('');
+                $('.text-format-group', row).val('');
+                bindColorPicker($('.text-format-color', row));
+                $('.text-format-color', row).val('');
+                $('.text-format-color', row).change();
+            };
+            this.popupEntryOptionsTable = new OptionsTable($('.popup-format-table', popup), null, null, addClosure); 
+            $('#popup-format-save-go', popup).click(function() {
+                thisBlock.savePopup();
+            });
+
+            // Hook the dropdowns
+            $(this.element).delegate('select', 'change', function() {
+                thisBlock.readState();
+                Pipeline.refresh(Pipeline.constants.CASCADE_REASON_SELECTION_CHANGED);
+            });
+        },
+        
+        /**
+         * Decode a parameter string and set this block's configuration according
+         * to those parameters.
+         */
+        decode: function(params) {
+            var parts = params.split(Pipeline.encoder.GROUP_SEPARATOR);
+            // Exactly 2 parts - flagword and settings
+            if ( parts.length != 2 ) {
+                console.debug("Format block invalid: incorrect number of parts");
+                return;
+            }
+
+            this.flags = parseInt(parts[0]);
+
+            var settings = parts[1].split(Pipeline.encoder.PARAM_SEPARATOR);
+            if ( settings.length != 2 ) {
+                console.debug("Format block invalid: incorrect number of settings");
+                return;
+            }
+            this.column = settings[0];
+            this.key = settings[1];
+        },
+        
+        /**
+         * Encode this block into a parameter string based on its configuration.
+         */
+        encode: function() {
+            return this.flags + Pipeline.encoder.GROUP_SEPARATOR + this.column + Pipeline.encoder.PARAM_SEPARATOR + this.key;
+        },
+
+        /**
+         * Take this block's HTML values and load them into local
+         * configuration.
+         */
+        readState: function() {
+            var scenarioSelect = $('.select-format-column', this.element);
+            var keySelect = $('.select-format-key', this.element);
+            
+            this.column = scenarioSelect.val();
+            this.key = keySelect.val();
+        },
+        
+        /**
+         * Take this block's local configuration and load it into the
+         * HTML.
+         */
+        loadState: function() {
+            // By the time this function is called, the scenario dropdown
+            // should already have been updated with available scenario
+            // columns
+            var scenarioSelect = $('.select-format-column', this.element);
+            var keySelect = $('.select-format-key', this.element);
+            
+            scenarioSelect.val(this.column);
+            keySelect.val(this.key);
+        },
+        
+        /**
+         * Visit this block and cascade the available scenario and value 
+         * columns. See Block.cascade for parameters and return.
+         */
+        cascade: function(scenarioCols, valueCols, reason) {
+            // Update the scenario column dropdown. If the selection was not
+            // kept, the block is invalid.
+            var scenarioSelect = $('.select-format-column', this.element);
+            if ( !Utilities.updateSelect(scenarioSelect, scenarioCols) ) {
+                this.column = -1;
+                return false;
+            }
+            return [scenarioCols, valueCols];
+        },
+        
+        updatePopup: function(col, key) {
+            popup = $('.popup', this.element);
+            
+            // Key dropdown and key field
+            $('.select-format-key', popup).replaceWith($('.select-format-key', this.element).eq(0).clone());
+            $('.text-format-key', popup).val(key == -1 ? "" : key);
+
+            // Suggested values
+            $('.format-suggestions', popup).text(col == -1 ? 'None (no column selected)' : Pipeline.valueCache[col].join(' '));
+
+            // Rows
+            // Get rid of all but the first row
+            this.popupEntryOptionsTable.reset();
+
+            if (key != "") {
+                // Need to load existing columns
+                $('input', popup).attr('disabled', 'disabled');
+                $(".check-color", popup).attr('checked', 'checked');
+                $(".check-group", popup).attr('checked', 'checked');
+                 
+                var thisBlock = this;
+                Pipeline.ajax.loadFormat(key, function(data) {
+                    if ( data.error == false ) {
+                        var foundGroup = 0;
+                        var foundColor = 0;
+                        jQuery.each(data.styles, function(i, style) {
+                            var row = thisBlock.popupEntryOptionsTable.addRow();
+                            $('.text-format-value', row).val(style.value);
+                            $('.text-format-display', row).val(style.display);
+                            $('.text-format-group', row).val(style.group);
+                            bindColorPicker($('.text-format-color', row));
+                            $('.text-format-color', row).val(style.color);
+                            $('.text-format-color', row).change();
+
+                            if (style.group != null) {
+                              foundGroup++;
+                            }
+                            if (style.color != null) {
+                              foundColor++;
+                            }
+                        });
+                        $('input', popup).removeAttr('disabled');
+                        if (foundColor == 0) {
+                            $('.text-format-color', popup).attr('disabled', 'disabled');
+                            $(".check-color", popup).removeAttr('checked');
+                        }
+                        if (foundGroup == 0) {
+                            $('.text-format-color', popup).attr('disabled', 'disabled');
+                            $(".check-color", popup).removeAttr('checked');
+                        }
+                    } else {
+                        $(".popup", thisBlock.element).hide();
+                        $('.filter', thisBlock.element).hide();
+                    }
+                });
+
+            }
+        },
+
+        savePopup: function() {
+            popup = $('.popup', this.element);
+            table = $('.popup-format-table', popup);
+            var styles = [];
+            var useColor = $(".check-color", popup).attr("checked");
+            var useGroup = $(".check-group", popup).attr("checked");
+            var index = 0;
+            $('tr', popup).not('.header').each(function(i, row) { 
+                value = $('.text-format-value', row).val();
+                display = $('.text-format-display', row).val();
+                group = useGroup ? $('.text-format-group', row).val() : null; 
+                color = useColor ? $('.text-format-color', row).val() : null;
+                if (value.length > 0 && display.length > 0 && (group == null || group.length > 0) && (color == null || color.length == 7)) {
+                    var style = {'index': index, 'value': value, 'display': display, 'group': group, 'color': color};
+                    var conflict = false;
+                    for(otherstyle in styles) {
+                       if (otherstyle.value == style.value) {
+                           conflict = true;
+                       }
+                    }
+                    if (!conflict) {
+                        styles[index] = style;
+                        index++;
+                    }
+                }
+            });
+            var key = $('.text-format-key', popup).val();
+            if (key != '') {
+                var thisBlock = this;
+                Pipeline.ajax.saveFormat(key, styles, function(data) {
+                    if (data.error == false) {
+                        $('.filter', thisBlock.element).hide();
+                        $('.popup', thisBlock.element).hide();
+                        thisBlock.key = key;
+                        thisBlock.loadState();
+                        Pipeline.refresh(Pipeline.constants.CASCADE_REASON_SELECTION_CHANGED);
+                    }
+                });
+            }
+        }
+    }),
 };
 
 
@@ -1972,7 +2254,7 @@ var OptionsTable = Base.extend({
      * Reset the table to a blank state
      */
     reset: function() {
-        $('tr', this.element).not(':first').remove();
+        $('tr', this.element).not('.header').not(':first').remove();
         this.numRows = 0;
     },
 
@@ -1981,7 +2263,7 @@ var OptionsTable = Base.extend({
      * (as opposed to being created by the user clicking +)
      */
     addRow: function() {
-        var row = $('tr', this.element).eq(0);
+        var row = $('tr', this.element).not('.header').eq(0);
         this.numRows += 1;
 
         // If the table is blank, we should return the first row.
@@ -2000,7 +2282,7 @@ var OptionsTable = Base.extend({
      * Update the add/remove buttons on a table of option rows
      */
     _updateAddRemoveButtons: function() {
-        var rows = $('tr', this.element);
+        var rows = $('tr', this.element).not('.header');
         if ( rows.length > 1 ) {
             $('.remove-row', rows).removeAttr('disabled');
             $('.add-row', rows).hide();
@@ -2015,7 +2297,7 @@ var OptionsTable = Base.extend({
      * Add a new row to a table of option rows
      */
     _addBlockTableRow: function() {
-        var newRow = $('tr:first-child', this.element).clone();
+        var newRow = $('tr', this.element).not('.header').eq(0).clone();
 
         this.numRows += 1;
 
@@ -2026,7 +2308,7 @@ var OptionsTable = Base.extend({
         this._updateAddRemoveButtons();
 
         if ( this.addCallback !== null ) {
-            this.addCallback.call(newRow);
+            this.addCallback.call(this, newRow);
         }
     },
     
@@ -2128,6 +2410,7 @@ var Pipeline = {
             4: Blocks.GraphBlock,
             5: Blocks.ValueFilterBlock,
             6: Blocks.CompositeScenarioBlock,
+            7: Blocks.FormatBlock,
         }
     },
     
@@ -2265,6 +2548,9 @@ var Pipeline = {
         $('#add-compositescenario').click(function() {
             Pipeline.createBlock(Blocks.CompositeScenarioBlock);
         });
+        $('#add-format').click(function() {
+            Pipeline.createBlock(Blocks.FormatBlock);
+        });
 
         // Hook the button for showing large tables
         $('#load-large-table').click(function() {
@@ -2350,6 +2636,10 @@ var Pipeline = {
         });
 
 
+        jQuery.each($('.popup'), function(popup) {
+        });
+
+
         // Hook the onchange for derived value cols to start a timer to refresh
         // the pipeline
         $('#pipeline-derived-value-cols').delegate('.pipeline-derived-value-field', 'keyup', function() {
@@ -2359,7 +2649,6 @@ var Pipeline = {
 
         // Trigger it once now
         Pipeline.hashChange();
-        
     },
     
     /**
@@ -2409,10 +2698,6 @@ var Pipeline = {
         });
         // XXX TODO no reason to duplicate this code vs the handlers for
         // the add buttons
-        $('#insert-compositescenario', addBlock).click(function() {
-            $(this).parents("#pipeline-insert").remove();
-            Pipeline.createBlock(Blocks.CompositeScenarioBlock, block);
-        });
         $('#insert-filter', addBlock).click(function() {
             $(this).parents("#pipeline-insert").remove();
             Pipeline.createBlock(Blocks.FilterBlock, block);
@@ -2432,6 +2717,14 @@ var Pipeline = {
         $('#insert-valuefilter', addBlock).click(function() {
             $(this).parents("#pipeline-insert").remove();
             Pipeline.createBlock(Blocks.ValueFilterBlock, block);
+        });
+        $('#insert-compositescenario', addBlock).click(function() {
+            $(this).parents("#pipeline-insert").remove();
+            Pipeline.createBlock(Blocks.CompositeScenarioBlock, block);
+        });
+        $('#insert-format', addBlock).click(function() {
+            $(this).parents("#pipeline-insert").remove();
+            Pipeline.createBlock(Blocks.FormatBlock, block);
         });
         addBlock.append('<div class="pipeline-footer"></div>');
         $('.pipeline-header', addBlock).html("<img src='static/brick_add.png'/> Insert Block");
@@ -3035,6 +3328,19 @@ var Pipeline = {
             $.post('ajax/save-pipeline/', {'name': name, 'encoded': encoded}, callback, 'json');
         },
 
+        saveFormat: function(key, items, callback) {
+            var itemString = JSON.stringify(items);
+            $.post('ajax/save-formatstyle/' + key + '/', {'style': itemString}, callback, 'json');
+        },
+
+        loadFormat: function(key, callback) {
+            $.getJSON('ajax/load-formatstyle/' + key + '/', callback);
+        },
+
+        listFormat: function(callback) {
+            $.getJSON('ajax/list-formatstyle/', callback);
+        },
+
         /**
          * ajax/save-pipeline/ deletes a pipeline on the server given a name
          *
@@ -3087,3 +3393,4 @@ var Pipeline = {
 Pipeline.DEBUG = ( typeof django_debug !== 'undefined' && django_debug );
 
 $(document).ready(Pipeline.init);
+

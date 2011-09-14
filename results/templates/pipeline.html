@@ -11,10 +11,12 @@
     </script>
     <link rel="stylesheet" href="static/pipeline.css" type="text/css" />
     <link rel="stylesheet" href="static/jquery.toChecklist.css" type="text/css" />
+    <link rel="stylesheet" href="static/kolorpicker.css" type="text/css" />
     <script type="text/javascript" charset="utf-8" src="static/jquery-1.6.2.js"></script>
     <script type="text/javascript" charset="utf-8" src="static/jquery.toChecklist.js"></script>
     <script type="text/javascript" charset="utf-8" src="static/jquery.tablesorter.js"></script>
     <script type="text/javascript" charset="utf-8" src="static/jquery.history.js"></script>
+    <script type="text/javascript" charset="utf-8" src="static/jquery.kolorpicker-2.7.js"></script>
     <script type="text/javascript" charset="utf-8" src="static/base.js"></script>
     <script type="text/javascript" charset="utf-8" src="static/pipeline.js"></script>
 </head>
@@ -82,6 +84,67 @@
                 </table>
             </div>
             <div class="pipeline-footer"></div>
+        </div>
+        <div id="pipeline-format-template" class="pipeline format pipeline-block">
+            <div class="pipeline-content">
+                <span class="pipeline-header"><img src="static/style.png"/> Format</span>
+                <span class="pipeline-header-right"><input type="image" class="insert-button" src="static/brick_add.png"/><input type="image" class="remove-button" src="static/cross.png"/></span>
+                <table>
+                    <tr>
+                        <td>Column</td>
+                        <td><select class="select-format-column scenario-column"><option></option></select></td>
+                    </tr>
+                    <tr>
+                        <td>Key</td>
+                        <td><select class="select-format-key"><option value="benchmark">benchmark</option></select>
+                            <button id="pipeline-format-load-go" class="pipeline-button">Edit</button>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+            <div class="pipeline-footer"></div>
+            <div class="filter"></div>
+            <div class="popup">
+                <span class="popup-header"><img src="static/style.png"/> Format Configuration</span>
+                <span class="popup-header-right"><input type="image" class="cancel-button" src="static/cross.png"/></span>
+                <select class="select-format-key"><option></option></select>
+                <button id="popup-format-load-go" class="pipeline-button">Load</button>
+                <button id="popup-format-delete-go" class="pipeline-button">Delete</button>
+                <button id="popup-format-new-go" class="pipeline-button">New</button>
+                <hr/>
+                <span class="popup-header-text">Key</span> <input type="text" class="text-format-key"/>
+                <hr/>
+                <span class="popup-header-text">Suggested Values:</span> <span class="format-suggestions">(n/a).</span>
+                <hr/>
+                <table class="popup-format-table">
+                    <tr class="popup-header-text header">
+                        <td>Value</td>
+                        <td>Display</td>
+                        <td><input type="checkbox" class="check-group"/>Group</td>
+                        <td><input type="checkbox" class="check-color"/>Color</td>
+                        <td></td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <input type="text" class="text-format-value" value=""/>
+                        </td>
+                        <td>
+                            <input type="text" class="text-format-display" value=""/>
+                        </td>
+                        <td>
+                            <input type="text" class="text-format-group" value=""/>
+                        </td>
+                        <td>
+                            <input type="text" class="text-format-color color" value=""/>
+                        </td>
+                        <td><input type="image" class="remove-row" disabled="disabled" src="static/delete.png"/></td>
+                        <td><input type="image" class="add-row" src="static/add.png"/></td>
+                    </tr>
+                </table>
+                <hr/>
+                <button id="popup-format-save-go" class="pipeline-button">Save</button>
+            </div>
         </div>
         <div id="pipeline-aggregate-template" class="pipeline aggregate pipeline-block">
             <div class="pipeline-content">
@@ -214,6 +277,7 @@
                 <button class="pipeline-button" type="button" id="add-aggregate">Aggregate</button>
                 <button class="pipeline-button" type="button" id="add-normalise">Normalise</button>
                 <button class="pipeline-button" type="button" id="add-graph">Graph</button>
+                <button class="pipeline-button" type="button" id="add-format">Format</button>
             </div>
         </div>
         <div id="pipeline-save" class="pipeline">

@@ -4,7 +4,7 @@ from django.shortcuts import render_to_response
 from django.template import RequestContext
 from plotty.results.DataTypes import *
 from plotty.results.Blocks import *
-from plotty.results.models import SavedPipeline
+from plotty.results.models import *
 from plotty.results.Pipeline import *
 from plotty import settings
 import json, csv, logging, os, shutil
@@ -133,6 +133,51 @@ def save_pipeline(request):
     try:
         new = SavedPipeline(name=request.POST['name'], encoded=request.POST['encoded'])
         new.save()
+    except:
+        return HttpResponse(json.dumps({'error': True}))
+    return HttpResponse(json.dumps({'error': False}))
+
+def list_formatstyle(request):
+    try:
+        return HttpResponse(json.dumps([f.key for f in FormatStyle.objects.all()]))
+    except:
+        return HttpResponse(json.dumps({'error': True}))
+
+def load_formatstyle(request, key):
+    if key == '':
+        return HttpResponse(json.dumps({'error': True}))
+    try:
+        style = FormatStyle.objects.get(key=key);
+        dbentries = FormatStyleEntry.objects.filter(formatstyle=style).order_by('index').all()
+        entries = []
+        for dbentry in dbentries:
+          entries.append({'value': dbentry.value, 'display': dbentry.display, 'group': dbentry.group, 'color': dbentry.color});
+        return HttpResponse(json.dumps({'error': False, 'styles': entries}));
+    except:
+        return HttpResponse(json.dumps({'error': True}))
+        
+
+def save_formatstyle(request, key):
+    if key == '' or 'style' not in request.POST:
+        return HttpResponse(json.dumps({'error': True}))
+    try:
+        (style, created) = FormatStyle.objects.get_or_create(key=key)
+
+        def load_row(row_dict):
+            load_row.count = load_row.count + 1
+            return FormatStyleEntry(formatstyle=style, 
+                                    index=load_row.count,
+                                    value=row_dict['value'],
+                                    display=row_dict['display'],
+                                    group=(None if not 'group' in row_dict or row_dict['group'] == '' else row_dict['group']),
+                                    color=(None if not 'color' in row_dict or row_dict['color'] == '' else row_dict['color']))
+
+        load_row.count = 0
+        in_rows = json.loads(request.POST['style'], object_hook=load_row)
+        if not created:
+            FormatStyleEntry.objects.filter(formatstyle=style).delete()
+        for row in in_rows:
+            row.save()
     except:
         return HttpResponse(json.dumps({'error': True}))
     return HttpResponse(json.dumps({'error': False}))

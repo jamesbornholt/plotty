@@ -4,7 +4,7 @@ import sys, os
 # Files created by plotty are globally read/write
 os.umask(0)
 
-DEBUG = False
+DEBUG = True
 TEMPLATE_DEBUG = DEBUG
 
 # Two-tailed confidence level (i.e. this value will be halved for calls to
