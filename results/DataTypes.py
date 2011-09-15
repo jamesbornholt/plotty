@@ -296,6 +296,20 @@ class DataTable:
                     del row.scenario[key]
         self.scenarioColumns = set(cols)
 
+
+    def getScenarioValues(self):
+        scenarioValues = {}
+        for row in self.rows:
+            for col in row.scenario:
+                if col not in scenarioValues:
+                    scenarioValues[col] = set()
+                scenarioValues[col].add(row.scenario[col])
+        for k in scenarioValues.iterkeys():
+            scenarioValues[k] = list(scenarioValues[k])
+            scenarioValues[k].sort()
+
+        return scenarioValues
+
     def renderToTable(self):
         """ Renders the values in this data table into a HTML table. """
         scenarios, values, _ = self.headers()

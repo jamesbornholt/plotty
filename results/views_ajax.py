@@ -40,16 +40,8 @@ def log_values(request, logs):
     scenarioCols.sort()
     valueCols.sort()
     
-    # Grab and sort possible values for scenario columns
-    scenarioValues = {}
-    for row in dt:
-        for col in row.scenario:
-            if col not in scenarioValues:
-                scenarioValues[col] = set()
-            scenarioValues[col].add(row.scenario[col])
-    for k in scenarioValues.iterkeys():
-        scenarioValues[k] = list(scenarioValues[k])
-        scenarioValues[k].sort()
+    # Grab possible values for scenario columns
+    scenarioValues = dt.getScenarioValues()
     
     return HttpResponse(json.dumps({'scenarioCols': scenarioCols, 'valueCols': valueCols, 'scenarioValues': scenarioValues}))
 
