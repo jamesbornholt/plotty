@@ -2722,13 +2722,17 @@ var Pipeline = {
             $('#pipeline-value-cols').addClass('incomplete-block');
         }
         jQuery.each(this.blocks, function(i, block) {
+            block.errorBeforeBlock = error;
             if (error) {
-                // TODO: $(block.element).attr("disabled","disabled");
-            } else if (block.complete()) {
-                encoded.push(block.ID + block.encode());
-            } else {
-                error = true;
-                $(block.element).addClass('incomplete-block');
+                //$('.select', block.element).attr("disabled","disabled");
+            } else { 
+                //$('.select', block.element).removeAttr("disabled");
+                if (block.complete()) {
+                    if (!error) encoded.push(block.ID + block.encode());
+                } else {
+                    error = true;
+                    $(block.element).addClass('incomplete-block');
+                }
             }
         });
         var hash = encoded.join(Pipeline.encoder.BLOCK_SEPARATOR);
@@ -2758,14 +2762,16 @@ var Pipeline = {
             Pipeline.valueColumnsCache = data.block_values[0];
 
             var changed = false;
-            jQuery.each(Pipeline.blocks, function(i) {
+            jQuery.each(Pipeline.blocks, function(i, block) {
                 if (i+1 >= data.block_scenarios.length) return;
                 Pipeline.blocks[i].scenarioColumnsCache = data.block_scenarios[i+1];
                 Pipeline.blocks[i].scenarioValuesCache = data.block_scenario_values[i+1];
                 Pipeline.blocks[i].valueColumnsCache = data.block_values[i+1];
 
-                changed |= Pipeline.blocks[i].refreshColumns();
-                Pipeline.blocks[i].loadState();
+                if (!block.errorBeforeBlock) {
+                    changed |= Pipeline.blocks[i].refreshColumns();
+                    Pipeline.blocks[i].loadState();
+                }
             });
 
             if (changed) {

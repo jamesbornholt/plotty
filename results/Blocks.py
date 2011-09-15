@@ -73,7 +73,6 @@ class FormatBlock(Block):
         """ Apply this block to the given data table.
         """
 
-
 class CompositeScenarioBlock(Block):
     """ Allows the introduction of new, logical scenario columns based on existing columns. """
 
