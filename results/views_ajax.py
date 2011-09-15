@@ -117,8 +117,8 @@ def pipeline(request, pipeline):
 
       msg_output += '</div>'
       output += msg_output
-
-    return HttpResponse(json.dumps({'error': False, 'ambiguity': ambiguity, 'index': index, 'block_scenarios': block_scenarios, 'block_scenario_values': block_scenario_values, 'block_values': block_values, 'html': output, 'rows': len(dt.rows), 'graph': len(graph_outputs) > 0}))
+    format_styles = [f.key for f in FormatStyle.objects.all()]
+    return HttpResponse(json.dumps({'error': False, 'ambiguity': ambiguity, 'index': index, 'block_scenarios': block_scenarios, 'block_scenario_values': block_scenario_values, 'block_values': block_values, 'format_styles': format_styles, 'html': output, 'rows': len(dt.rows), 'graph': len(graph_outputs) > 0}))
 
 def delete_saved_pipeline(request):
     if 'name' not in request.POST:

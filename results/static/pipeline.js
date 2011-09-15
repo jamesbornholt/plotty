@@ -1835,7 +1835,7 @@ var Blocks = {
         /**
          * The key of the configured formatting information to use.
          */
-        key: null,
+        key: -1,
 
         /**
          * The configured formatting information to use.
@@ -1967,6 +1967,7 @@ var Blocks = {
             var keySelect = $('.select-format-key', this.element);
             
             Utilities.updateSelect(scenarioSelect, this.scenarioColumnsCache);
+            Utilities.updateSelect(keySelect, Pipeline.formatStylesCache);
 
             scenarioSelect.val(this.column);
             keySelect.val(this.key);
@@ -1978,11 +1979,16 @@ var Blocks = {
                 return true;
             }
 
+            if ( this.key != -1 && jQuery.inArray(this.key, Pipeline.formatStylesCache) == -1 ) {
+                this.key = -1;
+                return true;
+            }
+
             return false;
         },
 
         complete: function() {
-            return this.column != -1;
+            return this.column != -1 && this.key != -1;
         },
         
         updatePopup: function(col, key) {
@@ -2760,6 +2766,7 @@ var Pipeline = {
             Pipeline.scenarioColumnsCache = data.block_scenarios[0];
             Pipeline.scenarioValuesCache = data.block_scenario_values[0];
             Pipeline.valueColumnsCache = data.block_values[0];
+            Pipeline.formatStylesCache = data.format_styles;
 
             var changed = false;
             jQuery.each(Pipeline.blocks, function(i, block) {
