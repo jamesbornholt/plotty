@@ -80,6 +80,21 @@ var Utilities = {
      */
     updateMultiSelect: function(element, displayList, list, selectedList) {
         var jQElem = $(element);
+
+        var oldDisplay = $(element).data('display');
+        var oldList = $(element).data('list');
+
+        if (oldList != null && list.length == oldList.length) {
+            var same = true;
+            jQuery.each(list, function(i) {
+                if (list[i] != oldList[i] || displayList[i] != oldDisplay[i]) {
+                    same = false;
+                    return false;
+                }
+            });
+            if (same) return;
+        }
+
         // Get the currently selected options if needed
         if ( selectedList === true ) {
             selectedList = Utilities.multiSelectValue(jQElem) || [];
@@ -90,10 +105,12 @@ var Utilities = {
         
         // Create a new dropdown and populate it
         var dropdown = document.createElement('select');
+        var className = jQElem.attr('class');
+
         dropdown.multiple = 'multiple';
         dropdown.id = jQElem.attr('id');
         dropdown.name = jQElem.attr('name');
-        dropdown.className = jQElem.attr('class');
+        dropdown.className = className;
         
         for ( var i = 0; i < list.length; i++ ) {
             var o = new Option(list[i], list[i]);
@@ -107,9 +124,12 @@ var Utilities = {
         // Replace the old select
         var wasVisible = jQElem.is(':visible');
         jQElem.replaceWith(dropdown);
+        var p = $(dropdown).parent();
         if ( wasVisible ) {
             $(dropdown).toChecklist();
         }
+        $('.'+className, p).data('display', displayList);
+        $('.'+className, p).data('list', list);
     },
     
     /**
