@@ -134,6 +134,15 @@ class Pipeline(object):
             try:
                 self.dataTable = DataTable(logs=self.logs, wait=not self.webClient)
                 self.messages = self.dataTable.messages
+
+                selectedValueCols = list(self.dataTable.valueColumns)
+                selectedValueCols.sort()
+                selectedScenarioCols = list(self.dataTable.scenarioColumns)
+                selectedScenarioCols.sort()
+                block_values.append(selectedValueCols)
+                block_scenarios.append(selectedScenarioCols)
+                block_scenario_values.append(self.dataTable.getScenarioValues())
+
                 self.dataTable.selectScenarioColumns(self.scenarioCols)
                 self.dataTable.selectValueColumns(self.valueCols, self.derivedValueCols)
                 selectedValueCols = list(self.dataTable.valueColumns)
@@ -175,7 +184,7 @@ class Pipeline(object):
                 # This is safe - if we've gotten to this point, everything
                 # before this block has already worked
                 del self.blocks[i+firstBlockToRun:]
-                graph_outputs = self.apply()
+                (block_scenarios, block_scenario_values, block_values, graph_outputs) = self.apply()
                 e.dataTable = self.dataTable
                 e.messages = self.messages
                 e.graph_outputs = graph_outputs

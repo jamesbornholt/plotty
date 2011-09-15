@@ -2704,11 +2704,31 @@ var Pipeline = {
     refresh: function() {
         var encoded = [Pipeline.encodeHeader()];
         var error = false;
+        // Reset any incomplete block styles
+        $('.incomplete-block').removeClass('incomplete-block');
+        if ( Pipeline.selectedLogFiles.length == 0 ) {
+            console.debug("Pipeline not valid because no logs selected.");
+            $('#pipeline-log').addClass('incomplete-block');
+            return;
+        }
+        if ( Pipeline.selectedScenarioColumns.length == 0 ) {
+            console.debug("Pipeline not valid because scenario cols empty.");
+            error = true ;
+            $('#pipeline-scenario-cols').addClass('incomplete-block');
+        }
+        if ( Pipeline.selectedValueColumns.length == 0 ) {
+            console.debug("Pipeline not valid because value cols empty.");
+            error = true ;
+            $('#pipeline-value-cols').addClass('incomplete-block');
+        }
         jQuery.each(this.blocks, function(i, block) {
-            if (!error && block.complete()) {
+            if (error) {
+                // TODO: $(block.element).attr("disabled","disabled");
+            } else if (block.complete()) {
                 encoded.push(block.ID + block.encode());
             } else {
                 error = true;
+                $(block.element).addClass('incomplete-block');
             }
         });
         var hash = encoded.join(Pipeline.encoder.BLOCK_SEPARATOR);
@@ -2739,10 +2759,10 @@ var Pipeline = {
 
             var changed = false;
             jQuery.each(Pipeline.blocks, function(i) {
-                if (i >= data.block_scenarios.length) return;
-                Pipeline.blocks[i].scenarioColumnsCache = data.block_scenarios[i];
-                Pipeline.blocks[i].scenarioValuesCache = data.block_scenario_values[i];
-                Pipeline.blocks[i].valueColumnsCache = data.block_values[i];
+                if (i > data.block_scenarios.length) return;
+                Pipeline.blocks[i].scenarioColumnsCache = data.block_scenarios[i+1];
+                Pipeline.blocks[i].scenarioValuesCache = data.block_scenario_values[i+1];
+                Pipeline.blocks[i].valueColumnsCache = data.block_values[i+1];
 
                 changed |= Pipeline.blocks[i].refreshColumns();
                 Pipeline.blocks[i].loadState();
@@ -2763,9 +2783,9 @@ var Pipeline = {
             Utilities.updateMultiSelect($("#select-value-cols"), Pipeline.valueColumnsCache, Pipeline.valueColumnsCache, Pipeline.selectedValueColumns);
 
             if (!error) {
-                Pipeline.newBlockScenarioColumnsCache = data.block_scenarios[Pipeline.blocks.length];
-                Pipeline.newBlockScenarioValuesCache = data.block_scenario_values[Pipeline.blocks.length];
-                Pipeline.newBlockValueColumnsCache = data.block_values[Pipeline.blocks.length];
+                Pipeline.newBlockScenarioColumnsCache = data.block_scenarios[Pipeline.blocks.length+1];
+                Pipeline.newBlockScenarioValuesCache = data.block_scenario_values[Pipeline.blocks.length+1];
+                Pipeline.newBlockValueColumnsCache = data.block_values[Pipeline.blocks.length+1];
 
                 $('#output').children().not('#loading-indicator').remove();
                 $('#output').hide();
@@ -2867,67 +2887,6 @@ var Pipeline = {
             Pipeline.hash = encoded;
         }
         window.location.hash = encoded;
-    },
-
-    encodePipelineToRun: function() {
-
-        /*
-         * parts 3+: blocks
-         */ 
-        jQuery.each(this.blocks, function(i, block) {
-            strs.push(block.ID + block.encode());
-        });
-
-        // Load the initial scenario and value columns from their selectors
-        var scenarioCols = Utilities.multiSelectValue($("#select-scenario-cols"));
-        var valueCols = Utilities.multiSelectValue($("#select-value-cols"));
-        $('.pipeline-derived-value-field').each(function() {
-            var s = $.trim(this.value);
-            if ( s.length > 0 ) valueCols.push(s);
-        });
-
-        // Reset any incomplete block styles
-        $('.incomplete-block').removeClass('incomplete-block');
-
-        // We want to visit every block even if the pipeline is invalid, since
-        // we also need to notify blocks about their new scenario and value
-        // columns.
-        var valid = true;
-        
-        if ( scenarioCols.length == 0 ) {
-            console.debug("Pipeline not valid because scenario cols empty: [" +  scenarioCols + "], [" + valueCols + "]");
-            valid = false;
-            $('#pipeline-scenario-cols').addClass('incomplete-block');
-        }
-        if ( valueCols.length == 0 ) {
-            console.debug("Pipeline not valid because value cols empty: [" +  scenarioCols + "], [" + valueCols + "]");
-            valid = false;
-            $('#pipeline-value-cols').addClass('incomplete-block');
-        }
-        
-        var ret;
-        for ( var i = 0; i < Pipeline.blocks.length; i++ ) {
-            ret = Pipeline.blocks[i].cascade(scenarioCols, valueCols, reason);
-            if ( ret === false ) {
-                console.debug("Block " + i + ": not valid");
-                valid = false;
-                $(Pipeline.blocks[i].element).addClass('incomplete-block');
-            }
-            else {
-                console.debug("Block " + i + ": valid, scenario=[" + ret[0] + "], value=[" + ret[1] + "]");
-                scenarioCols = ret[0];
-                validCols = ret[1];
-            }
-        }
-        
-        if ( !valid ) {
-            $("#header-config").addClass('error');
-            return false;
-        }
-        else {
-            $("#header-config").removeClass('error');
-            return Pipeline.encode();
-        }
     },
 
     /**
