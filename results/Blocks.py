@@ -110,6 +110,10 @@ class CompositeScenarioBlock(Block):
     def apply(self, data_table, messages):
         """ Apply this block to the given data table.
         """
+        for col in self.columns:
+            if not col in data_table.scenarioColumns:
+                raise PipelineError("Invalid columns specified for block")
+
         composite_col = '-'.join(self.columns)
         for row in data_table:
             row.scenario[composite_col] = '-'.join(row.scenario[x] for x in self.columns) 
@@ -176,6 +180,10 @@ class FilterBlock(Block):
     def apply(self, data_table, messages):
         """ Apply this block to the given data table.
         """
+        for f in self.filters:
+            if not f['scenario'] in data_table.scenarioColumns:
+                raise PipelineError("Invalid columns specified for block")
+
         new_rows = []
         removed_scenario_cols = set()
         for filt in self.filters:
@@ -272,6 +280,9 @@ class ValueFilterBlock(Block):
     def apply(self, data_table, messages):
         """ Apply this block to the given data table.
         """
+        for f in self.filters:
+            if not f['column'] in data_table.valueColumns:
+                raise PipelineError("Invalid columns specified for block")
         new_rows = []
         for row in data_table:
             add = True
@@ -334,6 +345,9 @@ class AggregateBlock(Block):
     def apply(self, data_table, messages):
         """ Apply this block to the given data table.
         """
+        if not self.column in data_table.scenarioColumns:
+            raise PipelineError("Invalid columns specified for block")
+
         groups = {}
         basescenarios = set()
         scenarios = {}
@@ -441,11 +455,18 @@ class NormaliseBlock(Block):
     def apply(self, data_table, messages):
         """ Apply this block to the given data table.
         """
-
         ignored_rows = []
         no_normaliser_rows = []
 
         groups = {}
+
+        for col in self.group:
+            if not col in data_table.scenarioColumns:
+                raise PipelineError("Invalid columns specified for block")
+        if self.type == NormaliseBlock.TYPE['SELECT']:
+            for n in self.normaliser:
+                if not n['scenario'] in data_table.scenarioColumns:
+                    raise PipelineError("Invalid columns specified for block")
 
         # Group the rows up as needed
         for row in data_table:
@@ -821,6 +842,8 @@ class GraphBlock(Block):
         if self.type == GraphBlock.TYPE['HISTOGRAM'] or self.type == GraphBlock.TYPE['XY']:
             sets, scenario_keys = self.group(data_table)
             graphs = {}
+            if not (self.column in data_table.scenarioColumns and self.row in data_table.scenarioColumns and self.value in data_table.valueColumns):
+                raise PipelineError("Invalid columns specified for block")
             for (scenario, rows) in sets.iteritems():
                 # Pivot the data
                 pivot_table, aggregates, column_keys = self.pivot(rows)
@@ -876,6 +899,8 @@ class GraphBlock(Block):
             
             return graphs
         elif self.type == GraphBlock.TYPE['SCATTER']:
+            if not (self.series in data_table.scenarioColumns and self.x in data_table.valueColumns and self.y in data_table.valueColumns):
+                raise PipelineError("Invalid columns specified for block")
             # XXX TODO: this cache key doesn't work; we should implement a
             # cache key method on DataTable
             graph_hash = str(abs(hash(self.cache_key_base)))

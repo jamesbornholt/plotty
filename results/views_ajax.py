@@ -62,9 +62,17 @@ def pipeline(request, pipeline):
     except PipelineError as e:
         if isinstance(e.block, str):
             output = '<div class="exception"><h1>Error in' + e.block + '</h1>' + e.msg + '</div>'
+            return HttpResponse(json.dumps({'error': True, 'index': e.block, 'html': output, 'rows': 1}))
         else:
             output = '<div class="exception"><h1>Error in block ' + str(e.block + 1) + '</h1>' + e.msg + '</div>'
-        return HttpResponse(json.dumps({'error': True, 'index': e.block, 'html': output, 'rows': 1}))
+            ambiguity = False
+            index = e.block
+            dt = e.dataTable
+            msg = e.messages
+            graph_outputs = e.graph_outputs
+            block_values = e.block_values
+            block_scenarios = e.block_scenarios
+            block_scenario_values = e.block_scenario_values
     except PipelineAmbiguityException as e:
         if isinstance(e.block, str):
             # The exception occured early on - cols, probably
@@ -73,7 +81,7 @@ def pipeline(request, pipeline):
         else:
             output = '<div class="ambiguity"><h1>Ambiguity in block ' + str(e.block + 1) + '</h1>' + e.msg + '<div><strong>The data below shows the output of the pipeline up to but not including block ' + str(e.block + 1) + '</strong></div></div>'
             ambiguity = True
-            ambiguityIndex = e.block
+            index = e.block
             dt = e.dataTable
             msg = e.messages
             graph_outputs = e.graph_outputs
@@ -83,7 +91,7 @@ def pipeline(request, pipeline):
     else:
         output = ''
         ambiguity = False
-        ambiguityIndex = -1
+        index = -1
         dt = p.dataTable
         msg = p.messages
 
@@ -110,7 +118,7 @@ def pipeline(request, pipeline):
       msg_output += '</div>'
       output += msg_output
 
-    return HttpResponse(json.dumps({'error': False, 'ambiguity': ambiguity, 'index': ambiguityIndex, 'block_scenarios': block_scenarios, 'block_scenario_values': block_scenario_values, 'block_values': block_values, 'html': output, 'rows': len(dt.rows), 'graph': len(graph_outputs) > 0}))
+    return HttpResponse(json.dumps({'error': False, 'ambiguity': ambiguity, 'index': index, 'block_scenarios': block_scenarios, 'block_scenario_values': block_scenario_values, 'block_values': block_values, 'html': output, 'rows': len(dt.rows), 'graph': len(graph_outputs) > 0}))
 
 def delete_saved_pipeline(request):
     if 'name' not in request.POST:

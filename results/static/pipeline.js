@@ -2759,7 +2759,7 @@ var Pipeline = {
 
             var changed = false;
             jQuery.each(Pipeline.blocks, function(i) {
-                if (i > data.block_scenarios.length) return;
+                if (i >= data.block_scenarios.length-2) return;
                 Pipeline.blocks[i].scenarioColumnsCache = data.block_scenarios[i+1];
                 Pipeline.blocks[i].scenarioValuesCache = data.block_scenario_values[i+1];
                 Pipeline.blocks[i].valueColumnsCache = data.block_values[i+1];
