@@ -2341,6 +2341,11 @@ var Pipeline = {
      */
     newBlockValueColumnsCache: [],
 
+    selectedLogFiles: [],
+    selectedScenarioColumns: [],
+    selectedValueColumns: [],
+    derivedValueColumns: [],
+
     /**
      * The option table for log files
      */
@@ -2419,13 +2424,21 @@ var Pipeline = {
         });
         
         // Create the options table for log files and derived value cols
-        Pipeline.logFileOptionsTable = new OptionsTable($('#pipeline-log-table'), null, Pipeline.refreshAvailableColumns);
+        Pipeline.logFileOptionsTable = new OptionsTable($('#pipeline-log-table'), null, Pipeline.refresh);
         Pipeline.derivedValueColsOptionsTable = new OptionsTable($('#pipeline-derived-value-cols'), null, Pipeline.refresh, function() {
             $('.pipeline-derived-value-field', this).val("");
         });
 
         // Hook the log selection dropdowns
-        $("#pipeline-log").delegate(".select-log", 'change', Pipeline.refreshAvailableColumns);
+        $("#pipeline-log").delegate(".select-log", 'change', function() {
+            Pipeline.selectedLogFiles = [];
+            $('.select-log', Pipeline.logFileOptionsTable.element).each(function() {
+                if ( $(this).val() != '-1' ) {
+                    Pipeline.selectedLogFiles.push($(this).val());
+                }
+            });
+            Pipeline.refresh();
+        });
         
         // Turn the scenario and value column selects into multiselects
         $("#select-scenario-cols, #select-value-cols").toChecklist();
@@ -2435,6 +2448,7 @@ var Pipeline = {
             if ( $('#select-scenario-cols input:checkbox').length == 0 ) return false;
             $('#select-scenario-cols input:checkbox').attr('checked', true);
             $('#select-scenario-cols li').addClass('checked');
+            Pipeline.selectedScenarioColumns = Utilities.multiSelectValue($("#select-scenario-cols"));
             Pipeline.refresh();
             return false;
         });
@@ -2442,13 +2456,20 @@ var Pipeline = {
             if ( $('#select-scenario-cols input:checkbox').length == 0 ) return false;
             $('#select-scenario-cols input:checkbox').removeAttr('checked');
             $('#select-scenario-cols li').removeClass('checked');
+            Pipeline.selectedScenarioColumns = [];
             Pipeline.refresh();
             return false;
         });
 
         // Hook the checkboxes in the scenario and value column selects
-        $("#pipeline-scenario-cols").delegate("#select-scenario-cols input", 'change', Pipeline.refresh);
-        $("#pipeline-value-cols").delegate("#select-value-cols input", 'change', Pipeline.refresh);
+        $("#pipeline-scenario-cols").delegate("#select-scenario-cols input", 'change', function() {
+            Pipeline.selectedScenarioColumns = Utilities.multiSelectValue($("#select-scenario-cols"));
+            Pipeline.refresh();
+        });
+        $("#pipeline-value-cols").delegate("#select-value-cols input", 'change', function() {
+            Pipeline.selectedValueColumns = Utilities.multiSelectValue($("#select-value-cols"));
+            Pipeline.refresh();
+        });
         
         // Hook the add buttons for different blocks
         $('#add-filter').click(function() {
@@ -2560,7 +2581,14 @@ var Pipeline = {
         // the pipeline
         $('#pipeline-derived-value-cols').delegate('.pipeline-derived-value-field', 'keyup', function() {
             clearTimeout(Pipeline.derivedValueColTimeoutID);
-            Pipeline.derivedValueColTimeoutID = setTimeout(Pipeline.refresh, Pipeline.constants.DERIVED_VALUE_COLUMN_CHANGE_TIMEOUT);
+            Pipeline.derivedValueColTimeoutID = setTimeout(function() { 
+                Pipeline.derivedColumns = [];
+                $('.pipeline-derived-value-field').each(function() {
+                    var s = $.trim(this.value);
+                    if ( s.length > 0 ) Pipeline.derivedColumns.push(s);
+                });
+                Pipeline.refresh();
+            }, Pipeline.constants.DERIVED_VALUE_COLUMN_CHANGE_TIMEOUT);
         });
 
         // Trigger it once now
@@ -2671,8 +2699,8 @@ var Pipeline = {
      * @param reason int The reason why this refresh was called. Value comes
      *   from Pipeline.constants.
      */
-    refresh: function(reason) {
-        var encoded = Pipeline.cascade(reason);
+    refresh: function() {
+        var encoded = Pipeline.encodePipelineToRun();
         if ( encoded === false ) {
             console.debug("Pipeline.refresh: Pipeline not valid.");
             // Disable the save pipeline fields
@@ -2806,15 +2834,7 @@ var Pipeline = {
         window.location.hash = encoded;
     },
 
-    /**
-     * Cascade the available scenario and value columns down the pipeline.
-     *
-     * @param reason int The reason why this cascade was called. Value comes
-     *   from Pipeline.constants.
-     * @return string The encoded pipeline, or False if the pipeline is not
-     *   valid.
-     */
-    cascade: function(reason) {
+    encodePipelineToRun: function() {
         // Load the initial scenario and value columns from their selectors
         var scenarioCols = Utilities.multiSelectValue($("#select-scenario-cols"));
         var valueCols = Utilities.multiSelectValue($("#select-value-cols"));
@@ -2888,24 +2908,10 @@ var Pipeline = {
         var pipelineConfig = [];
 
         // Encode the selected log files.
-        var logFiles = Pipeline._selectedLogFiles();
-        pipelineConfig.push(logFiles.join(Pipeline.encoder.PARAM_SEPARATOR));
-
-        // Encode the scenario and value columns
-        var scenarioCols = Utilities.multiSelectValue($("#select-scenario-cols"));
-        var valueCols = Utilities.multiSelectValue($("#select-value-cols"));
-        var derivedValueCols = $('.pipeline-derived-value-field');
-
-        var derivedValueColExprs = [];
-        derivedValueCols.each(function() {
-            var s = $.trim(this.value);
-            if ( s.length > 0 ) derivedValueColExprs.push(s);
-        });
-
-        pipelineConfig.push(scenarioCols.join(Pipeline.encoder.PARAM_SEPARATOR));
-        pipelineConfig.push(valueCols.join(Pipeline.encoder.PARAM_SEPARATOR));
-        pipelineConfig.push(derivedValueColExprs.join(Pipeline.encoder.PARAM_SEPARATOR));
-
+        pipelineConfig.push(Pipeline.selectedLogFiles.join(Pipeline.encoder.PARAM_SEPARATOR));
+        pipelineConfig.push(Pipeline.selectedScenarioColumns.join(Pipeline.encoder.PARAM_SEPARATOR));
+        pipelineConfig.push(Pipeline.selectedValueColumns.join(Pipeline.encoder.PARAM_SEPARATOR));
+        pipelineConfig.push(Pipeline.derivedColumns.join(Pipeline.encoder.PARAM_SEPARATOR));
         strs.push(pipelineConfig.join(Pipeline.encoder.GROUP_SEPARATOR));
 
         /*
@@ -2993,6 +2999,45 @@ var Pipeline = {
             else return null; // removes the item
         });
 
+        Pipeline.selectedLogFiles = logFiles;
+        Pipeline.selectedValueColumns = valueCols;
+        Pipeline.selectedScenarioColumns = scenarioCols;
+        Pipeline.derivedColumns = derivedValueCols;
+
+        // Load the log files into the table
+        Pipeline.logFileOptionsTable.reset();
+        jQuery.each(logFiles, function(i, log) {
+            var row = Pipeline.logFileOptionsTable.addRow();
+            $('.select-log', row).val(log);
+        });
+
+        // Update the derived value cols
+        jQuery.each(derivedValueCols, function(index, value) {
+            var row = Pipeline.derivedValueColsOptionsTable.addRow();
+            $('.pipeline-derived-value-field', row).val(value);
+        });
+
+
+        // Remove any old vlocks
+        jQuery.each(Pipeline.blocks, function(i, block) {
+            block.removeBlock();
+        });
+
+        Pipeline.blocks = [];
+
+        // Start creating blocks
+        jQuery.each(blocks, function(i, params) {
+            if ( $.trim(params).length == 0 ) return;
+            var paramString = params.slice(1); // The first character is the block ID
+            var block = new Pipeline.encoder.MAPPINGS[params[0]](Pipeline.blocks.length);
+            block.decode(paramString);
+            Pipeline.blocks.push(block);
+        });
+
+        Pipeline.refresh();
+    },
+
+/*
         // Load the log files into the table
         // XXX TODO: if a logfile no longer exists? does this work?
         Pipeline.logFileOptionsTable.reset();
@@ -3040,8 +3085,7 @@ var Pipeline = {
             });
 
             Pipeline.refresh();
-        });
-    },
+        });*/
     
     /**
      * Attempt to decode an old-style URL and turn it into a new-style one.
@@ -3122,51 +3166,6 @@ var Pipeline = {
         return newEncoded;
     },
 
-    /**
-     * Refresh the available scenario and value columns by requesting from
-     * the server what's available.
-     */
-    refreshAvailableColumns: function() {
-        // Clear the values cache, since a log changed it's invalid now.
-        Pipeline.scenarioColumnsCache = {};
-        Pipeline.scenarioValuesCache = {};
-        Pipeline.valueColumnsCache = [];
-        Pipeline.newBlockScenarioColumnsCache = {};
-        Pipeline.newBlockScenarioValuesCache = {};
-        Pipeline.newBlockValueColumnsCache = [];
-
-        var foundAny = false;
-        $('.select-log', Pipeline.logFileOptionsTable.element).each(function() {
-            if ( $(this).val() != '-1' ) {
-                foundAny = true
-            }
-        });
-
-        if (!foundAny) {
-            $('#pipeline-log').addClass('incomplete-block');
-            Pipeline.updateAvailableColumns([], [], true, true);
-            Pipeline.refresh();
-            return;
-        }
-
-        // Load new columns.
-        Pipeline.ajax.logValues(function(data, textStatus, xhr) {
-            if ( data.tabulating === true ) {
-                Pipeline.tabulating(data, Pipeline.refreshAvailableColumns);
-            }
-            else {
-                Pipeline.scenarioColumnsCache = data.scenarioCols;
-                Pipeline.scenarioValuesCache = data.scenarioValues;
-                Pipeline.valueColumnsCache = data.valueCols;
-                Pipeline.newBlockScenarioColumnsCache = data.scenarioCols;
-                Pipeline.newBlockScenarioValuesCache = data.scenarioValues;
-                Pipeline.newBlockValueColumnsCache = data.valueCols;
-                Pipeline.updateAvailableColumns(data.scenarioCols, data.valueCols, true, true);
-                Pipeline.refresh();
-            }
-        });
-    },
-    
     /**
      * Update the available scenario and value columns.
      *
@@ -3255,7 +3254,7 @@ var Pipeline = {
          * specified logfiles
          */
         logValues: function(callback) {
-            $.getJSON('ajax/log-values/' + Pipeline._selectedLogFiles().join(',') + '/', callback);
+            $.getJSON('ajax/log-values/' + Pipeline.selectedLogFiles.join(',') + '/', callback);
         },
 
         /**
