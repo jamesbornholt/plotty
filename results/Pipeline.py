@@ -117,6 +117,7 @@ class Pipeline(object):
             raise PipelineError("No log files are selected.", 'selected log files')
         
         graph_outputs = []
+        block_values = []
 
         # Preempt the pipeline if necessary
         if self.cacheAvailableIndex > -1:
@@ -124,16 +125,19 @@ class Pipeline(object):
             self.dataTable = cacheValue['data_table']
             self.messages = self.dataTable.messages
             graph_outputs = cacheValue['graph_outputs']
+            block_values = cacheValue['block_values']
         else:
             try:
                 self.dataTable = DataTable(logs=self.logs, wait=not self.webClient)
                 self.messages = self.dataTable.messages
                 self.dataTable.selectScenarioColumns(self.scenarioCols)
                 self.dataTable.selectValueColumns(self.valueCols, self.derivedValueCols)
+                block_values.append(self.dataTable.getScenarioValues())
                 # Cache it
                 cache.set(self.cacheKeyBase, {
                     'last_modified': self.dataTable.lastModified,
                     'data_table': self.dataTable,
+                    'block_values': block_values,
                     'graph_outputs': graph_outputs
                 })
             except LogTabulateStarted:
@@ -163,6 +167,7 @@ class Pipeline(object):
                 e.dataTable = self.dataTable
                 e.messages = self.messages
                 e.graph_outputs = graph_outputs
+                e.block_values = block_values
                 raise e
             except PipelineError:
                 raise
@@ -172,12 +177,15 @@ class Pipeline(object):
             if isinstance(block, GraphBlock):
                 graph_outputs.append(ret)
             
+            block_values.append(self.dataTable.getScenarioValues())
+
             # Cache it
             cache.set(cacheKey, {
                 'last_modified': self.dataTable.lastModified,
                 'data_table': self.dataTable,
+                'block_values': block_values,
                 'graph_outputs': graph_outputs
             })
 
 
-        return graph_outputs
+        return (block_values, graph_outputs)

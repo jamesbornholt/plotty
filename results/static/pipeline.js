@@ -167,6 +167,12 @@ var Block = Base.extend({
     /**
      ** Object fields
      **/
+
+    /**
+     * Caches the available values for scenario columns. Should be invalidated
+     * when the selected logs change.
+     */
+    valueCache: {},
     
     /**
      * The HTML div that contains this block.
@@ -488,7 +494,7 @@ var Blocks = {
                 scenarioSelect.val(filter.scenario);
                 isSelect.val(filter.is);
                 if ( filter.scenario != -1 ) {
-                    Utilities.updateSelect(valueSelect, Pipeline.valueCache[filter.scenario]);
+                    Utilities.updateSelect(valueSelect, thisBlock.valueCache[filter.scenario]);
                 }
                 else {
                     Utilities.updateSelect(valueSelect, []);
@@ -521,7 +527,7 @@ var Blocks = {
                 }
                 
                 // Check that the value is still in the valueCache
-                if ( jQuery.inArray(filter.value, Pipeline.valueCache[filter.scenario]) == -1 ) {
+                if ( jQuery.inArray(filter.value, thisBlock.valueCache[filter.scenario]) == -1 ) {
                     filter.value = -1;
                     changed = true;
                     return;
@@ -965,7 +971,7 @@ var Blocks = {
 		        	    Utilities.updateSelect(valueSelect, []);
 		            }
 		            else {
-		        	    Utilities.updateSelect(valueSelect, Pipeline.valueCache[norm.scenario]);
+		        	    Utilities.updateSelect(valueSelect, thisBlock.valueCache[norm.scenario]);
 		            }
 		            valueSelect.val(norm.value);
 		        });
@@ -1015,7 +1021,7 @@ var Blocks = {
                     }
                     
                     // Check that the value is still in the value cache
-                    if ( jQuery.inArray(norm.value, Pipeline.valueCache[norm.scenario]) == -1 ) {
+                    if ( jQuery.inArray(norm.value, thisBlock.valueCache[norm.scenario]) == -1 ) {
                         norm.value = -1;
                         invalid = true;
                         return;
@@ -1768,7 +1774,6 @@ var Blocks = {
             });
             column = this.columns.join('-');
             scenarioCols.push(column);
-            Pipeline.valueCache[column] = this.computeValues(this.columns);
         },
 
         /**
@@ -1855,7 +1860,6 @@ var Blocks = {
                 return false;
             }
             else {
-                Pipeline.valueCache[column] = this.computeValues(this.columns);
                 return [scenarioCols, valueCols];
             }
         },
@@ -1876,25 +1880,6 @@ var Blocks = {
                 }
             }
         },
-
-        /**
-         * Compute all possible values for this column
-         */
-        computeValues: function(cols) { 
-            var thisBlock = this;
-            var cachedVals = Pipeline.valueCache[cols[0]];
-            if (cols.length == 1) {
-                return cachedVals;
-            }
-            var values = [];
-            jQuery.each(cachedVals, function(i, val) { 
-                subValues = thisBlock.computeValues(cols.slice(1));
-                jQuery.each(subValues, function(i, subval) {
-                    values.push(val + '-' + subval);
-                });
-            });
-            return values;
-        }
     }),
     
     /**
@@ -1958,7 +1943,7 @@ var Blocks = {
                 
                 thisBlock.updatePopup(col, key);
 
-                $('.filter', thisBlock.element).show();
+                $('.popupfilter', thisBlock.element).show();
                 $('.popup', thisBlock.element).show();
             });
 
@@ -1967,7 +1952,7 @@ var Blocks = {
             bindColorPicker($('.text-format-color', popup));
             $(".cancel-button", popup).click(function() {
                 $(".popup", thisBlock.element).hide();
-                $('.filter', thisBlock.element).hide();
+                $('.popupfilter', thisBlock.element).hide();
 
             });
             $(".check-group", popup).change(function() {
@@ -2086,7 +2071,7 @@ var Blocks = {
             $('.text-format-key', popup).val(key == -1 ? "" : key);
 
             // Suggested values
-            $('.format-suggestions', popup).text(col == -1 ? 'None (no column selected)' : Pipeline.valueCache[col].join(' '));
+            $('.format-suggestions', popup).text(col == -1 ? 'None (no column selected)' : this.valueCache[col].join(' '));
 
             // Rows
             // Get rid of all but the first row
@@ -2130,7 +2115,7 @@ var Blocks = {
                         }
                     } else {
                         $(".popup", thisBlock.element).hide();
-                        $('.filter', thisBlock.element).hide();
+                        $('.popupfilter', thisBlock.element).hide();
                     }
                 });
 
@@ -2168,7 +2153,7 @@ var Blocks = {
                 var thisBlock = this;
                 Pipeline.ajax.saveFormat(key, styles, function(data) {
                     if (data.error == false) {
-                        $('.filter', thisBlock.element).hide();
+                        $('.popupfilter', thisBlock.element).hide();
                         $('.popup', thisBlock.element).hide();
                         thisBlock.key = key;
                         thisBlock.loadState();
@@ -2415,10 +2400,14 @@ var Pipeline = {
     },
     
     /**
-     * Caches the available values for scenario columns. Should be invalidated
-     * when the selected logs change.
+     * Caches the available values for scenario columns at the start of the pipeline.
      */
     valueCache: {},
+    
+    /**
+     * Caches the available values for scenario columns at the end of the pipeline.
+     */
+    newBlockValueCache: {},
     
     /**
      * The option table for log files
@@ -2660,13 +2649,18 @@ var Pipeline = {
      */
     createBlock: function(block, indexBlock) {
         var index;
+        var vc;
         if ( typeof indexBlock === 'undefined' ) {
             index = Pipeline.blocks.length;
+            vc = Pipeline.newBlockValueCache;
         }
         else {
             index = $(indexBlock).prevAll('.pipeline-block').length;
+            vc = index == 0 ? Pipeline.valueCache : Pipeline.blocks[index-1].valueCache;
         }
-        Pipeline.blocks.splice(index, 0, new block(index));
+        var b =  new block(index);
+        b.valueCache = vc;
+        Pipeline.blocks.splice(index, 0, b);
         Pipeline.refresh(Pipeline.constants.CASCADE_REASON_BLOCK_ADDED);
     },
     
@@ -2765,6 +2759,12 @@ var Pipeline = {
                     });
                     return;
                 }
+                 
+                jQuery.each(Pipeline.blocks, function(i) {
+                    Pipeline.blocks[i].valueCache = data.block_values[i];
+                });
+                Pipeline.newBlockValueCache = data.block_values[Pipeline.blocks.length];
+
                 // Stop the sparklines from being rendered unless we actually want them
                 $('#output').hide();
                 $('#output').append(data.html);
@@ -3077,6 +3077,7 @@ var Pipeline = {
                 return;
             }
             Pipeline.valueCache = data.scenarioValues;
+            Pipeline.newBlockValueCache = data.scenarioValues;
 
             Pipeline.updateAvailableColumns(data.scenarioCols, data.valueCols, scenarioCols, valueCols);
 
@@ -3191,6 +3192,7 @@ var Pipeline = {
     refreshAvailableColumns: function() {
         // Clear the values cache, since a log changed it's invalid now.
         Pipeline.valueCache = {};
+        Pipeline.newBlockValueCache = {};
         var foundAny = false;
         $('.select-log', Pipeline.logFileOptionsTable.element).each(function() {
             if ( $(this).val() != '-1' ) {
@@ -3212,6 +3214,7 @@ var Pipeline = {
             }
             else {
                 Pipeline.valueCache = data.scenarioValues;
+                Pipeline.newBlockValueCache = data.scenarioValues;
                 Pipeline.updateAvailableColumns(data.scenarioCols, data.valueCols, true, true);
                 Pipeline.refresh(Pipeline.constants.CASCADE_REASON_LOGS_CHANGED);
             }

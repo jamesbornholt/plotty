@@ -31,7 +31,7 @@ div {
     background-color: white;
 }
 
-.filter {
+.popupfilter {
     z-index: 1000;
     display: none;
     position: fixed;
