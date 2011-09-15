@@ -113,6 +113,7 @@ class CompositeScenarioBlock(Block):
         for col in self.columns:
             if not col in data_table.scenarioColumns:
                 raise PipelineError("Invalid columns specified for block")
+            data_table.scenarioColumns.remove(col)
 
         composite_col = '-'.join(self.columns)
         for row in data_table:
@@ -120,8 +121,6 @@ class CompositeScenarioBlock(Block):
             for col in self.columns:
                 del row.scenario[col]
 
-        for col in self.columns:
-           data_table.scenarioColumns.remove(col)
         data_table.scenarioColumns.add(composite_col) 
 
 class FilterBlock(Block):
