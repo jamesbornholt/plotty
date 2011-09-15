@@ -169,6 +169,11 @@ var Block = Base.extend({
      **/
 
     /**
+     * Caches the available scenario columns.
+     */
+    scenarioColumnsCache: {},
+
+    /**
      * Caches the available values for scenario columns. Should be invalidated
      * when the selected logs change.
      */
@@ -231,15 +236,6 @@ var Block = Base.extend({
         });
         
         this.element = newBlock;
-    },
-
-    seed: function(scenarioCols, valueCols) {
-        $('.scenario-column', this.element).each(function() {
-            Utilities.updateSelect(this, scenarioCols);
-        });
-        $('.value-column', this.element).each(function() {
-            Utilities.updateSelect(this, valueCols);
-        });
     },
 
     /**
@@ -309,22 +305,12 @@ var Block = Base.extend({
     },
     
     /**
-     * The available scenario or value columns have changed, so we need to
-     * cascade those changes through the pipeline. If these changes have 
+     * The available scenario or value columns may have changed, so we need to
+     * update those changes through the pipeline. If these changes have 
      * forced a change in our configuration (e.g. if a scenario column we were
      * using has disappeared), warn the user somehow.
-     * This function should validate the block's local configuration, and,
-     * if something has changed, call loadState to update the block.
-     *
-     * @param scenarioCols array The scenario columns available
-     * @param valueCols array the value columns now available
-     * @param reason int The reason for cascading
-     * @return [newScenarioCols, newValueCols], where newScenarioCols and
-     *   newValueCols contain the available scenario and value columns
-     *   respectively after this block takes effect
      */
-    cascade: function(scenarioCols, valueCols, reason) {
-        
+    update: function() {
     },
     
     /**
@@ -403,7 +389,7 @@ var Blocks = {
             };
             var addClosure = function() {
                 thisBlock.filters.push({scenario: -1, is: 1, value: -1});
-                Pipeline.refresh(Pipeline.constants.CASCADE_REASON_SELECTION_CHANGED);
+                Pipeline.refresh();
             };
             
             // Create the option table
@@ -412,7 +398,7 @@ var Blocks = {
             // Hook the dropdowns
             $(this.element).delegate('select', 'change', function() {
                 thisBlock.readState();
-                Pipeline.refresh(Pipeline.constants.CASCADE_REASON_SELECTION_CHANGED);
+                Pipeline.refresh();
             });
         },
         
@@ -484,7 +470,13 @@ var Blocks = {
         loadState: function() {
             // Get rid of all but the first row
             this.optionsTable.reset();
+            var thisBlock = this;
             
+            // Update the scenario columns
+            $('.select-filter-column', this.element).each(function() {
+                Utilities.updateSelect(this, thisBlock.scenarioColumnsCache, true);
+            });
+
             // Create new rows for each filter
             var thisBlock = this;
             jQuery.each(this.filters, function(i, filter) {
@@ -509,54 +501,21 @@ var Blocks = {
         },
         
         /**
-         * Visit this block and cascade the available scenario and value 
-         * columns. See Block.cascade for parameters and return.
+         * Update this block using newly cached column information.
          */
-        cascade: function(scenarioCols, valueCols, reason) {
-            var thisBlock = this;
-            var changed = false;
-            
-            // Update the scenario columns
-            $('.select-filter-column', this.element).each(function() {
-                Utilities.updateSelect(this, scenarioCols, true);
-            });
+        valid: function() {
+            var valid = true;
             
             jQuery.each(this.filters, function(i, filter) {
                 // If the selected scenario isn't in the new available ones,
                 // reset this row
-                if ( jQuery.inArray(filter.scenario, scenarioCols) == -1 ) {
-                    filter.scenario = -1;
-                    filter.value = -1;
-                    changed = true;
+                if ( filter.scenario == -1 || filter.value == -1) {
+                    valid = false;
                     return;
-                }
-                
-                // Check that the value is still in the scenarioValuesCache
-                if ( jQuery.inArray(filter.value, thisBlock.scenarioValuesCache[filter.scenario]) == -1 ) {
-                    filter.value = -1;
-                    changed = true;
-                    return;
-                }
-                
-                // We now have valid scenario and value. Remove the scenario
-                // from scenarioCols
-                if ( filter.is == thisBlock.TYPE.IS ) {
-                    scenarioCols.remove(filter.scenario);
                 }
             });
-            
-            // If the values have changed, or the logs have changed (and thus
-            // the scenarioValuesCache), we have to reload the HTML.
-            if ( changed || reason == Pipeline.constants.CASCADE_REASON_LOGS_CHANGED ) {
-                this.loadState();
-            }
-            
-            if ( changed ) {
-                return false;
-            }
-            else {
-                return [scenarioCols, valueCols];
-            }
+
+            return valid; 
         },
         
         /**
@@ -654,7 +613,7 @@ var Blocks = {
             var thisBlock = this;
             $(this.element).delegate('select', 'change', function() {
                 thisBlock.readState();
-                Pipeline.refresh(Pipeline.constants.CASCADE_REASON_SELECTION_CHANGED);
+                Pipeline.refresh();
             });
         },
         
@@ -716,21 +675,18 @@ var Blocks = {
         },
         
         /**
-         * Visit this block and cascade the available scenario and value 
-         * columns. See Block.cascade for parameters and return.
+         * Update this block using newly cached column information.
          */
-        cascade: function(scenarioCols, valueCols, reason) {
+        update: function() {
             // Update the scenario column dropdown. If the selection was not
             // kept, the block is invalid.
             var scenarioSelect = $('.select-aggregate-column', this.element);
-            if ( !Utilities.updateSelect(scenarioSelect, scenarioCols) ) {
+            var thisBlock = this;
+            if ( !Utilities.updateSelect(scenarioSelect, thisBlock.scenarioColumnsCache) ) {
                 this.column = -1;
                 return false;
             }
-            else {
-                scenarioCols.remove(this.column);
-                return [scenarioCols, valueCols];
-            }
+            return true;
         }
     }),
     
@@ -808,7 +764,7 @@ var Blocks = {
             };
             var addClosure = function() {
                 thisBlock.normaliser.push({scenario: -1, value: -1});
-                Pipeline.refresh(Pipeline.constants.CASCADE_REASON_SELECTION_CHANGED);
+                Pipeline.refresh();
             };
             
             // Create the option table
@@ -817,7 +773,7 @@ var Blocks = {
             // Hook the dropdowns
             $(this.element).delegate('select, .select-normalise-group input', 'change', function() {
 		        thisBlock.readState();
-                Pipeline.refresh(Pipeline.constants.CASCADE_REASON_SELECTION_CHANGED_NORMALISER);
+                Pipeline.refresh();
             });
             
             // We need to give the radio buttons a unique name to make sure
@@ -841,944 +797,8 @@ var Blocks = {
                     thisBlock.optionsTable.element.hide();
                 }
                 thisBlock.readState();
-                Pipeline.refresh(Pipeline.constants.CASCADE_REASON_SELECTION_CHANGED)
+                Pipeline.refresh()
             });
-        },
-
-        seed: function(scenarioCols, valueCols) {
-            $('.scenario-column', this.element).each(function() {
-                Utilities.updateSelect(this, scenarioCols);
-            });
-            $('.value-column', this.element).each(function() {
-                Utilities.updateSelect(this, valueCols);
-            });
-
-            Utilities.updateMultiSelect($('.select-normalise-group', this.element), scenarioCols, scenarioCols, true);
-        },
-        
-        /**
-        * Decode a parameter string and set this block's configuration according
-        * to those parameters.
-         */
-        decode: function(params) {
-            var parts = params.split(Pipeline.encoder.GROUP_SEPARATOR);
-            // At least 3 parts - flagword, type, groups (possibly empty)
-            if ( parts.length < 3 ) {
-                console.debug("Normalise block invalid: incorrect number of parts");
-                return
-            }
-
-            this.flags = parseInt(parts[0]);
-            this.type = parts[1];
-
-            this.normaliser = [];
-            this.group = [];
-
-            // Part 3 is the groupings
-            var groupings = parts[2].split(Pipeline.encoder.PARAM_SEPARATOR);
-            for ( var i = 0; i < groupings.length; i++ ) {
-                if ( $.trim(groupings[i]).length > 0 ) { // Make sure it's not empty
-                    this.group.push($.trim(groupings[i]));
-                }
-            }
-
-            // If this is a select normaliser, part 4 is the pairs
-            if ( this.type == this.TYPE.SELECT ) {
-                if ( parts.length < 4 || $.trim(parts[3]).length == 0 ) {
-                    console.debug("Normalise block invalid: no pairings for select normaliser");
-                    return;
-                }
-                var pairs = parts[3].split(Pipeline.encoder.PARAM_SEPARATOR);
-                for ( var i = 0; i < pairs.length; i++ ) {
-                    var elements = pairs[i].split(Pipeline.encoder.TUPLE_SEPARATOR);
-                    if ( elements.length != 2 ) {
-                        console.debug("Normalise block: Not a valid pairing: ", pairs[i]);
-                        continue;
-                    }
-                    this.normaliser.push({scenario: elements[0], value: elements[1]});
-                }
-            }
-        },
-        
-        /**
-         * Encode this block into a parameter string based on its configuration.
-         */
-        encode: function() {
-            var strs = [this.flags, this.type];
-
-            strs.push(this.group.join(Pipeline.encoder.PARAM_SEPARATOR));
-
-            if ( this.type == this.TYPE.SELECT ) {
-                var pairs = [];
-                jQuery.each(this.normaliser, function(i, norm) {
-                    if ( norm.scenario != -1 && norm.value != -1 ) {
-                        pairs.push(norm.scenario + Pipeline.encoder.TUPLE_SEPARATOR + norm.value);
-                    }
-                });
-                strs.push(pairs.join(Pipeline.encoder.PARAM_SEPARATOR));
-            }
-            
-            return strs.join(Pipeline.encoder.GROUP_SEPARATOR);
-        },
-				 
-        /**
-         * Take this block's HTML values and load them into local
-         * configuration.
-         */
-        readState: function() {
-	        this.group = [];
-	        this.normaliser = [];
-	    
-	        // Read the type
-	        this.type = $('input:radio:checked', this.element).val();
-	    
-	        // If needed, read the normaliser
-	        if ( this.type == this.TYPE.SELECT ) {
-	            var thisBlock = this;
-		        $('tr', this.element).each(function() {
-		            var scenarioSelect = $('.select-normalise-column', this);
-		            var valueSelect = $('.select-normalise-value', this);
-		            
-		            thisBlock.normaliser.push({
-			            scenario: scenarioSelect.val(),
-			            value: valueSelect.val()
-		            });
-		        });
-	        }
-	    
-	        // Read the grouping
-	        this.group = Utilities.multiSelectValue($('.select-normalise-group', this.element));
-	    },
-	
-	    /**
-         * Take this block's local configuration and load it into the
-         * HTML.
-         */
-        loadState: function() {
-            var radios = $('input:radio', this.element);
-            radios.removeAttr('checked');
-            radios.filter('[value=' + this.type + ']').attr('checked', true);
-
-	        if ( this.type == this.TYPE.SELECT ) {
-		        // Show and reset the table
-		        this.optionsTable.element.show();
-		        this.optionsTable.reset();
-		        
-		        var thisBlock = this;
-		        jQuery.each(this.normaliser, function(i, norm) {
-		            var row = thisBlock.optionsTable.addRow();
-		            var scenarioSelect = $('.select-normalise-column', row);
-		            var valueSelect = $('.select-normalise-value', row);
-		            
-		            // Note here we assume the scenario dropdown has already been updated
-		            scenarioSelect.val(norm.scenario);
-		            if ( norm.scenario == -1 ) {
-		        	    Utilities.updateSelect(valueSelect, []);
-		            }
-		            else {
-		        	    Utilities.updateSelect(valueSelect, thisBlock.scenarioValuesCache[norm.scenario]);
-		            }
-		            valueSelect.val(norm.value);
-		        });
-	        }
-	        else {
-		        // Hide the table, and reset it anyway
-		        this.optionsTable.element.hide();
-	        }
-
-		    // Update the grouping
-		    var thisBlock = this;
-		    $('.select-normalise-group input:checkbox', this.element).each(function() {
-		        if ( jQuery.inArray($(this).val(), thisBlock.group) > -1 ) {
-		            $(this).attr('checked', true);
-		        }
-		        else {
-		            $(this).removeAttr('checked');
-		        }
-		    });
-	    },
-        
-        /**
-         * Visit this block and cascade the available scenario and value 
-         * columns. See Block.cascade for parameters and return.
-         */
-        cascade: function(scenarioCols, valueCols, reason) {
-            var thisBlock = this;
-            var changed = false;
-            var invalid = false;
-
-            // Update all the scenario columns
-            $('.select-normalise-column', this.optionsTable.element).each(function() {
-                Utilities.updateSelect(this, scenarioCols, true);
-            });
-
-            // If we are selecting a normaliser, we need to update the 
-            // options table.
-            if ( this.type == this.TYPE.SELECT ) {                
-                jQuery.each(this.normaliser, function(i, norm) {
-                    // If the selected scenario isn't in the new available ones,
-                    // reset this row
-                    if ( jQuery.inArray(norm.scenario, scenarioCols) == -1 ) {
-                        norm.scenario = -1;
-                        norm.value = -1;
-                        invalid = true;
-                        return;
-                    }
-                    
-                    // Check that the value is still in the value cache
-                    if ( jQuery.inArray(norm.value, thisBlock.scenarioValuesCache[norm.scenario]) == -1 ) {
-                        norm.value = -1;
-                        invalid = true;
-                        return;
-                    }
-                });
-            }
-            
-            // Update the groups
-            Utilities.updateMultiSelect($('.select-normalise-group', this.element), scenarioCols, scenarioCols, true);
-            
-            // Check that all the groups are in the new scenario cols
-            jQuery.each(this.group, function(i, grp) {
-                if ( jQuery.inArray(grp, scenarioCols) == -1 ) {
-                    // This is safe due to the way jQuery.each iterates.
-                    thisBlock.group.splice(i, 1);
-                    changed = true;
-                }
-            });
-            
-            // If the values have changed, or the logs have changed (and thus
-            // the scenarioValuesCache), we have to reload the HTML.
-            if ( changed || invalid || reason == Pipeline.constants.CASCADE_REASON_LOGS_CHANGED ) {
-                this.loadState();
-            }
-            
-            if ( invalid ) {
-                return false;
-            }
-            else {
-                return [scenarioCols, valueCols];
-            }
-        },
-        
-        /**
-         * A row is about to be removed from the OptionsTable. We need to
-         * clean it up here.
-         *
-         * @param row Element The table row to be removed
-         */
-        removeNormaliser: function(row) {
-            var value = this.normaliserValue(row);
-
-            for ( var i = 0; i < this.normaliser.length; i++ ) {
-                if ( this.normaliser[i].scenario == value.scenario && this.normaliser[i].value == value.value ) {
-                    this.normaliser.splice(i, 1);
-                    break;
-                }
-            }
-        },
-        
-        /**
-         * Turns a <tr> in the OptionsTable into a dictionary
-         *
-         * @param row Element The table row to gather values from
-         * @return dict|boolean The values in the given row, or false if
-         *   the selection is incomplete
-         */
-        normaliserValue: function(row) {
-            var scenario = $('.select-normalise-column', row).val();
-            var value    = $('.select-normalise-value', row).val();
-            return {scenario: scenario, value: value};
-        }
-    }),
-    
-    
-    /**
-     *
-     */
-    GraphBlock: Block.extend({
-        /**
-         ** Static fields
-         **/
-        
-        /**
-         * The ID of the template for this filter
-         */
-        TEMPLATE_ID: "#pipeline-graph-template",
-
-        /**
-         * The ID of this block for encoding (the inverse of the mapping in
-         * Pipeline.encoder.MAPPINGS)
-         */
-        ID: 4,
-
-        /**
-         * The type of graph
-         */
-        TYPE: {
-            HISTOGRAM: 1,
-            XY: 2,
-            SCATTER: 3
-        },
-
-        /**
-         * Block-local flag types
-         */
-        FLAGS: {
-            ERRORBARS: 1 << 0
-        },
-
-        /**
-         ** Object fields
-         **/
-        
-        /**
-         * The type of graph. Should be a value from Pipeline.constants.graph
-         */
-        type: null,
-        
-        /**
-         * The options for the specified graph
-         */
-        options: null,
-        
-        /**
-         ** Object methods
-         **/
-
-        /**
-         * Creates a new block. See Block.constructor for parameters.
-         */
-        constructor: function(insertIndex) {
-            this.base(insertIndex);
-            this.type = this.TYPE.HISTOGRAM;
-            this.options = {};
-            
-            // Hook the dropdowns
-            var thisBlock = this;
-            $(this.element).delegate('select, input', 'change', function() {
-                thisBlock.readState();
-                Pipeline.refresh(Pipeline.constants.CASCADE_REASON_SELECTION_CHANGED);
-            });
-            
-            // Hide all blocks except our default one
-            $('.pipeline-graph-type-options', this.element).hide();
-            $('.graph-histogram', this.element).show();
-            $('.select-graph-type').val(this.type);
-        },
-        
-        /**
-         * Decode a parameter string and set this block's configuration according
-         * to those parameters.
-         */
-        decode: function(params) {
-            var parts = params.split(Pipeline.encoder.GROUP_SEPARATOR);
-            // Exactly three parts - flagword, type, settings for that type
-            if ( parts.length != 3 ) {
-                console.debug("Graph block invalid: incorrect number of parts");
-                return;
-            }
-
-            this.flags = parseInt(parts[0]);
-            
-            this.type = parts[1];
-
-            var settings = parts[2].split(Pipeline.encoder.PARAM_SEPARATOR);
-
-            if ( this.type == this.TYPE.HISTOGRAM || this.type == this.TYPE.XY ) {
-                // Three settings: column, row, value
-                if ( settings.length != 3 ) {
-                    console.debug("Graph block invalid: incorrect number of histo/xy settings");
-                    return;
-                }
-                this.options = {
-                    column: settings[0],
-                    row: settings[1],
-                    value: settings[2]
-                };
-            }
-            else if ( this.type == this.TYPE.SCATTER ) {
-                // Three settings: x, y, series (may be -1 for null)
-                if ( settings.length != 3 ) {
-                    console.debug("Graph block invalid: incorrect number of scatter settings");
-                    return;
-                }
-                this.options = {
-                    x: settings[0],
-                    y: settings[1],
-                    series: settings[2]
-                };
-            }
-        },
-        
-        /**
-         * Encode this block into a parameter string based on its configuration.
-         */
-        encode: function() {
-            var strs = [this.flags, this.type];
-
-            var settings = [];
-            if ( this.type == this.TYPE.HISTOGRAM || this.type == this.TYPE.XY ) {
-                settings = [this.options.column, this.options.row, this.options.value];
-            }
-            else if ( this.type == this.TYPE.SCATTER ) {
-                settings = [this.options.x, this.options.y, this.options.series];
-            }
-            strs.push(settings.join(Pipeline.encoder.PARAM_SEPARATOR));
-            
-            return strs.join(Pipeline.encoder.GROUP_SEPARATOR);
-        },
-        
-        /**
-         * Take this block's HTML values and load them into local
-         * configuration.
-         */
-        readState: function() {
-            this.options = {};
-            
-            // Read the type
-            this.type = $('.select-graph-type', this.element).val();
-
-            this.setFlag(this.FLAGS.ERRORBARS, $('.graph-enable-errorbars', this.element).is(':checked'));
-            
-            // These could be consolidated, but are left split as an example
-            // of how to do more complicated graphs with different options.
-            if ( this.type == this.TYPE.HISTOGRAM ) {
-                var blockOptions = $('.graph-histogram', this.element);
-
-                var columnSelect = $('.select-graph-column', blockOptions);
-                var rowSelect = $('.select-graph-row', blockOptions);
-                var valueSelect = $('.select-graph-value', blockOptions);
-                
-                this.options.column = columnSelect.val();
-                this.options.row = rowSelect.val();
-                this.options.value = valueSelect.val();
-            }
-            else if ( this.type == this.TYPE.XY ) {
-                var blockOptions = $('.graph-xy', this.element);
-
-                var columnSelect = $('.select-graph-column', blockOptions);
-                var rowSelect = $('.select-graph-row', blockOptions);
-                var valueSelect = $('.select-graph-value', blockOptions);
-                
-                this.options.column = columnSelect.val();
-                this.options.row = rowSelect.val();
-                this.options.value = valueSelect.val();
-            }
-            else if ( this.type == this.TYPE.SCATTER ) {
-                var blockOptions = $('.graph-scatter', this.element);
-
-                var xSelect = $('.select-graph-x', blockOptions);
-                var ySelect = $('.select-graph-y', blockOptions);
-                var seriesSelect = $('.select-graph-series', blockOptions);
-
-                this.options.x = xSelect.val();
-                this.options.y = ySelect.val();
-                this.options.series = seriesSelect.val();
-            }
-        },
-        
-        /**
-         * Take this block's local configuration and load it into the
-         * HTML.
-         */
-        loadState: function() {
-            // Hide all the blocks (we'll show one soon)
-            $('.pipeline-graph-type-options', this.element).hide();
-            
-            // Set the type dropdown
-            $('.select-graph-type', this.element).val(this.type);
-
-            $('.graph-enable-errorbars', this.element).attr('checked', this.getFlag(this.FLAGS.ERRORBARS));
-
-            // These could be consolidated, but are left split as an example
-            // of how to do more complicated graphs with different options.
-            if ( this.type == this.TYPE.HISTOGRAM ) {
-                var blockOptions = $('.graph-histogram', this.element);
-                
-                // Show this block
-                blockOptions.show();
-
-                var columnSelect = $('.select-graph-column', blockOptions);
-                var rowSelect = $('.select-graph-row', blockOptions);
-                var valueSelect = $('.select-graph-value', blockOptions);
-                
-                columnSelect.val(this.options.column);
-                rowSelect.val(this.options.row);
-                valueSelect.val(this.options.value);
-            }
-            else if ( this.type == this.TYPE.XY ) {
-                var blockOptions = $('.graph-xy', this.element);
-                
-                // Show this block
-                blockOptions.show();
-
-                var columnSelect = $('.select-graph-column', blockOptions);
-                var rowSelect = $('.select-graph-row', blockOptions);
-                var valueSelect = $('.select-graph-value', blockOptions);
-                
-                columnSelect.val(this.options.column);
-                rowSelect.val(this.options.row);
-                valueSelect.val(this.options.value);
-            }
-            else if ( this.type == this.TYPE.SCATTER ) {
-                var blockOptions = $('.graph-scatter', this.element);
-
-                // Show this block
-                blockOptions.show();
-
-                var xSelect = $('.select-graph-x', blockOptions);
-                var ySelect = $('.select-graph-y', blockOptions);
-                var seriesSelect = $('.select-graph-series', blockOptions);
-
-                xSelect.val(this.options.x);
-                ySelect.val(this.options.y);
-                seriesSelect.val(this.options.series);
-            }
-        },
-        
-        /**
-         * Visit this block and cascade the available scenario and value 
-         * columns. See Block.cascade for parameters and return.
-         */
-        cascade: function(scenarioCols, valueCols, reason) {
-            var valid = true;
-            
-            $('.pipeline-graph-type-options', this.element).hide();
-
-            // These could be consolidated, but are left split as an example
-            // of how to do more complicated graphs with different options.
-            if ( this.type == this.TYPE.HISTOGRAM ) {
-                var blockOptions = $('.graph-histogram', this.element);
-                
-                // Show this block
-                blockOptions.show();
-
-                var columnSelect = $('.select-graph-column', blockOptions);
-                var rowSelect = $('.select-graph-row', blockOptions);
-                var valueSelect = $('.select-graph-value', blockOptions);
-                
-                if ( !Utilities.updateSelect(columnSelect, scenarioCols) ) {
-                    this.options.column = -1;
-                    valid = false;
-                }
-                if ( !Utilities.updateSelect(rowSelect, scenarioCols) ) {
-                    this.options.row = -1;
-                    valid = false;
-                }
-                if ( !Utilities.updateSelect(valueSelect, valueCols) ) {
-                    this.options.value = -1;
-                    valid = false;
-                }
-                
-                if ( valid ) {
-                    scenarioCols.remove(this.options.column);
-                    scenarioCols.remove(this.options.row);
-                }
-                
-            }
-            else if ( this.type == this.TYPE.XY ) {
-                var blockOptions = $('.graph-xy', this.element);
-                
-                // Show this block
-                blockOptions.show();
-
-                var columnSelect = $('.select-graph-column', blockOptions);
-                var rowSelect = $('.select-graph-row', blockOptions);
-                var valueSelect = $('.select-graph-value', blockOptions);
-                
-                if ( !Utilities.updateSelect(columnSelect, scenarioCols) ) {
-                    this.options.column = -1;
-                    valid = false;
-                }
-                if ( !Utilities.updateSelect(rowSelect, scenarioCols) ) {
-                    this.options.row = -1;
-                    valid = false;
-                }
-                if ( !Utilities.updateSelect(valueSelect, valueCols) ) {
-                    this.options.value = -1;
-                    valid = false;
-                }
-                
-                // This isn't right - these shouldn't be consumed, they're still
-                // valid.
-                //if ( valid ) {
-                //    scenarioCols.remove(this.options.column);
-                //    scenarioCols.remove(this.options.row);
-                //}
-            }
-            else if ( this.type == this.TYPE.SCATTER ) {
-                var blockOptions = $('.graph-scatter', this.element);
-
-                // Show this block
-                blockOptions.show();
-
-                var xSelect = $('.select-graph-x', blockOptions);
-                var ySelect = $('.select-graph-y', blockOptions);
-                var seriesSelect = $('.select-graph-series', blockOptions);
-
-                if ( !Utilities.updateSelect(xSelect, valueCols) ) {
-                    this.options.x = -1;
-                    valid = false;
-                }
-                if ( !Utilities.updateSelect(ySelect, valueCols) ) {
-                    this.options.y = -1;
-                    valid = false;
-                }
-                if ( !Utilities.updateSelect(seriesSelect, scenarioCols) ) {
-                    this.options.series = -1;
-                    // This is still valid - we might not want to group by
-                    // series.
-                }
-
-            }
-            
-            if ( valid ) {
-                return [scenarioCols, valueCols];
-            }
-            else {
-                return false;
-            }
-        }
-    }),
-
-    /**
-     * The value filter block allows certain filters to be specified that will
-     * remove rows from the data.
-     */
-    ValueFilterBlock: Block.extend({
-        /**
-         ** Static fields
-         **/
-
-        /**
-         * The ID of the template for this filter
-         */
-        TEMPLATE_ID: "#pipeline-valuefilter-template",
-
-        /**
-         * The ID of this block for encoding (the inverse of the mapping in
-         * Pipeline.encoder.MAPPINGS)
-         */
-        ID: 5,
-
-        /**
-         * The type of filter
-         */
-        TYPE: {
-            IS: 1,
-            IS_NOT: 2
-        },
-        
-        /**
-         ** Object fields
-         **/
-
-        /**
-         * The currently valid filters
-         */
-        filters: null,
-        
-        /**
-         * The options table for selecting filters
-         */
-        optionsTable: null,
-        
-        /**
-         ** Object methods
-         **/
-
-        /**
-         * Creates a new block. See Block.constructor for parameters.
-         */
-        constructor: function(insertIndex) {
-            this.base(insertIndex);
-            this.filters = [{column: -1, is: 1, lowerbound: '-inf', upperbound: '+inf'}];
-            
-            // Create a closure to use as the callback for removing objects.
-            // This way, the scope of this block is maintained.
-            var thisBlock = this;
-            var removeClosure = function(row) {
-                thisBlock.removeFilter.call(thisBlock, row); 
-            };
-            var addClosure = function() {
-                thisBlock.filters.push({column: -1, is: 1, lowerbound: '-inf', upperbound: '+inf'});
-                Pipeline.refresh(Pipeline.constants.CASCADE_REASON_SELECTION_CHANGED);
-            };
-            
-            // Create the option table
-            this.optionsTable = new OptionsTable($('.pipeline-valuefilter-table', this.element), removeClosure, Pipeline.refresh, addClosure);
-            
-            // Hook the dropdowns and text inputs
-            $(this.element).delegate('select, input', 'change', function() {
-                thisBlock.readState();
-                Pipeline.refresh(Pipeline.constants.CASCADE_REASON_SELECTION_CHANGED);
-            });
-        },
-        
-        /**
-        * Decode a parameter string and set this block's configuration according
-        * to those parameters.
-         */
-        decode: function(params) {
-            this.filters = [];
-            var parts = params.split(Pipeline.encoder.GROUP_SEPARATOR);
-            // There must be at least two - a flagword and one filter
-            if ( parts.length < 2 ) {
-                console.debug("ValueFilter block invalid: not enough parts");
-                return;
-            }
-
-            this.flags = parseInt(parts[0]);
-
-            var filts = parts.slice(1);
-            var thisBlock = this;
-            jQuery.each(filts, function(i ,filter) {
-                var settings = filter.split(Pipeline.encoder.PARAM_SEPARATOR);
-                // Exactly four parts - column, is, lowerbound, upperbound
-                if ( settings.length != 4 ) {
-                    console.debug("ValueFilter invalid: not enough parts in ", filter);
-                }
-                thisBlock.filters.push({column: settings[0], is: settings[1], lowerbound: settings[2], upperbound: settings[3]});
-            });
-        },
-        
-        /**
-         * Encode this block into a parameter string based on its configuration.
-         */
-        encode: function() {
-            var strs = [this.flags];
-            jQuery.each(this.filters, function(i, filter) {
-                if ( filter.scenario != -1 ) {
-                    strs.push(filter.column + Pipeline.encoder.PARAM_SEPARATOR
-                              + filter.is + Pipeline.encoder.PARAM_SEPARATOR
-                              + filter.lowerbound + Pipeline.encoder.PARAM_SEPARATOR
-                              + filter.upperbound);
-                }
-            });
-            return strs.join(Pipeline.encoder.GROUP_SEPARATOR);
-        },
-
-        /**
-         * Take this block's HTML values and load them into local
-         * configuration.
-         */
-        readState: function() {
-            this.filters = [];
-            var thisBlock = this;
-            $('tr', this.element).each(function() {
-                var columnSelect = $('.select-valuefilter-column', this);
-                var isSelect = $('.select-valuefilter-is', this);
-                var lowerboundText = $('.text-valuefilter-lowerbound', this);
-                var upperboundText = $('.text-valuefilter-upperbound', this);
-
-                thisBlock.filters.push({
-                    column: columnSelect.val(),
-                    is: isSelect.val(),
-                    lowerbound: lowerboundText.val(),
-                    upperbound: upperboundText.val(),
-                });
-            });
-        },
-
-        /**
-         * Take this block's local configuration and load it into the
-         * HTML.
-         */
-        loadState: function() {
-            // Get rid of all but the first row
-            this.optionsTable.reset();
-            
-            // Create new rows for each filter
-            var thisBlock = this;
-            jQuery.each(this.filters, function(i, filter) {
-                var row = thisBlock.optionsTable.addRow();
-                var columnSelect = $('.select-valuefilter-column', row);
-                var isSelect = $('.select-valuefilter-is', row);
-                var lowerboundText = $('.text-valuefilter-lowerbound', row);
-                var upperboundText = $('.text-valuefilter-upperbound', row);
-                
-                // Note here we assume the scenario dropdown has already been
-                // updated, and the value cache is also up to date with new
-                // logs.
-                columnSelect.val(filter.column);
-                isSelect.val(filter.is);
-                lowerboundText.val(filter.lowerbound);
-                upperboundText.val(filter.upperbound);
-            });
-        },
-        
-        /**
-         * Visit this block and cascade the available scenario and value 
-         * columns. See Block.cascade for parameters and return.
-         */
-        cascade: function(scenarioCols, valueCols, reason) {
-            var thisBlock = this;
-            var changed = false;
-            
-            // Update the value columns
-            $('.select-valuefilter-column', this.element).each(function() {
-                Utilities.updateSelect(this, valueCols, true);
-            });
-            
-            jQuery.each(this.filters, function(i, filter) {
-                // If the selected scenario isn't in the new available ones,
-                // reset this row
-                if ( jQuery.inArray(filter.column, valueCols) == -1 ) {
-                    filter.column = -1;
-                    changed = true;
-                    return;
-                }
-            });
-            
-            // If the values have changed, or the logs have changed (and thus
-            // the scenarioValuesCache), we have to reload the HTML.
-            if ( changed || reason == Pipeline.constants.CASCADE_REASON_LOGS_CHANGED ) {
-                this.loadState();
-            }
-            
-            if ( changed ) {
-                return false;
-            }
-            else {
-                return [scenarioCols, valueCols];
-            }
-        },
-        
-        /**
-         * A row is about to be removed from the OptionsTable. We need to
-         * clean it up here.
-         *
-         * @param row Element The table row to be removed
-         */
-        removeFilter: function(row) {
-            var value = this.filterValue(row);
-            
-            for ( var i = 0; i < this.filters.length; i++ ) {
-                if ( this.filters[i].scenario == value.scenario
-                     && this.filters[i].is == value.is
-                     && this.filters[i].value == value.value ) {
-                    this.filters.splice(i, 1);
-                    break;
-                }
-            }
-        },
-        
-        /**
-         * Turns a <tr> in the OptionsTable into a dictionary
-         *
-         * @param row Element The table row to gather values from
-         * @return dict|boolean The values in the given row, or false if
-         *   the selection is incomplete
-         */
-        filterValue: function(row) {
-            var column     = $('.select-valuefilter-column', row).val();
-            var is         = $('.select-valuefilter-is', row).val();
-            var lowerbound = $('.text-valuefilter-lowerbound', row).val();
-            var upperbound = $('.text-valuefilter-upperbound', row).val();
-            
-            return {column: column, is: is, lowerbound: lowerbound, upperbound: upperbound};
-        }
-    }),
-
-    /**
-     * The composite scenario block allows the addition of scenario columns.
-     */
-    CompositeScenarioBlock: Block.extend({
-        /**
-         ** Static fields
-         **/
-
-        /**
-         * The ID of the template for this filter
-         */
-        TEMPLATE_ID: "#pipeline-compositescenario-template",
-
-        /**
-         * The ID of this block for encoding (the inverse of the mapping in
-         * Pipeline.encoder.MAPPINGS)
-         */
-        ID: 6,
-
-        /**
-         ** Object fields
-         **/
-
-        /**
-         * The currently valid filters
-         */
-        columns: null,
-        
-        /**
-         * The options table for selecting filters
-         */
-        optionsTable: null,
-        
-        /**
-         ** Object methods
-         **/
-
-        /**
-         * Creates a new block. See Block.constructor for parameters.
-         */
-        constructor: function(insertIndex) {
-            this.base(insertIndex);
-            this.columns = [-1];
-            
-            // Create a closure to use as the callback for removing objects.
-            // This way, the scope of this block is maintained.
-            var thisBlock = this;
-            var removeClosure = function(row) {
-                thisBlock.removeColumn.call(thisBlock, row); 
-            };
-            var addClosure = function() {
-                thisBlock.columns.push(-1);
-                Pipeline.refresh(Pipeline.constants.CASCADE_REASON_SELECTION_CHANGED);
-            };
-            
-            // Create the option table
-            this.optionsTable = new OptionsTable($('.pipeline-compositescenario-table', this.element), removeClosure, Pipeline.refresh, addClosure);
-            
-            // Hook the dropdowns and text inputs
-            $(this.element).delegate('select, input', 'change', function() {
-                thisBlock.readState();
-                Pipeline.refresh(Pipeline.constants.CASCADE_REASON_SELECTION_CHANGED);
-            });
-        },
-        
-        /**
-        * Decode a parameter string and set this block's configuration according
-        * to those parameters.
-         */
-        decode: function(params) {
-            this.columns = [];
-            var parts = params.split(Pipeline.encoder.GROUP_SEPARATOR);
-            // There must be at least two - a flagword and one filter
-            if ( parts.length < 2 ) {
-                console.debug("CompositeScenario block invalid: not enough parts");
-                return;
-            }
-
-            this.flags = parseInt(parts[0]);
-
-            var cols = parts.slice(1);
-            var thisBlock = this;
-            jQuery.each(cols, function(i, column) {
-                var settings = column.split(Pipeline.encoder.PARAM_SEPARATOR);
-                // Exactly four parts - column, is, lowerbound, upperbound
-                if ( settings.length != 1 ) {
-                    console.debug("CompositeScenario block invalid: incorrect number of parts in ", column);
-                }
-                thisBlock.columns.push(settings[0]);
-            });
-        },
-        
-
-        seed: function(scenarioCols, valueCols) {
-            $('.scenario-column', this.element).each(function() {
-                Utilities.updateSelect(this, scenarioCols);
-            });
-            column = this.columns.join('-');
-            scenarioCols.push(column);
         },
 
         /**
@@ -1828,45 +848,28 @@ var Blocks = {
         },
         
         /**
-         * Visit this block and cascade the available scenario and value 
-         * columns. See Block.cascade for parameters and return.
+         * Update this block using newly cached column information.
          */
-        cascade: function(scenarioCols, valueCols, reason) {
+        update: function() {
             var thisBlock = this;
-            var changed = false;
+            var valid = true;
             
             // Update the scenario columns
             $('.select-compositescenario-column', this.element).each(function() {
-                Utilities.updateSelect(this, scenarioCols, true);
+                Utilities.updateSelect(this, thisBlock.scenarioColumnsCache, true);
             });
             
             jQuery.each(this.columns, function(i, column) {
                 // If the selected scenario isn't in the new available ones,
                 // reset this row
-                if ( jQuery.inArray(column, scenarioCols) == -1 ) {
+                if ( jQuery.inArray(column, thisBlock.scenarioColumnsCache) == -1 ) {
                     thisBlock.columns[i] = -1;
-                    changed = true;
+                    valid = false;
                     return;
                 }
-                scenarioCols.remove(column);
             });
 
-            // Add the new column
-            var column = this.columns.join('-');
-            scenarioCols.push(column);
-            
-            // If the values have changed, or the logs have changed (and thus
-            // the scenarioValuesCache), we have to reload the HTML.
-            if ( changed || reason == Pipeline.constants.CASCADE_REASON_LOGS_CHANGED ) {
-                this.loadState();
-            }
-            
-            if ( changed ) {
-                return false;
-            }
-            else {
-                return [scenarioCols, valueCols];
-            }
+            return valid;
         },
         
         /**
@@ -1992,7 +995,7 @@ var Blocks = {
             // Hook the dropdowns
             $(this.element).delegate('select', 'change', function() {
                 thisBlock.readState();
-                Pipeline.refresh(Pipeline.constants.CASCADE_REASON_SELECTION_CHANGED);
+                Pipeline.refresh();
             });
         },
         
@@ -2054,18 +1057,18 @@ var Blocks = {
         },
         
         /**
-         * Visit this block and cascade the available scenario and value 
-         * columns. See Block.cascade for parameters and return.
+         * Update this block using newly cached column information.
          */
-        cascade: function(scenarioCols, valueCols, reason) {
+        update: function() {
             // Update the scenario column dropdown. If the selection was not
             // kept, the block is invalid.
             var scenarioSelect = $('.select-format-column', this.element);
-            if ( !Utilities.updateSelect(scenarioSelect, scenarioCols) ) {
+            if ( !Utilities.updateSelect(scenarioSelect, this.scenarioColumnsCache) ) {
                 this.column = -1;
                 return false;
             }
-            return [scenarioCols, valueCols];
+
+            return true;
         },
         
         updatePopup: function(col, key) {
@@ -2162,7 +1165,7 @@ var Blocks = {
                         $('.popup', thisBlock.element).hide();
                         thisBlock.key = key;
                         thisBlock.loadState();
-                        Pipeline.refresh(Pipeline.constants.CASCADE_REASON_SELECTION_CHANGED);
+                        Pipeline.refresh();
                     }
                 });
             }
@@ -2358,14 +1361,6 @@ var Pipeline = {
      * Some constants
      */
     constants: {        
-        // Reasons for cascade being called
-        CASCADE_REASON_PIPELINE_LOADED: 0,   // A new pipeline was loaded
-        CASCADE_REASON_LOGS_CHANGED: 1,      // Available logs have changed
-        CASCADE_REASON_BLOCK_ADDED: 2,       // A new block was added
-        CASCADE_REASON_BLOCK_REMOVED: 3,     // A block was removed
-        CASCADE_REASON_SELECTION_CHANGED: 4, // A selection changed 
-        CASCADE_REASON_SELECTION_CHANGED_NORMALISER: 5,    // Scenario selection changed
-
         // Timeout after the last typing event in a derived value column
         // expression before the pipeline is refreshed
         DERIVED_VALUE_COLUMN_CHANGE_TIMEOUT: 1000, // ms
@@ -2405,6 +1400,11 @@ var Pipeline = {
     },
     
     /**
+     * Caches the available scenario columns.
+     */
+    scenarioColumnsCache: {},
+    
+    /**
      * Caches the available values for scenario columns at the start of the pipeline.
      */
     scenarioValuesCache: {},
@@ -2414,6 +1414,11 @@ var Pipeline = {
      */
     valueColumnsCache: [],
 
+    /**
+     * Caches the available values for scenario columns at the end of the pipeline.
+     */
+    newBlockScenarioColumnsCache: {},
+    
     /**
      * Caches the available values for scenario columns at the end of the pipeline.
      */
@@ -2661,21 +1666,25 @@ var Pipeline = {
         var index;
         var vc;
         var sc;
+        var sv;
         if ( typeof indexBlock === 'undefined' ) {
             index = Pipeline.blocks.length;
-            sc = Pipeline.newBlockScenarioValuesCache;
+            sc = Pipeline.newBlockScenarioColumnsCache;
+            sv = Pipeline.newBlockScenarioValuesCache;
             vc = Pipeline.newBlockValueColumnsCache;
         }
         else {
             index = $(indexBlock).prevAll('.pipeline-block').length;
-            sc = index == 0 ? Pipeline.scenarioValuesCache : Pipeline.blocks[index-1].scenarioValuesCache;
+            sc = index == 0 ? Pipeline.scenarioColumnsCache : Pipeline.blocks[index-1].scenarioColumnsCache;
+            sv = index == 0 ? Pipeline.scenarioValuesCache : Pipeline.blocks[index-1].scenarioValuesCache;
             vc = index == 0 ? Pipeline.valueColumnsCache : Pipeline.blocks[index-1].valueColumnsCache;
         }
         var b =  new block(index);
-        b.scenarioValuesCache = sc;
+        b.scenarioColumnsCache = sc;
+        b.scenarioValuesCache = sv;
         b.valueColumnsCache = vc;
         Pipeline.blocks.splice(index, 0, b);
-        Pipeline.refresh(Pipeline.constants.CASCADE_REASON_BLOCK_ADDED);
+        Pipeline.refresh();
     },
     
     /**
@@ -2686,7 +1695,7 @@ var Pipeline = {
     removeBlock: function(block) {
         Pipeline.blocks.remove(block);
         block.removeBlock();
-        Pipeline.refresh(Pipeline.constants.CASCADE_REASON_BLOCK_REMOVED);
+        Pipeline.refresh();
     },
 
     /**
@@ -2775,10 +1784,12 @@ var Pipeline = {
                 }
                  
                 jQuery.each(Pipeline.blocks, function(i) {
-                    Pipeline.blocks[i].scenarioValuesCache = data.block_scenarios[i];
+                    Pipeline.blocks[i].scenarioColumnsCache = data.block_scenarios[i];
+                    Pipeline.blocks[i].scenarioValuesCache = data.block_scenario_values[i];
                     Pipeline.blocks[i].valueColumnsCache = data.block_values[i];
                 });
-                Pipeline.newBlockScenarioValuesCache = data.block_scenarios[Pipeline.blocks.length];
+                Pipeline.newBlockScenarioColumnsCache = data.block_scenarios[Pipeline.blocks.length];
+                Pipeline.newBlockScenarioValuesCache = data.block_scenario_values[Pipeline.blocks.length];
                 Pipeline.newBlockValueColumnsCache = data.block_values[Pipeline.blocks.length];
 
                 // Stop the sparklines from being rendered unless we actually want them
@@ -3086,8 +2097,10 @@ var Pipeline = {
                 });
                 return;
             }
+            Pipeline.scenarioColumnsCache = data.scenarioCols;
             Pipeline.scenarioValuesCache = data.scenarioValues;
             Pipeline.valueColumnsCache = data.valueCols;
+            Pipeline.newBlockScenarioColumnsCache = data.scenarioCols;
             Pipeline.newBlockScenarioValuesCache = data.scenarioValues;
             Pipeline.newBlockValueColumnsCache = data.valueCols;
 
@@ -3099,14 +2112,11 @@ var Pipeline = {
                 $('.pipeline-derived-value-field', row).val(value);
             });
 
-            // We want to cascade all value cols including derived ones,
-            // so add those to the original now
-            jQuery.merge(data.valueCols, derivedValueCols);
-
-        jQuery.each(Pipeline.blocks, function(i, block) {
-            block.removeBlock();
-        });
-        Pipeline.blocks = [];
+            // Remove any old vlocks
+            jQuery.each(Pipeline.blocks, function(i, block) {
+                block.removeBlock();
+            });
+            Pipeline.blocks = [];
 
             // Start creating blocks
             jQuery.each(blocks, function(i, params) {
@@ -3114,12 +2124,10 @@ var Pipeline = {
                 var paramString = params.slice(1); // The first character is the block ID
                 var block = new Pipeline.encoder.MAPPINGS[params[0]](Pipeline.blocks.length);
                 block.decode(paramString);
-                block.seed(data.scenarioCols, data.valueCols);
-                block.loadState();
                 Pipeline.blocks.push(block);
             });
 
-            Pipeline.refresh(Pipeline.constants.CASCADE_REASON_PIPELINE_LOADED);
+            Pipeline.refresh();
         });
     },
     
@@ -3208,10 +2216,13 @@ var Pipeline = {
      */
     refreshAvailableColumns: function() {
         // Clear the values cache, since a log changed it's invalid now.
+        Pipeline.scenarioColumnsCache = {};
         Pipeline.scenarioValuesCache = {};
         Pipeline.valueColumnsCache = [];
+        Pipeline.newBlockScenarioColumnsCache = {};
         Pipeline.newBlockScenarioValuesCache = {};
         Pipeline.newBlockValueColumnsCache = [];
+
         var foundAny = false;
         $('.select-log', Pipeline.logFileOptionsTable.element).each(function() {
             if ( $(this).val() != '-1' ) {
@@ -3222,7 +2233,7 @@ var Pipeline = {
         if (!foundAny) {
             $('#pipeline-log').addClass('incomplete-block');
             Pipeline.updateAvailableColumns([], [], true, true);
-            Pipeline.refresh(Pipeline.constants.CASCADE_REASON_LOGS_CHANGED);
+            Pipeline.refresh();
             return;
         }
 
@@ -3232,12 +2243,14 @@ var Pipeline = {
                 Pipeline.tabulating(data, Pipeline.refreshAvailableColumns);
             }
             else {
+                Pipeline.scenarioColumnsCache = data.scenarioCols;
                 Pipeline.scenarioValuesCache = data.scenarioValues;
                 Pipeline.valueColumnsCache = data.valueCols;
+                Pipeline.newBlockScenarioColumnsCache = data.scenarioCols;
                 Pipeline.newBlockScenarioValuesCache = data.scenarioValues;
                 Pipeline.newBlockValueColumnsCache = data.valueCols;
                 Pipeline.updateAvailableColumns(data.scenarioCols, data.valueCols, true, true);
-                Pipeline.refresh(Pipeline.constants.CASCADE_REASON_LOGS_CHANGED);
+                Pipeline.refresh();
             }
         });
     },

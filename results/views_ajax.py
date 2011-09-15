@@ -49,7 +49,7 @@ def pipeline(request, pipeline):
     try:
         p = Pipeline(web_client=True)
         p.decode(pipeline)
-        (block_scenarios, block_values, graph_outputs) = p.apply()
+        (block_scenarios, block_scenario_values, block_values, graph_outputs) = p.apply()
 
     except LogTabulateStarted as e:
         return HttpResponse(json.dumps({'tabulating': True, 'log': e.log, 'pid': e.pid, 'index': e.index, 'total': e.length}))
@@ -79,6 +79,7 @@ def pipeline(request, pipeline):
             graph_outputs = e.graph_outputs
             block_values = e.block_values
             block_scenarios = e.block_scenarios
+            block_scenario_values = e.block_scenario_values
     else:
         output = ''
         ambiguity = False
@@ -108,8 +109,8 @@ def pipeline(request, pipeline):
 
       msg_output += '</div>'
       output += msg_output
-    
-    return HttpResponse(json.dumps({'error': False, 'ambiguity': ambiguity, 'index': ambiguityIndex, 'block_scenarios': block_scenarios, 'block_values': block_values, 'html': output, 'rows': len(dt.rows), 'graph': len(graph_outputs) > 0}))
+
+    return HttpResponse(json.dumps({'error': False, 'ambiguity': ambiguity, 'index': ambiguityIndex, 'block_scenarios': block_scenarios, 'block_scenario_values': block_scenario_values, 'block_values': block_values, 'html': output, 'rows': len(dt.rows), 'graph': len(graph_outputs) > 0}))
 
 def delete_saved_pipeline(request):
     if 'name' not in request.POST:

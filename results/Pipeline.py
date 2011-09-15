@@ -117,6 +117,7 @@ class Pipeline(object):
             raise PipelineError("No log files are selected.", 'selected log files')
         
         graph_outputs = []
+        block_scenario_values = []
         block_scenarios = []
         block_values = []
 
@@ -126,6 +127,7 @@ class Pipeline(object):
             self.dataTable = cacheValue['data_table']
             self.messages = self.dataTable.messages
             graph_outputs = cacheValue['graph_outputs']
+            block_scenario_values = cacheValue['block_scenario_values']
             block_scenarios = cacheValue['block_scenarios']
             block_values = cacheValue['block_values']
         else:
@@ -136,14 +138,18 @@ class Pipeline(object):
                 self.dataTable.selectValueColumns(self.valueCols, self.derivedValueCols)
                 selectedValueCols = list(self.dataTable.valueColumns)
                 selectedValueCols.sort()
+                selectedScenarioCols = list(self.dataTable.scenarioColumns)
+                selectedScenarioCols.sort()
                 block_values.append(selectedValueCols)
-                block_scenarios.append(self.dataTable.getScenarioValues())
+                block_scenarios.append(selectedScenarioCols)
+                block_scenario_values.append(self.dataTable.getScenarioValues())
                 # Cache it
                 cache.set(self.cacheKeyBase, {
                     'last_modified': self.dataTable.lastModified,
                     'data_table': self.dataTable,
                     'block_values': block_values,
                     'block_scenarios': block_scenarios,
+                    'block_scenario_values': block_scenario_values,
                     'graph_outputs': graph_outputs
                 })
             except LogTabulateStarted:
@@ -175,6 +181,7 @@ class Pipeline(object):
                 e.graph_outputs = graph_outputs
                 e.block_values = block_values
                 e.block_scenarios = block_scenarios
+                e.block_scenario_values = block_scenario_values
                 raise e
             except PipelineError:
                 raise
@@ -184,10 +191,13 @@ class Pipeline(object):
             if isinstance(block, GraphBlock):
                 graph_outputs.append(ret)
             
-            block_scenarios.append(self.dataTable.getScenarioValues())
             selectedValueCols = list(self.dataTable.valueColumns)
             selectedValueCols.sort()
+            selectedScenarioCols = list(self.dataTable.scenarioColumns)
+            selectedScenarioCols.sort()
             block_values.append(selectedValueCols)
+            block_scenarios.append(selectedScenarioCols)
+            block_scenario_values.append(self.dataTable.getScenarioValues())
 
             # Cache it
             cache.set(cacheKey, {
@@ -195,8 +205,9 @@ class Pipeline(object):
                 'data_table': self.dataTable,
                 'block_values': block_values,
                 'block_scenarios': block_scenarios,
+                'block_scenario_values': block_scenario_values,
                 'graph_outputs': graph_outputs
             })
 
 
-        return (block_scenarios, block_values, graph_outputs)
+        return (block_scenarios, block_scenario_values, block_values, graph_outputs)
