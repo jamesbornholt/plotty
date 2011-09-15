@@ -2584,10 +2584,10 @@ var Pipeline = {
         $('#pipeline-derived-value-cols').delegate('.pipeline-derived-value-field', 'keyup', function() {
             clearTimeout(Pipeline.derivedValueColTimeoutID);
             Pipeline.derivedValueColTimeoutID = setTimeout(function() { 
-                Pipeline.derivedColumns = [];
+                Pipeline.derivedValueColumns = [];
                 $('.pipeline-derived-value-field').each(function() {
                     var s = $.trim(this.value);
-                    if ( s.length > 0 ) Pipeline.derivedColumns.push(s);
+                    if ( s.length > 0 ) Pipeline.derivedValueColumns.push(s);
                 });
                 Pipeline.refresh();
             }, Pipeline.constants.DERIVED_VALUE_COLUMN_CHANGE_TIMEOUT);
@@ -2759,7 +2759,7 @@ var Pipeline = {
 
             var changed = false;
             jQuery.each(Pipeline.blocks, function(i) {
-                if (i >= data.block_scenarios.length-2) return;
+                if (i+1 >= data.block_scenarios.length) return;
                 Pipeline.blocks[i].scenarioColumnsCache = data.block_scenarios[i+1];
                 Pipeline.blocks[i].scenarioValuesCache = data.block_scenario_values[i+1];
                 Pipeline.blocks[i].valueColumnsCache = data.block_values[i+1];
@@ -2909,7 +2909,7 @@ var Pipeline = {
         pipelineConfig.push(Pipeline.selectedLogFiles.join(Pipeline.encoder.PARAM_SEPARATOR));
         pipelineConfig.push(Pipeline.selectedScenarioColumns.join(Pipeline.encoder.PARAM_SEPARATOR));
         pipelineConfig.push(Pipeline.selectedValueColumns.join(Pipeline.encoder.PARAM_SEPARATOR));
-        pipelineConfig.push(Pipeline.derivedColumns.join(Pipeline.encoder.PARAM_SEPARATOR));
+        pipelineConfig.push(Pipeline.derivedValueColumns.join(Pipeline.encoder.PARAM_SEPARATOR));
         strs.push(pipelineConfig.join(Pipeline.encoder.GROUP_SEPARATOR));
 
         return strs.join(Pipeline.encoder.BLOCK_SEPARATOR);
@@ -2994,7 +2994,7 @@ var Pipeline = {
         Pipeline.selectedLogFiles = logFiles;
         Pipeline.selectedValueColumns = valueCols;
         Pipeline.selectedScenarioColumns = scenarioCols;
-        Pipeline.derivedColumns = derivedValueCols;
+        Pipeline.derivedValueColumns = derivedValueCols;
 
         // Load the log files into the table
         Pipeline.logFileOptionsTable.reset();
