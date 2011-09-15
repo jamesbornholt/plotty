@@ -512,12 +512,12 @@ var Blocks = {
             var thisBlock = this;
             var changed = false;
             jQuery.each(this.filters, function(i, filter) {
-                if ( jQuery.inArray(filter.scenario, thisBlock.scenarioColumnsCache) == -1 ) { 
+                if ( filter.scenario != -1 && jQuery.inArray(filter.scenario, thisBlock.scenarioColumnsCache) == -1 ) { 
                     thisBlock.filters[i].scenario = -1;
                     changed = true;
                     return;
                 } 
-                if ( jQuery.inArray(filter.value, thisBlock.scenarioValuesCache[filter.scenario]) == -1 ) {
+                if ( filter.value != -1 && jQuery.inArray(filter.value, thisBlock.scenarioValuesCache[filter.scenario]) == -1 ) {
                     thisBlock.filters[i].value = -1;
                     changed = true;
                     return;
@@ -700,7 +700,7 @@ var Blocks = {
         },
        
         refreshColumns: function() {
-            if (jQuery.inArray(this.column, thisBlock.scenarioColumnsCache) == -1) {
+            if (this.column != -1 && jQuery.inArray(this.column, thisBlock.scenarioColumnsCache) == -1) {
                 this.column = -1;
                 return true;
             }
@@ -982,7 +982,7 @@ var Blocks = {
                 jQuery.each(this.normaliser, function(i, norm) {
                     // If the selected scenario isn't in the new available ones,
                     // reset this row
-                    if ( jQuery.inArray(norm.scenario, thisBlock.scenarioColumnsCache) == -1 ) {
+                    if ( norm.scenario != -1 && jQuery.inArray(norm.scenario, thisBlock.scenarioColumnsCache) == -1 ) {
                         norm.scenario = -1;
                         norm.value = -1;
                         changed = true;
@@ -990,7 +990,7 @@ var Blocks = {
                     }
                     
                     // Check that the value is still in the value cache
-                    if ( jQuery.inArray(norm.value, thisBlock.scenarioValuesCache[norm.scenario]) == -1 ) {
+                    if ( norm.value != -1 && jQuery.inArray(norm.value, thisBlock.scenarioValuesCache[norm.scenario]) == -1 ) {
                         norm.value = -1;
                         changed = true;
                         return;
@@ -1317,25 +1317,25 @@ var Blocks = {
             var changed = false;
             
             if ( this.type == this.TYPE.HISTOGRAM || this.type == this.TYPE.XY ) {
-                if ( jQuery.inArray(this.options.column, this.scenarioColumnsCache) == -1 ) {
+                if ( this.options.column != -1 && jQuery.inArray(this.options.column, this.scenarioColumnsCache) == -1 ) {
                     this.options.column = -1;
                     changed = true;
                 }
-                if ( jQuery.inArray(this.options.row, this.scenarioColumnsCache) == -1 ) {
+                if ( this.options.row != -1 && jQuery.inArray(this.options.row, this.scenarioColumnsCache) == -1 ) {
                     this.options.row = -1;
                     changed = true;
                 }
-                if ( jQuery.inArray(this.options.value, this.valueColumnsCache) == -1 ) {
+                if ( this.options.value != -1 && jQuery.inArray(this.options.value, this.valueColumnsCache) == -1 ) {
                     this.options.value = -1;
                     changed = true;
                 }
             }
             else if ( this.type == this.TYPE.SCATTER ) {
-                if ( jQuery.inArray(this.options.x, this.valueColumnsCache) == -1 ) {
+                if ( this.options.x != -1 && jQuery.inArray(this.options.x, this.valueColumnsCache) == -1 ) {
                     this.options.x = -1;
                     changed = true;
                 }
-                if ( jQuery.inArray(this.options.y, this.valueColumnsCache) == -1 ) {
+                if ( this.options.y != -1 && jQuery.inArray(this.options.y, this.valueColumnsCache) == -1 ) {
                     this.options.y = -1;
                     changed = true;
                 }
@@ -1541,7 +1541,7 @@ var Blocks = {
             jQuery.each(this.filters, function(i, filter) {
                 // If the selected scenario isn't in the new available ones,
                 // reset this row
-                if ( jQuery.inArray(filter.column, thisBlock.valueColumnsCache) == -1 ) {
+                if ( filter.column != -1 && jQuery.inArray(filter.column, thisBlock.valueColumnsCache) == -1 ) {
                     filter.column = -1;
                     changed = true;
                     return;
@@ -1735,6 +1735,7 @@ var Blocks = {
         loadState: function() {
             // Get rid of all but the first row
             this.optionsTable.reset();
+            var thisBlock = this;
             
             // Update the scenario columns
             $('.select-compositescenario-column', this.element).each(function() {
@@ -1761,7 +1762,7 @@ var Blocks = {
             jQuery.each(this.columns, function(i, column) {
                 // If the selected scenario isn't in the new available ones,
                 // reset this row
-                if ( jQuery.inArray(column, thisBlock.scenarioColumnsCache) == -1 ) {
+                if ( column != -1 && jQuery.inArray(column, thisBlock.scenarioColumnsCache) == -1 ) {
                     thisBlock.columns[i] = -1;
                     changed = true;
                     return;
@@ -1773,6 +1774,7 @@ var Blocks = {
 
         complete: function() {
             var valid = true;
+            var thisBlock = this;
 
             jQuery.each(this.columns, function(i, column) {
                 if (thisBlock.columns[i] == -1) {
@@ -1971,7 +1973,7 @@ var Blocks = {
         },
         
         refreshColumns: function() {
-            if ( jQuery.inArray(this.column, this.scenarioColumnsCache) == -1 ) {
+            if ( this.column != -1 && jQuery.inArray(this.column, this.scenarioColumnsCache) == -1 ) {
                 this.column = -1;
                 return true;
             }
@@ -2700,39 +2702,72 @@ var Pipeline = {
      *   from Pipeline.constants.
      */
     refresh: function() {
-        var encoded = Pipeline.encodePipelineToRun();
-        if ( encoded === false ) {
+        var encoded = [Pipeline.encodeHeader()];
+        var error = false;
+        jQuery.each(this.blocks, function(i, block) {
+            if (!error && block.complete()) {
+                encoded.push(block.ID + block.encode());
+            } else {
+                error = true;
+            }
+        });
+        var hash = encoded.join(Pipeline.encoder.BLOCK_SEPARATOR);
+        if (error) {
             console.debug("Pipeline.refresh: Pipeline not valid.");
             // Disable the save pipeline fields
             $('#pipeline-save-name, #pipeline-save-go').attr('disabled', 'disabled');
-        }
-        else {
+        } else {
             console.debug("Pipeline.refresh: Pipeline valid: " + encoded);
             // Push the new state onto the history stack
-            Pipeline.pushState(encoded);
-            // Enable the save pipeline fields
+            Pipeline.pushState(hash);
             $('#pipeline-save-name, #pipeline-save-go').removeAttr('disabled');
-            Pipeline.ajax.pipeline(encoded, function(data) {
-                $('#output').children().not('#loading-indicator').remove();
-                if ( data.tabulating === true ) {
-                    // Data is still being tabulated - show a progress indicator,
-                    // then bail.
-                    Pipeline.tabulating(data, function() {
-                        Pipeline.refresh(reason);
-                    });
-                    return;
-                }
-                 
-                jQuery.each(Pipeline.blocks, function(i) {
-                    Pipeline.blocks[i].scenarioColumnsCache = data.block_scenarios[i];
-                    Pipeline.blocks[i].scenarioValuesCache = data.block_scenario_values[i];
-                    Pipeline.blocks[i].valueColumnsCache = data.block_values[i];
+        }
+
+        Pipeline.ajax.pipeline(hash, function(data) {
+            if ( data.tabulating === true ) {
+                // Data is still being tabulated - show a progress indicator,
+                // then bail.
+                Pipeline.tabulating(data, function() {
+                    Pipeline.refresh();
                 });
+                return;
+            }
+
+            Pipeline.scenarioColumnsCache = data.block_scenarios[0];
+            Pipeline.scenarioValuesCache = data.block_scenario_values[0];
+            Pipeline.valueColumnsCache = data.block_values[0];
+
+            var changed = false;
+            jQuery.each(Pipeline.blocks, function(i) {
+                if (i >= data.block_scenarios.length) return;
+                Pipeline.blocks[i].scenarioColumnsCache = data.block_scenarios[i];
+                Pipeline.blocks[i].scenarioValuesCache = data.block_scenario_values[i];
+                Pipeline.blocks[i].valueColumnsCache = data.block_values[i];
+
+                changed |= Pipeline.blocks[i].refreshColumns();
+                Pipeline.blocks[i].loadState();
+            });
+
+            if (changed) {
+                Pipeline.refresh();
+                return;
+            }
+
+            var scenarioDisplay = jQuery.map(Pipeline.scenarioColumnsCache, function(col) {
+                var colvals = Pipeline.scenarioValuesCache[col];
+                var numvals = colvals.length;
+                return '<b>' + col + '</b> (' + numvals + ') <font size="-2">[' + colvals.join(', ') + ']</font>';
+            });
+
+            Utilities.updateMultiSelect($("#select-scenario-cols"), scenarioDisplay, Pipeline.scenarioColumnsCache, Pipeline.selectedScenarioColumns);
+            Utilities.updateMultiSelect($("#select-value-cols"), Pipeline.valueColumnsCache, Pipeline.valueColumnsCache, Pipeline.selectedValueColumns);
+
+            if (!error) {
                 Pipeline.newBlockScenarioColumnsCache = data.block_scenarios[Pipeline.blocks.length];
                 Pipeline.newBlockScenarioValuesCache = data.block_scenario_values[Pipeline.blocks.length];
                 Pipeline.newBlockValueColumnsCache = data.block_values[Pipeline.blocks.length];
 
-                // Stop the sparklines from being rendered unless we actually want them
+                $('#output').children().not('#loading-indicator').remove();
                 $('#output').hide();
                 $('#output').append(data.html);
                 if ( data.rows > Pipeline.constants.MAX_TABLE_ROWS_AUTO_RENDER && !data.graph) {
@@ -2747,7 +2782,7 @@ var Pipeline = {
                     Utilities.outputTableSort();
                 }
                 $('#output').show();
-
+    
                 $('.error-block').removeClass('error-block');
                 $('.ambiguous-block').removeClass('ambiguous-block');
                 if ( data.error === true ) {
@@ -2766,8 +2801,8 @@ var Pipeline = {
                         $('#pipeline .pipeline-block').eq(data.index).addClass('ambiguous-block');
                     }
                 }
-            });
-        }
+            } 
+        });
     },
 
     /**
@@ -2835,6 +2870,14 @@ var Pipeline = {
     },
 
     encodePipelineToRun: function() {
+
+        /*
+         * parts 3+: blocks
+         */ 
+        jQuery.each(this.blocks, function(i, block) {
+            strs.push(block.ID + block.encode());
+        });
+
         // Load the initial scenario and value columns from their selectors
         var scenarioCols = Utilities.multiSelectValue($("#select-scenario-cols"));
         var valueCols = Utilities.multiSelectValue($("#select-value-cols"));
@@ -2888,13 +2931,9 @@ var Pipeline = {
     },
 
     /**
-     * Encode the entire pipeline. This function assumes the pipeline has
-     * already been validated and is correct - if not, the results of this
-     * are probably unpredictable.
-     *
-     * @return string The encoded pipeline.
+     * Encode the header of the pipeline.
      */
-    encode: function() {
+    encodeHeader: function() {
         var strs = [];
 
         /*
@@ -2914,15 +2953,9 @@ var Pipeline = {
         pipelineConfig.push(Pipeline.derivedColumns.join(Pipeline.encoder.PARAM_SEPARATOR));
         strs.push(pipelineConfig.join(Pipeline.encoder.GROUP_SEPARATOR));
 
-        /*
-         * parts 3+: blocks
-         */ 
-        jQuery.each(this.blocks, function(i, block) {
-            strs.push(block.ID + block.encode());
-        });
-
         return strs.join(Pipeline.encoder.BLOCK_SEPARATOR);
     },
+
 
     /**
      * Load a pipeline from an encoded string.
