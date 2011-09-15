@@ -172,7 +172,12 @@ var Block = Base.extend({
      * Caches the available values for scenario columns. Should be invalidated
      * when the selected logs change.
      */
-    valueCache: {},
+    scenarioValuesCache: {},
+
+    /**
+     * Caches the available value columns.
+     */
+    valueColumnsCache: {},
     
     /**
      * The HTML div that contains this block.
@@ -494,7 +499,7 @@ var Blocks = {
                 scenarioSelect.val(filter.scenario);
                 isSelect.val(filter.is);
                 if ( filter.scenario != -1 ) {
-                    Utilities.updateSelect(valueSelect, thisBlock.valueCache[filter.scenario]);
+                    Utilities.updateSelect(valueSelect, thisBlock.scenarioValuesCache[filter.scenario]);
                 }
                 else {
                     Utilities.updateSelect(valueSelect, []);
@@ -526,8 +531,8 @@ var Blocks = {
                     return;
                 }
                 
-                // Check that the value is still in the valueCache
-                if ( jQuery.inArray(filter.value, thisBlock.valueCache[filter.scenario]) == -1 ) {
+                // Check that the value is still in the scenarioValuesCache
+                if ( jQuery.inArray(filter.value, thisBlock.scenarioValuesCache[filter.scenario]) == -1 ) {
                     filter.value = -1;
                     changed = true;
                     return;
@@ -541,7 +546,7 @@ var Blocks = {
             });
             
             // If the values have changed, or the logs have changed (and thus
-            // the valueCache), we have to reload the HTML.
+            // the scenarioValuesCache), we have to reload the HTML.
             if ( changed || reason == Pipeline.constants.CASCADE_REASON_LOGS_CHANGED ) {
                 this.loadState();
             }
@@ -971,7 +976,7 @@ var Blocks = {
 		        	    Utilities.updateSelect(valueSelect, []);
 		            }
 		            else {
-		        	    Utilities.updateSelect(valueSelect, thisBlock.valueCache[norm.scenario]);
+		        	    Utilities.updateSelect(valueSelect, thisBlock.scenarioValuesCache[norm.scenario]);
 		            }
 		            valueSelect.val(norm.value);
 		        });
@@ -1021,7 +1026,7 @@ var Blocks = {
                     }
                     
                     // Check that the value is still in the value cache
-                    if ( jQuery.inArray(norm.value, thisBlock.valueCache[norm.scenario]) == -1 ) {
+                    if ( jQuery.inArray(norm.value, thisBlock.scenarioValuesCache[norm.scenario]) == -1 ) {
                         norm.value = -1;
                         invalid = true;
                         return;
@@ -1042,7 +1047,7 @@ var Blocks = {
             });
             
             // If the values have changed, or the logs have changed (and thus
-            // the valueCache), we have to reload the HTML.
+            // the scenarioValuesCache), we have to reload the HTML.
             if ( changed || invalid || reason == Pipeline.constants.CASCADE_REASON_LOGS_CHANGED ) {
                 this.loadState();
             }
@@ -1626,7 +1631,7 @@ var Blocks = {
             });
             
             // If the values have changed, or the logs have changed (and thus
-            // the valueCache), we have to reload the HTML.
+            // the scenarioValuesCache), we have to reload the HTML.
             if ( changed || reason == Pipeline.constants.CASCADE_REASON_LOGS_CHANGED ) {
                 this.loadState();
             }
@@ -1851,7 +1856,7 @@ var Blocks = {
             scenarioCols.push(column);
             
             // If the values have changed, or the logs have changed (and thus
-            // the valueCache), we have to reload the HTML.
+            // the scenarioValuesCache), we have to reload the HTML.
             if ( changed || reason == Pipeline.constants.CASCADE_REASON_LOGS_CHANGED ) {
                 this.loadState();
             }
@@ -1951,7 +1956,7 @@ var Blocks = {
             var popup = $('.popup', this.element);
             bindColorPicker($('.text-format-color', popup));
             $(".cancel-button", popup).click(function() {
-                $(".popup", thisBlock.element).hide();
+                $('.popup', thisBlock.element).hide();
                 $('.popupfilter', thisBlock.element).hide();
 
             });
@@ -2071,7 +2076,7 @@ var Blocks = {
             $('.text-format-key', popup).val(key == -1 ? "" : key);
 
             // Suggested values
-            $('.format-suggestions', popup).text(col == -1 ? 'None (no column selected)' : this.valueCache[col].join(' '));
+            $('.format-suggestions', popup).text(col == -1 ? 'None (no column selected)' : this.scenarioValuesCache[col].join(' '));
 
             // Rows
             // Get rid of all but the first row
@@ -2402,13 +2407,23 @@ var Pipeline = {
     /**
      * Caches the available values for scenario columns at the start of the pipeline.
      */
-    valueCache: {},
+    scenarioValuesCache: {},
     
+    /**
+     * Caches the available value columnss;
+     */
+    valueColumnsCache: [],
+
     /**
      * Caches the available values for scenario columns at the end of the pipeline.
      */
-    newBlockValueCache: {},
+    newBlockScenarioValuesCache: {},
     
+    /**
+     * Caches the available value columnss;
+     */
+    newBlockValueColumnsCache: [],
+
     /**
      * The option table for log files
      */
@@ -2624,11 +2639,6 @@ var Pipeline = {
             }
         });
 
-
-        jQuery.each($('.popup'), function(popup) {
-        });
-
-
         // Hook the onchange for derived value cols to start a timer to refresh
         // the pipeline
         $('#pipeline-derived-value-cols').delegate('.pipeline-derived-value-field', 'keyup', function() {
@@ -2650,16 +2660,20 @@ var Pipeline = {
     createBlock: function(block, indexBlock) {
         var index;
         var vc;
+        var sc;
         if ( typeof indexBlock === 'undefined' ) {
             index = Pipeline.blocks.length;
-            vc = Pipeline.newBlockValueCache;
+            sc = Pipeline.newBlockScenarioValuesCache;
+            vc = Pipeline.newBlockValueColumnsCache;
         }
         else {
             index = $(indexBlock).prevAll('.pipeline-block').length;
-            vc = index == 0 ? Pipeline.valueCache : Pipeline.blocks[index-1].valueCache;
+            sc = index == 0 ? Pipeline.scenarioValuesCache : Pipeline.blocks[index-1].scenarioValuesCache;
+            vc = index == 0 ? Pipeline.valueColumnsCache : Pipeline.blocks[index-1].valueColumnsCache;
         }
         var b =  new block(index);
-        b.valueCache = vc;
+        b.scenarioValuesCache = sc;
+        b.valueColumnsCache = vc;
         Pipeline.blocks.splice(index, 0, b);
         Pipeline.refresh(Pipeline.constants.CASCADE_REASON_BLOCK_ADDED);
     },
@@ -2761,9 +2775,11 @@ var Pipeline = {
                 }
                  
                 jQuery.each(Pipeline.blocks, function(i) {
-                    Pipeline.blocks[i].valueCache = data.block_values[i];
+                    Pipeline.blocks[i].scenarioValuesCache = data.block_scenarios[i];
+                    Pipeline.blocks[i].valueColumnsCache = data.block_values[i];
                 });
-                Pipeline.newBlockValueCache = data.block_values[Pipeline.blocks.length];
+                Pipeline.newBlockScenarioValuesCache = data.block_scenarios[Pipeline.blocks.length];
+                Pipeline.newBlockValueColumnsCache = data.block_values[Pipeline.blocks.length];
 
                 // Stop the sparklines from being rendered unless we actually want them
                 $('#output').hide();
@@ -2985,18 +3001,6 @@ var Pipeline = {
      * @param encoded String The encoded pipeline string to parse.
      */
     decode: function(encoded) {
-        /*
-         * Reset the pipeline
-         */
-        
-        Pipeline.logFileOptionsTable.reset();
-        Pipeline.derivedValueColsOptionsTable.reset();
-        jQuery.each(Pipeline.blocks, function(i, block) {
-            block.removeBlock();
-        });
-        Pipeline.blocks = [];
-        Pipeline.setFlags(0);
-
         // Try to convert old ones to new ones. No guarantees!
         // If the first character isn't a number, it is certainly not a new
         // pipeline. The converse is not true however, since logfiles may
@@ -3050,11 +3054,16 @@ var Pipeline = {
             return;
         }
 
+        /*
+         * Reset the pipeline
+         */
+        
         var logFiles = pipelineConfig[0].split(Pipeline.encoder.PARAM_SEPARATOR);
         var scenarioCols = pipelineConfig[1].split(Pipeline.encoder.PARAM_SEPARATOR);
         var valueCols = pipelineConfig[2].split(Pipeline.encoder.PARAM_SEPARATOR);
         var derivedValueCols = pipelineConfig[3].split(Pipeline.encoder.PARAM_SEPARATOR);
         // Remove whitespace-only columns from derivedValueCols
+        Pipeline.derivedValueColsOptionsTable.reset();
         derivedValueCols = jQuery.map(derivedValueCols, function(val) {
             var s = $.trim(val);
             if ( s.length > 0 ) return s;
@@ -3063,6 +3072,7 @@ var Pipeline = {
 
         // Load the log files into the table
         // XXX TODO: if a logfile no longer exists? does this work?
+        Pipeline.logFileOptionsTable.reset();
         jQuery.each(logFiles, function(i, log) {
             var row = Pipeline.logFileOptionsTable.addRow();
             $('.select-log', row).val(log);
@@ -3076,8 +3086,10 @@ var Pipeline = {
                 });
                 return;
             }
-            Pipeline.valueCache = data.scenarioValues;
-            Pipeline.newBlockValueCache = data.scenarioValues;
+            Pipeline.scenarioValuesCache = data.scenarioValues;
+            Pipeline.valueColumnsCache = data.valueCols;
+            Pipeline.newBlockScenarioValuesCache = data.scenarioValues;
+            Pipeline.newBlockValueColumnsCache = data.valueCols;
 
             Pipeline.updateAvailableColumns(data.scenarioCols, data.valueCols, scenarioCols, valueCols);
 
@@ -3090,6 +3102,11 @@ var Pipeline = {
             // We want to cascade all value cols including derived ones,
             // so add those to the original now
             jQuery.merge(data.valueCols, derivedValueCols);
+
+        jQuery.each(Pipeline.blocks, function(i, block) {
+            block.removeBlock();
+        });
+        Pipeline.blocks = [];
 
             // Start creating blocks
             jQuery.each(blocks, function(i, params) {
@@ -3191,8 +3208,10 @@ var Pipeline = {
      */
     refreshAvailableColumns: function() {
         // Clear the values cache, since a log changed it's invalid now.
-        Pipeline.valueCache = {};
-        Pipeline.newBlockValueCache = {};
+        Pipeline.scenarioValuesCache = {};
+        Pipeline.valueColumnsCache = [];
+        Pipeline.newBlockScenarioValuesCache = {};
+        Pipeline.newBlockValueColumnsCache = [];
         var foundAny = false;
         $('.select-log', Pipeline.logFileOptionsTable.element).each(function() {
             if ( $(this).val() != '-1' ) {
@@ -3213,8 +3232,10 @@ var Pipeline = {
                 Pipeline.tabulating(data, Pipeline.refreshAvailableColumns);
             }
             else {
-                Pipeline.valueCache = data.scenarioValues;
-                Pipeline.newBlockValueCache = data.scenarioValues;
+                Pipeline.scenarioValuesCache = data.scenarioValues;
+                Pipeline.valueColumnsCache = data.valueCols;
+                Pipeline.newBlockScenarioValuesCache = data.scenarioValues;
+                Pipeline.newBlockValueColumnsCache = data.valueCols;
                 Pipeline.updateAvailableColumns(data.scenarioCols, data.valueCols, true, true);
                 Pipeline.refresh(Pipeline.constants.CASCADE_REASON_LOGS_CHANGED);
             }
@@ -3229,7 +3250,7 @@ var Pipeline = {
      */
     updateAvailableColumns: function(scenarioCols, valueCols, selectedScenarioCols, selectedValueCols) {
         var scenarioDisplay = jQuery.map(scenarioCols, function(col) {
-           var colvals = Pipeline.valueCache[col];
+           var colvals = Pipeline.scenarioValuesCache[col];
            var numvals = colvals.length;
            return '<b>' + col + '</b> (' + numvals + ') <font size="-2">[' + colvals.join(', ') + ']</font>';
         });
@@ -3243,7 +3264,7 @@ var Pipeline = {
      */
     purgeCache: function() {
         Pipeline.ajax.purgeCache(function(data, textStatus, xhr) {
-            window.location = ".";
+            Pipeline.refresh();
         });
     },
 
