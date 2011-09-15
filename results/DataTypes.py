@@ -303,7 +303,7 @@ class DataTable:
             for col in row.scenario:
                 if col not in scenarioValues:
                     scenarioValues[col] = set()
-                scenarioValues[col].add(row.scenario[col])
+                scenarioValues[col].add(str(row.scenario[col]))
         for k in scenarioValues.iterkeys():
             scenarioValues[k] = list(scenarioValues[k])
             scenarioValues[k].sort()
@@ -324,7 +324,7 @@ class DataTable:
             s = '<tr>'
             for key in scenarios:
                 if key in row.scenario:
-                    s+= '<td>' + row.scenario[key] + '</td>'
+                    s+= '<td>' + str(row.scenario[key]) + '</td>'
                 else:
                     s+= '<td>*</td>'
             for key in values:
@@ -356,7 +356,7 @@ class DataTable:
         for row in self.rows:
             for key in scenarios:
                 if key in row.scenario:
-                    output += '"' + row.scenario[key] + '",'
+                    output += '"' + str(row.scenario[key]) + '",'
                 else:
                     output += '"",'
             for key in values:
@@ -392,6 +392,15 @@ class DataRow:
     def __repr__(self):
         return '(DataRow scenario=%s values=%s)' % (self.scenario, self.values)
 
+class FormattedScenario:
+    def __init__(self, value, display, group = None, color = None):
+        self.value = value
+        self.display = display
+        self.group = group
+        self.color = color
+
+    def __str__(self):
+        return str(self.display)
 
 class DataAggregate:
     """ Holds an aggregate of values that were mutliple rows but have been

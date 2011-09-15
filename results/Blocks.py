@@ -6,10 +6,11 @@ which it describes.
 
 import math, copy, os, time
 import subprocess
-from plotty.results.DataTypes import DataRow, DataAggregate
+from plotty.results.DataTypes import DataRow, DataAggregate, FormattedScenario
 from plotty.results.Utilities import present_value, present_value_csv_graph, scenario_hash
 from plotty.results.Exceptions import PipelineAmbiguityException, PipelineError, PipelineBlockException
 import plotty.results.PipelineEncoder as PipelineEncoder
+from plotty.results.models import *
 from plotty import settings
 import logging
 
@@ -72,6 +73,29 @@ class FormatBlock(Block):
     def apply(self, data_table, messages):
         """ Apply this block to the given data table.
         """
+        if not self.column in data_table.scenarioColumns:
+            raise PipelineError("Invalid column specified for block")
+
+        styles = {}
+
+#        try:
+        if True:
+            style = FormatStyle.objects.get(key=self.key);
+            for dbe in FormatStyleEntry.objects.filter(formatstyle=style).order_by('index').all():
+                styles[dbe.value] = FormattedScenario(dbe.value, dbe.display, dbe.group, dbe.color)
+#        except:
+#            raise PipelineError("Error loading style")
+
+        missing = set()
+        for row in data_table:
+            val = row.scenario[self.column]
+            if val not in styles:
+                missing.add(val)
+            else:
+                row.scenario[self.column] = styles[val]
+
+        for m in missing:
+            messages.warn("Format missing entry for %s value %s" % (self.column, m))
 
 class CompositeScenarioBlock(Block):
     """ Allows the introduction of new, logical scenario columns based on existing columns. """
