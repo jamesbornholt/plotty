@@ -78,13 +78,12 @@ class FormatBlock(Block):
 
         styles = {}
 
-#        try:
-        if True:
+        try:
             style = FormatStyle.objects.get(key=self.key);
             for dbe in FormatStyleEntry.objects.filter(formatstyle=style).order_by('index').all():
                 styles[dbe.value] = FormattedScenario(dbe.value, dbe.display, dbe.group, dbe.color)
-#        except:
-#            raise PipelineError("Error loading style")
+        except:
+            raise PipelineError("Error loading style")
 
         missing = set()
         for row in data_table:
