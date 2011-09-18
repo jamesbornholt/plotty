@@ -11,6 +11,10 @@ body {
 input {
 }
 
+textarea {
+    width: 98%;
+}
+
 div {
     padding: 0;
     margin: 0;
@@ -83,14 +87,26 @@ input:disabled {
     opacity: 0.3;
 }
 
-#popup-format-save-go {
-    background-image: url('style_go.png');
+#popup-graph-save-go {
+    background-image: url('chart_line_add.png');
 }
-#pipeline-format-load-go {
+#popup-graph-delete-go {
+    background-image: url('chart_line_delete.png');
+}
+#pipeline-graph-load-go {
+    background-image: url('chart_line_edit.png');
+}
+#pipeline-graph-new-go {
+    background-image: url('chart_line_add.png');
+}
+#popup-format-save-go {
     background-image: url('style_go.png');
 }
 #popup-format-delete-go {
     background-image: url('style_delete.png');
+}
+#pipeline-format-load-go {
+    background-image: url('style_edit.png');
 }
 #pipeline-format-new-go {
     background-image: url('style_add.png');

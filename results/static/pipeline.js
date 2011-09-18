@@ -1126,6 +1126,8 @@ var Blocks = {
          */
         options: null,
         
+        format: -1,
+
         /**
          ** Object methods
          **/
@@ -1143,6 +1145,39 @@ var Blocks = {
             $(this.element).delegate('select, input', 'change', function() {
                 thisBlock.readState();
                 Pipeline.refresh(Pipeline.constants.CASCADE_REASON_SELECTION_CHANGED);
+            });
+
+            // Hook the load button for loading the format
+            $("#pipeline-format-load-go", this.element).click(function() {
+                var key = $('.select-format-key', thisBlock.element).eq(0).val();
+
+                thisBlock.popupOpen(key);
+
+                $('.popupfilter', thisBlock.element).show();
+                $('.popup', thisBlock.element).show();
+            });
+
+            // Hook up the popup
+            var popup = $('.popup', this.element);
+            $(".text-format-key", popup).change(function() {
+                var oldVal = $(popup).data("initial_key");
+                var newVal = $(".text-format-key", popup).val();
+                if (oldVal == newVal) {
+                    $('#popup-format-delete-go', popup).removeAttr("disabled");
+                } else {
+                    $('#popup-format-delete-go', popup).attr("disabled", "disabled");
+                }
+            });
+            $(".cancel-button", popup).click(function() {
+                $('.popup', thisBlock.element).hide();
+                $('.popupfilter', thisBlock.element).hide();
+
+            });
+            $('#popup-format-save-go', popup).click(function() {
+                thisBlock.popupSave();
+            });
+            $("#popup-format-delete-go", popup).click(function() {
+                thisBlock.popupDelete();
             });
             
             // Hide all blocks except our default one
@@ -1225,6 +1260,8 @@ var Blocks = {
 
             this.setFlag(this.FLAGS.ERRORBARS, $('.graph-enable-errorbars', this.element).is(':checked'));
             
+            this.format = $('.select-format-key', this.element).val();
+
             // These could be consolidated, but are left split as an example
             // of how to do more complicated graphs with different options.
             if ( this.type == this.TYPE.HISTOGRAM ) {
@@ -1268,12 +1305,16 @@ var Blocks = {
          */
         loadState: function() {
             // Hide all the blocks (we'll show one soon)
-            $('.pipeline-graph-type-options', this.element).hide();
+            $('.graph-type-options', this.element).hide();
             
             // Set the type dropdown
             $('.select-graph-type', this.element).val(this.type);
 
             $('.graph-enable-errorbars', this.element).attr('checked', this.getFlag(this.FLAGS.ERRORBARS));
+
+            var graphFormat = $('.select-format-key', this.element);
+            Utilities.updateSelect(graphFormat, Pipeline.graphFormatsCache);
+            graphFormat.val(this.format);
 
             // These could be consolidated, but are left split as an example
             // of how to do more complicated graphs with different options.
@@ -1335,6 +1376,9 @@ var Blocks = {
         
         refreshColumns: function() {
             var changed = false;
+            if ( this.format != -1 && jQuery.inArray(this.format, Pipeline.graphFormatsCache) == -1 ) {
+                changed = true;
+            }
             
             if ( this.type == this.TYPE.HISTOGRAM || this.type == this.TYPE.XY ) {
                 if ( this.options.column != -1 && jQuery.inArray(this.options.column, this.scenarioColumnsCache) == -1 ) {
@@ -1378,6 +1422,54 @@ var Blocks = {
                 return this.options.x != -1 && this.options.y != -1;
             }
             return false;
+        },
+
+        popupOpen: function(key) {
+            var popup = $('.popup', this.element);
+            key = (key == -1) ? "" : key;
+            $(popup).data("initial_key", key);
+            
+            // Key dropdown and key field
+            $('.text-format-key', popup).val(key);
+
+            if (key == "") {
+                $('#popup-format-delete-go', popup).hide();
+            } else {
+            /*    $('#popup-format-delete-go', popup).show();
+                $('#popup-format-delete-go', popup).removeAttr("disabled");
+
+                var thisBlock = this;
+                Pipeline.ajax.loadGraphFormat(key, function(data) {
+                    if ( data.error == false ) {
+                    } else {
+                        $(".popup", thisBlock.element).hide();
+                        $('.popupfilter', thisBlock.element).hide();
+                    }
+                });*/
+            }
+        },
+
+        popupSave: function() {
+            var thisBlock = this;
+            $('.popupfilter', thisBlock.element).hide();
+            $('.popup', thisBlock.element).hide();
+        },
+
+        popupDelete: function() {
+            var popup = $('.popup', this.element);
+            var thisBlock = this;
+            var key = $('.text-format-key', popup).val();
+            if ( key != '' ) {
+                Pipeline.ajax.deleteGraphFormat(key, function(data) {
+                    if ( data.error == false ) {
+                        $('.popupfilter', thisBlock.element).hide();
+                        $('.popup', thisBlock.element).hide();
+                        thisBlock.format = '-1';
+                        thisBlock.loadState();
+                        Pipeline.refresh();
+                    }
+                });
+            }
         }
     }),
 
@@ -2030,7 +2122,6 @@ var Blocks = {
             $(popup).data("initial_key", key);
             
             // Key dropdown and key field
-            $('.select-format-key', popup).replaceWith($('.select-format-key', this.element).eq(0).clone());
             $('.text-format-key', popup).val(key);
 
             // Suggested values
@@ -2824,6 +2915,7 @@ var Pipeline = {
             Pipeline.scenarioValuesCache = data.block_scenario_values[0];
             Pipeline.valueColumnsCache = data.block_values[0];
             Pipeline.formatStylesCache = data.format_styles;
+            Pipeline.graphFormatsCache = data.graph_formats;
 
             var changed = false;
             jQuery.each(Pipeline.blocks, function(i, block) {

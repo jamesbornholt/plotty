@@ -118,7 +118,8 @@ def pipeline(request, pipeline):
       msg_output += '</div>'
       output += msg_output
     format_styles = [f.key for f in FormatStyle.objects.all()]
-    return HttpResponse(json.dumps({'error': False, 'ambiguity': ambiguity, 'index': index, 'block_scenarios': block_scenarios, 'block_scenario_values': block_scenario_values, 'block_values': block_values, 'format_styles': format_styles, 'html': output, 'rows': len(dt.rows), 'graph': len(graph_outputs) > 0}))
+    graph_formats = [f.key for f in GraphFormat.objects.all()]
+    return HttpResponse(json.dumps({'error': False, 'ambiguity': ambiguity, 'index': index, 'block_scenarios': block_scenarios, 'block_scenario_values': block_scenario_values, 'block_values': block_values, 'format_styles': format_styles, 'graph_formats': graph_formats, 'html': output, 'rows': len(dt.rows), 'graph': len(graph_outputs) > 0}))
 
 def delete_saved_pipeline(request):
     if 'name' not in request.POST:
@@ -140,12 +141,40 @@ def save_pipeline(request):
         return HttpResponse(json.dumps({'error': True}))
     return HttpResponse(json.dumps({'error': False}))
 
-def list_formatstyle(request):
+def load_graphformat(request, key):
+    if key == '':
+        return HttpResponse(json.dumps({'error': True}))
     try:
-        return HttpResponse(json.dumps([f.key for f in FormatStyle.objects.all()]))
-    except:
+        graphformat = GraphFormat.objects.get(key=key)
+    except GraphFormat.DoesNotExist:
+        return HttpResponse(json.dumps({'error': True, 'reason': 'No format for that key'}))
+    return HttpResponse(json.dumps({'error': False, 'parent': graphformat.parent.key, 'value' : graphformat.value, 'full' : unicode(graphformat)}))
+    
+def save_graphformat(request, key):
+    if key == '' or 'parent' not in request.POST or 'value' not in request.POST:
         return HttpResponse(json.dumps({'error': True}))
 
+    parent = None if request.POST['parent'] == '' else request.POST['parent']
+    value = request.POST['value']
+    (graphformat, created) = GraphFormat.objects.get(key=key, defaults={'parent': parent, 'value': value})
+    
+    if not created:
+        graphformat.parent = parent;
+        graphformat.value = value;
+        graphformat.save();
+
+    return HttpResponse(json.dumps({'error': False}));
+    
+def delete_graphformat(request, key):
+    if key == '':
+        return HttpResponse(json.dumps({'error': True}))
+    try:
+        graphformat = GraphFormat.objects.get(key=key)
+    except GraphFormat.DoesNotExist:
+        return HttpResponse(json.dumps({'error': True, 'reason': 'No format for that key'}))
+    graphformat.delete()
+    return HttpResponse(json.dumps({'error': False}))
+    
 def load_formatstyle(request, key):
     if key == '':
         return HttpResponse(json.dumps({'error': True}))

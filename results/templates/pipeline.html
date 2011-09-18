@@ -183,26 +183,73 @@
         <div id="pipeline-graph-template" class="pipeline graph pipeline-block">
             <div class="pipeline-content">
                 <span class="pipeline-header"><img src="static/chart_line.png"/> Graph</span>
-                <span class="pipeline-header-right"><input type="image" class="insert-button" src="static/brick_add.png"/><input type="image" class="remove-button" src="static/cross.png"/></span> <br/>
-                Type: <select class="select-graph-type"><option value="1">Histogram</option><option value="2">XY</option><option value="3">Scatter</option></select>
-                <div class="graph-histogram pipeline-graph-type-options">
-                    Series (x-axis): <select class="select-graph-column scenario-column"><option></option></select> <br />
-                    Clusters (x-axis): <select class="select-graph-row scenario-column"><option></option></select> <br />
-                    Value (y-axis): <select class="select-graph-value value-column"><option></option></select> <br />
-                </div>
-                <div class="graph-xy pipeline-graph-type-options">
-                    Series: <select class="select-graph-column scenario-column"><option></option></select> <br />
-                    x-axis: <select class="select-graph-row scenario-column"><option></option></select> <br />
-                    y-axis: <select class="select-graph-value value-column"><option></option></select> <br />
-                </div>
-                <div class="graph-scatter pipeline-graph-type-options">
-                    Series: <select class="select-graph-series scenario-column"><option></option></select> <br />
-                    x-axis: <select class="select-graph-x value-column"><option></option></select> <br />
-                    y-axis: <select class="select-graph-y value-column"><option></option></select> <br />
-                </div>
+                <span class="pipeline-header-right"><input type="image" class="insert-button" src="static/brick_add.png"/><input type="image" class="remove-button" src="static/cross.png"/></span>
+                <table>
+                    <tr>
+                        <td>Type</td>
+                        <td><select class="select-graph-type"><option value="1">Histogram</option><option value="2">XY</option><option value="3">Scatter</option></select></td>
+                    </tr>
+                    <tr>
+                        <td>Format</td>
+                        <td><select class="select-format-key"><option></option></select>
+                            <button id="pipeline-format-load-go" class="pipeline-button">Edit</button>
+                            <button id="pipeline-format-new-go" class="pipeline-button">New</button>
+                        </td>
+                    </tr>
+                    <tr class="graph-histogram graph-type-options">
+                        <td>Series (x-axis)</td>
+                        <td><select class="select-graph-column scenario-column"><option></option></select></td>
+                    </tr>
+                    <tr class="graph-histogram graph-type-options">
+                        <td>Clusters (x-axis)</td>
+                        <td><select class="select-graph-row scenario-column"><option></option></select></td>
+                    </tr>
+                    <tr class="graph-histogram graph-type-options">
+                        <td>Value (y-axis)</td>
+                        <td><select class="select-graph-value value-column"><option></option></select></td>
+                    </tr>
+                    <tr class="graph-xy graph-type-options">
+                        <td>Series</td>
+                        <td><select class="select-graph-column scenario-column"><option></option></select></td>
+                    </tr>
+                    <tr class="graph-xy graph-type-options">
+                        <td>x-axis</td>
+                        <td><select class="select-graph-row scenario-column"><option></option></select></td>
+                    </tr>
+                    <tr class="graph-xy graph-type-options">
+                        <td>y-axis</td>
+                        <td><select class="select-graph-value value-column"><option></option></select></td>
+                    </tr>
+                    <tr class="graph-scatter graph-type-options">
+                        <td>Series</td>
+                        <td><select class="select-graph-series scenario-column"><option></option></select></td>
+                    </tr>
+                    <tr class="graph-scatter graph-type-options">
+                        <td>x-axis</td>
+                        <td><select class="select-graph-x value-column"><option></option></select></td>
+                    </tr>
+                    <tr class="graph-scatter graph-type-options">
+                        <td>y-axis</td>
+                        <td><select class="select-graph-y value-column"><option></option></select></td>
+                    </tr>
+                </table>
                 <label title="Shows errorbars on plots"><input type="checkbox" class="graph-enable-errorbars" checked="true" /> Show errorbars</label>
             </div>
             <div class="pipeline-footer"></div>
+            <div class="popupfilter"></div>
+            <div class="popup">
+                <span class="popup-header"><img src="static/chart_line.png"/> Graph Configuration</span>
+                <span class="popup-header-right"><input type="image" class="cancel-button" src="static/cross.png"/></span>
+                <hr/>
+                <span class="popup-header-text">Key</span> <input type="text" class="text-format-key"/>
+                <hr/>
+                <span class="popup-header-text">Parent</span> <select class="select-graph-parent"><option></option></select>
+                <hr/>
+                <textarea class="textarea-graph-value" rows="10"></textarea> 
+                <hr/>
+                <button id="popup-graph-save-go" class="pipeline-button">Save</button>
+                <button id="popup-graph-delete-go" class="pipeline-button">Delete</button>
+            </div>
         </div>
     </div>
     <div id="pipeline">

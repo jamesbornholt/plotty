@@ -21,3 +21,13 @@ class FormatStyleEntry(models.Model):
     display = models.CharField(max_length=200) 
     group = models.CharField(max_length=200,null=True) 
     color = models.CharField(max_length=6,null=True)
+
+class GraphFormat(models.Model):
+    key = models.CharField(max_length=200,unique=True)
+    parent = models.ForeignKey('self',null=True)
+    value = models.TextField()
+
+    def __unicode__(self):
+        if self.parent == None:
+            return self.value
+        return unicode(self.parent) + '\n' + self.value
