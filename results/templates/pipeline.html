@@ -92,12 +92,15 @@
                 <table>
                     <tr>
                         <td>Column</td>
-                        <td><select class="select-format-column scenario-column"><option></option></select></td>
+                        <td>
+                            <select class="select-format-column scenario-column"><option></option></select>
+                        </td>
                     </tr>
                     <tr>
-                        <td>Key</td>
+                        <td>Format</td>
                         <td><select class="select-format-key"><option></option></select>
                             <button id="pipeline-format-load-go" class="pipeline-button">Edit</button>
+                            <button id="pipeline-format-new-go" class="pipeline-button">New</button>
                         </td>
                     </tr>
                 </table>
@@ -107,10 +110,6 @@
             <div class="popup">
                 <span class="popup-header"><img src="static/style.png"/> Format Configuration</span>
                 <span class="popup-header-right"><input type="image" class="cancel-button" src="static/cross.png"/></span>
-                <select class="select-format-key"><option></option></select>
-                <button id="popup-format-load-go" class="pipeline-button">Load</button>
-                <button id="popup-format-delete-go" class="pipeline-button">Delete</button>
-                <button id="popup-format-new-go" class="pipeline-button">New</button>
                 <hr/>
                 <span class="popup-header-text">Key</span> <input type="text" class="text-format-key"/>
                 <hr/>
@@ -144,6 +143,7 @@
                 </table>
                 <hr/>
                 <button id="popup-format-save-go" class="pipeline-button">Save</button>
+                <button id="popup-format-delete-go" class="pipeline-button">Delete</button>
             </div>
         </div>
         <div id="pipeline-aggregate-template" class="pipeline aggregate pipeline-block">

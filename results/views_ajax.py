@@ -184,6 +184,16 @@ def save_formatstyle(request, key):
     except:
         return HttpResponse(json.dumps({'error': True}))
     return HttpResponse(json.dumps({'error': False}))
+
+def delete_formatstyle(request, key):
+    if key == '':
+        return HttpResponse(json.dumps({'error': True}))
+    try:
+        style = FormatStyle.objects.get(key=key)
+    except FormatStyle.DoesNotExist:
+        return HttpResponse(json.dumps({'error': True, 'reason': 'No style for that key'}))
+    style.delete()
+    return HttpResponse(json.dumps({'error': False}))
     
 def purge_cache(request):
     try:

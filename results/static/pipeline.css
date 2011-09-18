@@ -89,13 +89,10 @@ input:disabled {
 #pipeline-format-load-go {
     background-image: url('style_go.png');
 }
-#popup-format-load-go {
-    background-image: url('style_go.png');
-}
 #popup-format-delete-go {
     background-image: url('style_delete.png');
 }
-#popup-format-new-go {
+#pipeline-format-new-go {
     background-image: url('style_add.png');
 }
 #pipeline-load-go {

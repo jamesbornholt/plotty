@@ -709,7 +709,7 @@ var Blocks = {
          * HTML.
          */
         loadState: function() {
-            Utilites.updateSelect(scenarioSelect, thisBlock.scenarioColumnsCache);
+            Utilities.updateSelect(scenarioSelect, thisBlock.scenarioColumnsCache);
             var typeSelect = $('.select-aggregate-type', this.element);
             var scenarioSelect = $('.select-aggregate-column', this.element);
             
@@ -1883,7 +1883,7 @@ var Blocks = {
                 var col = $('.select-format-column', thisBlock.element).val();
                 var key = $('.select-format-key', thisBlock.element).eq(0).val();
                 
-                thisBlock.updatePopup(col, key);
+                thisBlock.popupOpen(col, key);
 
                 $('.popupfilter', thisBlock.element).show();
                 $('.popup', thisBlock.element).show();
@@ -1891,6 +1891,15 @@ var Blocks = {
 
             // Hook up the popup
             var popup = $('.popup', this.element);
+            $(".text-format-key", popup).change(function() {
+                var oldVal = $(popup).data("initial_key");
+                var newVal = $(".text-format-key", popup).val();
+                if (oldVal == newVal) {
+                    $('#popup-format-delete-go', popup).removeAttr("disabled");
+                } else {
+                    $('#popup-format-delete-go', popup).attr("disabled", "disabled");
+                }
+            });
             bindColorPicker($('.text-format-color', popup));
             $(".cancel-button", popup).click(function() {
                 $('.popup', thisBlock.element).hide();
@@ -1923,8 +1932,12 @@ var Blocks = {
             };
             this.popupEntryOptionsTable = new OptionsTable($('.popup-format-table', popup), null, null, addClosure); 
             $('#popup-format-save-go', popup).click(function() {
-                thisBlock.savePopup();
+                thisBlock.popupSave();
             });
+            $("#popup-format-delete-go", popup).click(function() {
+                thisBlock.popupDelete();
+            });
+
 
             // Hook the dropdowns
             $(this.element).delegate('select', 'change', function() {
@@ -2011,12 +2024,14 @@ var Blocks = {
             return this.column != -1 && this.key != -1;
         },
         
-        updatePopup: function(col, key) {
-            popup = $('.popup', this.element);
+        popupOpen: function(col, key) {
+            var popup = $('.popup', this.element);
+            key = (key == -1) ? "" : key;
+            $(popup).data("initial_key", key);
             
             // Key dropdown and key field
             $('.select-format-key', popup).replaceWith($('.select-format-key', this.element).eq(0).clone());
-            $('.text-format-key', popup).val(key == -1 ? "" : key);
+            $('.text-format-key', popup).val(key);
 
             // Suggested values
             $('.format-suggestions', popup).text(col == -1 ? 'None (no column selected)' : this.scenarioValuesCache[col].join(' '));
@@ -2025,7 +2040,12 @@ var Blocks = {
             // Get rid of all but the first row
             this.popupEntryOptionsTable.reset();
 
-            if (key != "") {
+            if (key == "") {
+                $('#popup-format-delete-go', popup).hide();
+            } else {
+                $('#popup-format-delete-go', popup).show();
+                $('#popup-format-delete-go', popup).removeAttr("disabled");
+
                 // Need to load existing columns
                 $('input', popup).attr('disabled', 'disabled');
                 $(".check-color", popup).attr('checked', 'checked');
@@ -2070,17 +2090,17 @@ var Blocks = {
             }
         },
 
-        savePopup: function() {
-            popup = $('.popup', this.element);
-            table = $('.popup-format-table', popup);
+        popupSave: function() {
+            var popup = $('.popup', this.element);
+            var table = $('.popup-format-table', popup);
             var styles = [];
             var useColor = $(".check-color", popup).attr("checked");
             var useGroup = $(".check-group", popup).attr("checked");
             var index = 0;
             $('tr', popup).not('.header').each(function(i, row) { 
-                value = $('.text-format-value', row).val();
-                display = $('.text-format-display', row).val();
-                group = useGroup ? $('.text-format-group', row).val() : null; 
+                value = $.trim($('.text-format-value', row).val());
+                display = $.trim($('.text-format-display', row).val());
+                group = useGroup ? $.trim($('.text-format-group', row).val()) : null; 
                 color = useColor ? $('.text-format-color', row).val() : null;
                 if (value.length > 0 && display.length > 0 && (group == null || group.length > 0) && (color == null || color.length == 7)) {
                     var style = {'index': index, 'value': value, 'display': display, 'group': group, 'color': color};
@@ -2104,6 +2124,23 @@ var Blocks = {
                         $('.popupfilter', thisBlock.element).hide();
                         $('.popup', thisBlock.element).hide();
                         thisBlock.key = key;
+                        thisBlock.loadState();
+                        Pipeline.refresh();
+                    }
+                });
+            }
+        },
+
+        popupDelete: function() {
+            var popup = $('.popup', this.element);
+            var thisBlock = this;
+            var key = $('.text-format-key', popup).val();
+            if ( key != '' ) {
+                Pipeline.ajax.deleteFormat(key, function(data) {
+                    if ( data.error == false ) {
+                        $('.popupfilter', thisBlock.element).hide();
+                        $('.popup', thisBlock.element).hide();
+                        thisBlock.key = '-1';
                         thisBlock.loadState();
                         Pipeline.refresh();
                     }
@@ -2416,7 +2453,7 @@ var Pipeline = {
     init: function() {
         // Add the debug link if needed
         if ( Pipeline.DEBUG ) {
-            $('#pipeline-new-go').after(' <button id="pipeline-debug-go" class="pipeline-button">Debug</button>');
+            $('#pipeline-purgecache-go').after(' <button id="pipeline-debug-go" class="pipeline-button">Debug</button>');
             $('#pipeline-debug-go').click(function() {
                 window.location.href = 'list/' + Pipeline.hash + '?debug';
             });
@@ -3310,8 +3347,8 @@ var Pipeline = {
             $.getJSON('ajax/load-formatstyle/' + key + '/', callback);
         },
 
-        listFormat: function(callback) {
-            $.getJSON('ajax/list-formatstyle/', callback);
+        deleteFormat: function(key, callback) {
+            $.getJSON('ajax/delete-formatstyle/' + key + '/', callback);
         },
 
         /**
