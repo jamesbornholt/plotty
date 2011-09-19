@@ -402,6 +402,9 @@ class FormattedScenario:
     def __str__(self):
         return str(self.display)
 
+    def __float__(self):
+        return float(self.value)
+
 class DataAggregate:
     """ Holds an aggregate of values that were mutliple rows but have been
         condensed into one as part of an Aggregate block. This object can

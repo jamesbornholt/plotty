@@ -156,6 +156,12 @@ var Utilities = {
             }
             $(this).tablesorter({sortList: sortList});
         });
+    },
+
+    keys: function(theArray) {
+        var keys = $.map(theArray, function(value, key) { return key; });
+        keys.sort();
+        return keys;
     }
 };
 
@@ -203,7 +209,8 @@ var Block = Base.extend({
      * Caches the available value columns.
      */
     valueColumnsCache: {},
-    
+
+
     /**
      * The HTML div that contains this block.
      */
@@ -709,18 +716,17 @@ var Blocks = {
          * HTML.
          */
         loadState: function() {
-            Utilities.updateSelect(scenarioSelect, thisBlock.scenarioColumnsCache);
             var typeSelect = $('.select-aggregate-type', this.element);
             var scenarioSelect = $('.select-aggregate-column', this.element);
             
-            Utilities.updateSelect(scenarioSelect, thisBlock.scenarioColumnsCache);
+            Utilities.updateSelect(scenarioSelect, this.scenarioColumnsCache);
             
             typeSelect.val(this.type);
             scenarioSelect.val(this.column);
         },
        
         refreshColumns: function() {
-            if (this.column != -1 && jQuery.inArray(this.column, thisBlock.scenarioColumnsCache) == -1) {
+            if (this.column != -1 && jQuery.inArray(this.column, this.scenarioColumnsCache) == -1) {
                 this.column = -1;
                 return true;
             }
@@ -1126,7 +1132,10 @@ var Blocks = {
          */
         options: null,
         
-        format: -1,
+        /**
+         * The format key for this graph.
+         */
+        key: -1,
 
         /**
          ** Object methods
@@ -1139,6 +1148,7 @@ var Blocks = {
             this.base(insertIndex);
             this.type = this.TYPE.HISTOGRAM;
             this.options = {};
+            this.key = -1;
             
             // Hook the dropdowns
             var thisBlock = this;
@@ -1166,6 +1176,15 @@ var Blocks = {
                     $('#popup-format-delete-go', popup).removeAttr("disabled");
                 } else {
                     $('#popup-format-delete-go', popup).attr("disabled", "disabled");
+                }
+            });
+            $(".select-format-parent", popup).change(function() {
+                var val = $(".select-format-parent", popup).val();
+                if (val == '-1') {
+                    $('.textarea-format-parent-value', popup).hide();
+                } else {
+                    $('.textarea-format-parent-value', popup).show();
+                    $('.textarea-format-parent-value', popup).val(Pipeline.graphFormatsCache[val]['full_value']);
                 }
             });
             $(".cancel-button", popup).click(function() {
@@ -1260,7 +1279,7 @@ var Blocks = {
 
             this.setFlag(this.FLAGS.ERRORBARS, $('.graph-enable-errorbars', this.element).is(':checked'));
             
-            this.format = $('.select-format-key', this.element).val();
+            this.key = $('.select-format-key', this.element).val();
 
             // These could be consolidated, but are left split as an example
             // of how to do more complicated graphs with different options.
@@ -1313,8 +1332,8 @@ var Blocks = {
             $('.graph-enable-errorbars', this.element).attr('checked', this.getFlag(this.FLAGS.ERRORBARS));
 
             var graphFormat = $('.select-format-key', this.element);
-            Utilities.updateSelect(graphFormat, Pipeline.graphFormatsCache);
-            graphFormat.val(this.format);
+            Utilities.updateSelect(graphFormat, Pipeline.graphFormatKeysCache);
+            graphFormat.val(this.key);
 
             // These could be consolidated, but are left split as an example
             // of how to do more complicated graphs with different options.
@@ -1376,7 +1395,8 @@ var Blocks = {
         
         refreshColumns: function() {
             var changed = false;
-            if ( this.format != -1 && jQuery.inArray(this.format, Pipeline.graphFormatsCache) == -1 ) {
+            if ( this.key != -1 && jQuery.inArray(this.key, Pipeline.graphFormatKeysCache) == -1 ) {
+                this.key = -1;
                 changed = true;
             }
             
@@ -1432,27 +1452,44 @@ var Blocks = {
             // Key dropdown and key field
             $('.text-format-key', popup).val(key);
 
+            // Update the parent drop-down
+            var parentFormat = $('.select-format-parent', popup);
+            Utilities.updateSelect(parentFormat, Pipeline.graphFormatKeysCache);
+
             if (key == "") {
                 $('#popup-format-delete-go', popup).hide();
+                $('.textarea-format-value', popup).val('');
+                parentFormat.val('-1');
+                parentFormat.change();
             } else {
-            /*    $('#popup-format-delete-go', popup).show();
+                var data = Pipeline.graphFormatsCache[key];
+                parentFormat.val(data.parent != null ? data.parent : '-1');
+                parentFormat.change();
+                $('.textarea-format-value', popup).val(data.value);
+                $('#popup-format-delete-go', popup).show();
                 $('#popup-format-delete-go', popup).removeAttr("disabled");
-
-                var thisBlock = this;
-                Pipeline.ajax.loadGraphFormat(key, function(data) {
-                    if ( data.error == false ) {
-                    } else {
-                        $(".popup", thisBlock.element).hide();
-                        $('.popupfilter', thisBlock.element).hide();
-                    }
-                });*/
             }
         },
 
         popupSave: function() {
             var thisBlock = this;
-            $('.popupfilter', thisBlock.element).hide();
-            $('.popup', thisBlock.element).hide();
+            var popup = $('.popup', this.element)
+            var key = $('.text-format-key', popup).val();
+            if (key != '') {
+                var value =  $('.textarea-format-value', popup).val();
+                var parent = $('.select-format-parent', popup).val();
+                if (parent == '-1') parent = null;
+                var thisBlock = this;
+                Pipeline.ajax.saveGraphFormat(key, parent, value, function(data) {
+                    if (data.error == false) {
+                        $('.popupfilter', thisBlock.element).hide();
+                        $('.popup', thisBlock.element).hide();
+                        thisBlock.key = key;
+                        thisBlock.loadState();
+                        Pipeline.refresh();
+                    }
+                });
+            }
         },
 
         popupDelete: function() {
@@ -2143,7 +2180,7 @@ var Blocks = {
                 $(".check-group", popup).attr('checked', 'checked');
                  
                 var thisBlock = this;
-                Pipeline.ajax.loadFormat(key, function(data) {
+                Pipeline.ajax.loadFormatStyle(key, function(data) {
                     if ( data.error == false ) {
                         var foundGroup = 0;
                         var foundColor = 0;
@@ -2210,7 +2247,7 @@ var Blocks = {
             var key = $('.text-format-key', popup).val();
             if (key != '') {
                 var thisBlock = this;
-                Pipeline.ajax.saveFormat(key, styles, function(data) {
+                Pipeline.ajax.saveFormatStyle(key, styles, function(data) {
                     if (data.error == false) {
                         $('.popupfilter', thisBlock.element).hide();
                         $('.popup', thisBlock.element).hide();
@@ -2227,7 +2264,7 @@ var Blocks = {
             var thisBlock = this;
             var key = $('.text-format-key', popup).val();
             if ( key != '' ) {
-                Pipeline.ajax.deleteFormat(key, function(data) {
+                Pipeline.ajax.deleteFormatStyle(key, function(data) {
                     if ( data.error == false ) {
                         $('.popupfilter', thisBlock.element).hide();
                         $('.popup', thisBlock.element).hide();
@@ -2497,10 +2534,41 @@ var Pipeline = {
      */
     newBlockValueColumnsCache: [],
 
+    /**
+     * The currently selected log files.
+     */
     selectedLogFiles: [],
+
+    /**
+     * The curerntly selected scenario columns.
+     */ 
     selectedScenarioColumns: [],
+
+    /**
+     * The curerntly selected value columns.
+     */ 
     selectedValueColumns: [],
+
+    /**
+     * The curerntly defined derived value columns. 
+     */ 
     derivedValueColumns: [],
+
+    /**
+     * Caches the keys of available formatting styles.
+     */
+    formatStylesCache: [],
+    
+    /**
+     * Caches the set of graph format keys
+     */
+    graphFormatKeysCache: [],
+
+    /**
+     * Caches the graph format configurations (including text for the ui)
+     */
+    graphFormatsCache: {},
+
 
     /**
      * The option table for log files
@@ -2911,17 +2979,18 @@ var Pipeline = {
                 return;
             }
 
-            Pipeline.scenarioColumnsCache = data.block_scenarios[0];
-            Pipeline.scenarioValuesCache = data.block_scenario_values[0];
+            Pipeline.scenarioColumnsCache = Utilities.keys(data.block_scenarios[0]);
+            Pipeline.scenarioValuesCache = data.block_scenarios[0];
             Pipeline.valueColumnsCache = data.block_values[0];
             Pipeline.formatStylesCache = data.format_styles;
+            Pipeline.graphFormatKeysCache = Utilities.keys(data.graph_formats);
             Pipeline.graphFormatsCache = data.graph_formats;
 
             var changed = false;
             jQuery.each(Pipeline.blocks, function(i, block) {
                 if (i+1 >= data.block_scenarios.length) return;
-                Pipeline.blocks[i].scenarioColumnsCache = data.block_scenarios[i+1];
-                Pipeline.blocks[i].scenarioValuesCache = data.block_scenario_values[i+1];
+                Pipeline.blocks[i].scenarioColumnsCache = Utilities.keys(data.block_scenarios[i+1]);
+                Pipeline.blocks[i].scenarioValuesCache = data.block_scenarios[i+1];
                 Pipeline.blocks[i].valueColumnsCache = data.block_values[i+1];
 
                 if (!block.errorBeforeBlock) {
@@ -2945,10 +3014,6 @@ var Pipeline = {
             Utilities.updateMultiSelect($("#select-value-cols"), Pipeline.valueColumnsCache, Pipeline.valueColumnsCache, Pipeline.selectedValueColumns);
 
             if (!error) {
-                Pipeline.newBlockScenarioColumnsCache = data.block_scenarios[Pipeline.blocks.length+1];
-                Pipeline.newBlockScenarioValuesCache = data.block_scenario_values[Pipeline.blocks.length+1];
-                Pipeline.newBlockValueColumnsCache = data.block_values[Pipeline.blocks.length+1];
-
                 $('#output').children().not('#loading-indicator').remove();
                 $('#output').hide();
                 $('#output').append(data.html);
@@ -2974,14 +3039,17 @@ var Pipeline = {
                     else if ( typeof data.index === 'number' ) {
                         $('#pipeline .pipeline-block').eq(data.index).addClass('error-block');
                     }
-                }
-                else if ( data.ambiguity === true ) {
+                } else if ( data.ambiguity === true ) {
                     if ( data.index === 'selected data' ) {
                         $('#pipeline-log').addClass('ambiguity-block');
                     }
                     else if ( typeof data.index === 'number' ) {
                         $('#pipeline .pipeline-block').eq(data.index).addClass('ambiguous-block');
                     }
+                } else {
+                    Pipeline.newBlockScenarioColumnsCache = Utilities.keys(data.block_scenarios[Pipeline.blocks.length+1]);
+                    Pipeline.newBlockScenarioValuesCache = data.block_scenarios[Pipeline.blocks.length+1];
+                    Pipeline.newBlockValueColumnsCache = data.block_values[Pipeline.blocks.length+1];
                 }
             } 
         });
@@ -3430,18 +3498,28 @@ var Pipeline = {
             $.post('ajax/save-pipeline/', {'name': name, 'encoded': encoded}, callback, 'json');
         },
 
-        saveFormat: function(key, items, callback) {
+        saveFormatStyle: function(key, items, callback) {
             var itemString = JSON.stringify(items);
             $.post('ajax/save-formatstyle/' + key + '/', {'style': itemString}, callback, 'json');
         },
 
-        loadFormat: function(key, callback) {
+        loadFormatStyle: function(key, callback) {
             $.getJSON('ajax/load-formatstyle/' + key + '/', callback);
         },
 
-        deleteFormat: function(key, callback) {
+        deleteFormatStyle: function(key, callback) {
             $.getJSON('ajax/delete-formatstyle/' + key + '/', callback);
         },
+
+        saveGraphFormat: function(key, parent, value, callback) {
+            data = parent != null ? {'parent': parent, 'value': value} : {'value': value};
+            $.post('ajax/save-graphformat/' + key + '/', data, callback, 'json');
+        },
+
+        deleteGraphFormat: function(key, callback) {
+            $.getJSON('ajax/delete-graphformat/' + key + '/', callback);
+        },
+
 
         /**
          * ajax/save-pipeline/ deletes a pipeline on the server given a name

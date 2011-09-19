@@ -727,7 +727,8 @@ class GraphBlock(Block):
                 if schash not in scenario_keys:
                     scenario = copy.copy(row.scenario)
                     del scenario[self.column]
-                    del scenario[self.row]
+                    if self.row != self.column:
+                        del scenario[self.row]
                     scenario_keys[schash] = scenario
                 if schash not in sets:
                     sets[schash] = []
@@ -750,10 +751,10 @@ class GraphBlock(Block):
         # Build the header row
         output = '"' + self.row + '",'
         for key in column_keys:
-            output += '"' + key + '",'
+            output += '"' + str(key) + '",'
             if has_cis:
-                output += '"' + key + '.' + str(settings.CONFIDENCE_LEVEL * 100) + '%-CI.lowerBound",'
-                output += '"' + key + '.' + str(settings.CONFIDENCE_LEVEL * 100) + '%-CI.upperBound",'
+                output += '"' + str(key) + '.' + str(settings.CONFIDENCE_LEVEL * 100) + '%-CI.lowerBound",'
+                output += '"' + str(key) + '.' + str(settings.CONFIDENCE_LEVEL * 100) + '%-CI.upperBound",'
         # Truncate the last comma to be clear
         if output[-1] == ',':
             output = output[:-1]
@@ -761,7 +762,7 @@ class GraphBlock(Block):
         
         # Build the rows
         for row_name in row_keys:
-            output += '"' + row_name + '",'
+            output += '"' + str(row_name) + '",'
             for key in column_keys:
                 if key in pivot_table[row_name]:
                     val = pivot_table[row_name][key]
@@ -826,10 +827,10 @@ class GraphBlock(Block):
         output += '</p>'
         output += '<table><thead><tr><th>' + self.row + '</th>'
         for key in column_keys:
-            output += '<th>' + self.column + '=' + key + '</th>'
+            output += '<th>' + self.column + '=' + str(key) + '</th>'
         output += '</tr></thead><tbody>'
         for row_name in row_keys:
-            output += '<tr><td>' + row_name + '</td>'
+            output += '<tr><td>' + str(row_name) + '</td>'
             for key in column_keys:
                 if key in pivot_table[row_name]:
                     output += '<td>' + present_value(pivot_table[row_name][key]) + '</td>'
@@ -875,12 +876,12 @@ class GraphBlock(Block):
                 try:
                     row_keys.sort(key=float)
                 except ValueError:
-                    row_keys.sort(key=str.lower)
+                    row_keys.sort(key=str)
                 
                 try:
                     column_keys.sort(key=float)
                 except ValueError:
-                    column_keys.sort(key=str.lower)
+                    column_keys.sort(key=str)
                 
                 # Generate a hash for this graph
                 graph_hash = str(abs(hash(self.cache_key_base + scenario)))

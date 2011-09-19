@@ -9,11 +9,11 @@ def scenario_hash(scenario, exclude=None, include=None):
     for (key,val) in scenario.items():
         i += 1
         if exclude <> None and key not in exclude:
-            hashstr += key + val
+            hashstr += str(key) + str(val)
         elif include <> None and key in include:
-            hashstr += key + val
+            hashstr += str(key) + str(val)
         elif include == None and exclude == None:
-            hashstr += key + val
+            hashstr += str(key) + str(val)
     return hashstr
 
 def present_value(val):

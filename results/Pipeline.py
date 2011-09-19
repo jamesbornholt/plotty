@@ -118,7 +118,6 @@ class Pipeline(object):
         
         graph_outputs = []
         block_scenario_values = []
-        block_scenarios = []
         block_values = []
 
         # Preempt the pipeline if necessary
@@ -128,7 +127,6 @@ class Pipeline(object):
             self.messages = self.dataTable.messages
             graph_outputs = cacheValue['graph_outputs']
             block_scenario_values = cacheValue['block_scenario_values']
-            block_scenarios = cacheValue['block_scenarios']
             block_values = cacheValue['block_values']
         else:
             try:
@@ -140,7 +138,6 @@ class Pipeline(object):
                 selectedScenarioCols = list(self.dataTable.scenarioColumns)
                 selectedScenarioCols.sort()
                 block_values.append(selectedValueCols)
-                block_scenarios.append(selectedScenarioCols)
                 block_scenario_values.append(self.dataTable.getScenarioValues())
 
                 self.dataTable.selectScenarioColumns(self.scenarioCols)
@@ -150,14 +147,12 @@ class Pipeline(object):
                 selectedScenarioCols = list(self.dataTable.scenarioColumns)
                 selectedScenarioCols.sort()
                 block_values.append(selectedValueCols)
-                block_scenarios.append(selectedScenarioCols)
                 block_scenario_values.append(self.dataTable.getScenarioValues())
                 # Cache it
                 cache.set(self.cacheKeyBase, {
                     'last_modified': self.dataTable.lastModified,
                     'data_table': self.dataTable,
                     'block_values': block_values,
-                    'block_scenarios': block_scenarios,
                     'block_scenario_values': block_scenario_values,
                     'graph_outputs': graph_outputs
                 })
@@ -166,7 +161,6 @@ class Pipeline(object):
             except PipelineAmbiguityException as e:
                 e.block = 'selected data'
                 e.block_values = block_values
-                e.block_scenarios = block_scenarios
                 e.block_scenario_values = block_scenario_values
                 raise e
             except PipelineError:
@@ -187,12 +181,11 @@ class Pipeline(object):
                 # This is safe - if we've gotten to this point, everything
                 # before this block has already worked
                 del self.blocks[i+firstBlockToRun:]
-                (block_scenarios, block_scenario_values, block_values, graph_outputs) = self.apply()
+                (block_scenario_values, block_values, graph_outputs) = self.apply()
                 e.dataTable = self.dataTable
                 e.messages = self.messages
                 e.graph_outputs = graph_outputs
                 e.block_values = block_values
-                e.block_scenarios = block_scenarios
                 e.block_scenario_values = block_scenario_values
                 raise e
             except PipelineError as e :
@@ -201,12 +194,11 @@ class Pipeline(object):
                 # This is safe - if we've gotten to this point, everything
                 # before this block has already worked
                 del self.blocks[i+firstBlockToRun:]
-                (block_scenarios, block_scenario_values, block_values, graph_outputs) = self.apply()
+                (block_scenario_values, block_values, graph_outputs) = self.apply()
                 e.dataTable = self.dataTable
                 e.messages = self.messages
                 e.graph_outputs = graph_outputs
                 e.block_values = block_values
-                e.block_scenarios = block_scenarios
                 e.block_scenario_values = block_scenario_values
                 raise e
             except:
@@ -220,7 +212,6 @@ class Pipeline(object):
             selectedScenarioCols = list(self.dataTable.scenarioColumns)
             selectedScenarioCols.sort()
             block_values.append(selectedValueCols)
-            block_scenarios.append(selectedScenarioCols)
             block_scenario_values.append(self.dataTable.getScenarioValues())
 
             # Cache it
@@ -228,10 +219,9 @@ class Pipeline(object):
                 'last_modified': self.dataTable.lastModified,
                 'data_table': self.dataTable,
                 'block_values': block_values,
-                'block_scenarios': block_scenarios,
                 'block_scenario_values': block_scenario_values,
                 'graph_outputs': graph_outputs
             })
 
 
-        return (block_scenarios, block_scenario_values, block_values, graph_outputs)
+        return (block_scenario_values, block_values, graph_outputs)

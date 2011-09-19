@@ -49,7 +49,7 @@ def pipeline(request, pipeline):
     try:
         p = Pipeline(web_client=True)
         p.decode(pipeline)
-        (block_scenarios, block_scenario_values, block_values, graph_outputs) = p.apply()
+        (block_scenario_values, block_values, graph_outputs) = p.apply()
 
     except LogTabulateStarted as e:
         return HttpResponse(json.dumps({'tabulating': True, 'log': e.log, 'pid': e.pid, 'index': e.index, 'total': e.length}))
@@ -71,7 +71,6 @@ def pipeline(request, pipeline):
             msg = e.messages
             graph_outputs = e.graph_outputs
             block_values = e.block_values
-            block_scenarios = e.block_scenarios
             block_scenario_values = e.block_scenario_values
     except PipelineAmbiguityException as e:
         if isinstance(e.block, str):
@@ -86,7 +85,6 @@ def pipeline(request, pipeline):
             msg = e.messages
             graph_outputs = e.graph_outputs
             block_values = e.block_values
-            block_scenarios = e.block_scenarios
             block_scenario_values = e.block_scenario_values
     else:
         output = ''
@@ -118,8 +116,8 @@ def pipeline(request, pipeline):
       msg_output += '</div>'
       output += msg_output
     format_styles = [f.key for f in FormatStyle.objects.all()]
-    graph_formats = [f.key for f in GraphFormat.objects.all()]
-    return HttpResponse(json.dumps({'error': False, 'ambiguity': ambiguity, 'index': index, 'block_scenarios': block_scenarios, 'block_scenario_values': block_scenario_values, 'block_values': block_values, 'format_styles': format_styles, 'graph_formats': graph_formats, 'html': output, 'rows': len(dt.rows), 'graph': len(graph_outputs) > 0}))
+    graph_formats = dict([(f.key, {'value': f.value, 'parent': f.parent.key if f.parent else None, 'full_value': unicode(f)}) for f in GraphFormat.objects.all()])
+    return HttpResponse(json.dumps({'error': False, 'ambiguity': ambiguity, 'index': index, 'block_scenarios': block_scenario_values, 'block_values': block_values, 'format_styles': format_styles, 'graph_formats': graph_formats, 'html': output, 'rows': len(dt.rows), 'graph': len(graph_outputs) > 0}))
 
 def delete_saved_pipeline(request):
     if 'name' not in request.POST:
@@ -148,22 +146,28 @@ def load_graphformat(request, key):
         graphformat = GraphFormat.objects.get(key=key)
     except GraphFormat.DoesNotExist:
         return HttpResponse(json.dumps({'error': True, 'reason': 'No format for that key'}))
-    return HttpResponse(json.dumps({'error': False, 'parent': graphformat.parent.key, 'value' : graphformat.value, 'full' : unicode(graphformat)}))
+    return HttpResponse(json.dumps({'error': False, 'parent': None if not graphformat.parent else graphformat.parent.key, 'value' : graphformat.value, 'full' : unicode(graphformat)}))
     
 def save_graphformat(request, key):
-    if key == '' or 'parent' not in request.POST or 'value' not in request.POST:
+    if key == '' or 'value' not in request.POST:
         return HttpResponse(json.dumps({'error': True}))
 
-    parent = None if request.POST['parent'] == '' else request.POST['parent']
-    value = request.POST['value']
-    (graphformat, created) = GraphFormat.objects.get(key=key, defaults={'parent': parent, 'value': value})
-    
-    if not created:
-        graphformat.parent = parent;
-        graphformat.value = value;
-        graphformat.save();
+    parent = request.POST['parent'] if ('parent' in request.POST) else None
 
-    return HttpResponse(json.dumps({'error': False}));
+    dbparent = None
+    if parent:
+        dbparent = GraphFormat.objects.get(key=parent)
+
+    value = request.POST['value']
+    (graphformat, created) = GraphFormat.objects.get_or_create(key=key, defaults={'parent': dbparent, 'value': value})
+    
+ 
+    if not created:
+        graphformat.parent = dbparent
+        graphformat.value = value
+        graphformat.save()
+
+    return HttpResponse(json.dumps({'error': False}))
     
 def delete_graphformat(request, key):
     if key == '':
@@ -179,12 +183,12 @@ def load_formatstyle(request, key):
     if key == '':
         return HttpResponse(json.dumps({'error': True}))
     try:
-        style = FormatStyle.objects.get(key=key);
+        style = FormatStyle.objects.get(key=key)
         dbentries = FormatStyleEntry.objects.filter(formatstyle=style).order_by('index').all()
         entries = []
         for dbentry in dbentries:
-          entries.append({'value': dbentry.value, 'display': dbentry.display, 'group': dbentry.group, 'color': dbentry.color});
-        return HttpResponse(json.dumps({'error': False, 'styles': entries}));
+          entries.append({'value': dbentry.value, 'display': dbentry.display, 'group': dbentry.group, 'color': dbentry.color})
+        return HttpResponse(json.dumps({'error': False, 'styles': entries}))
     except:
         return HttpResponse(json.dumps({'error': True}))
         

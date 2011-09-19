@@ -28,6 +28,15 @@ class GraphFormat(models.Model):
     value = models.TextField()
 
     def __unicode__(self):
+        return self.safeInherit(set(self.key))
+
+    def safeInherit(self, seen):
         if self.parent == None:
-            return self.value
-        return unicode(self.parent) + '\n' + self.value
+            return self.value + '\n'
+        if self.key in seen:
+            return '# inheritance cycle detected, aborting\n'
+        seen.add(self.key)
+        return self.parent.safeInherit(seen) + self.value + '\n'
+
+    def computeParentValue(self):
+        return None if not self.parent else unicode(self.parent)
