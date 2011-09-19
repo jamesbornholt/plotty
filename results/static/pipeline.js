@@ -2979,39 +2979,41 @@ var Pipeline = {
                 return;
             }
 
-            Pipeline.scenarioColumnsCache = Utilities.keys(data.block_scenarios[0]);
-            Pipeline.scenarioValuesCache = data.block_scenarios[0];
-            Pipeline.valueColumnsCache = data.block_values[0];
-            Pipeline.formatStylesCache = data.format_styles;
-            Pipeline.graphFormatKeysCache = Utilities.keys(data.graph_formats);
-            Pipeline.graphFormatsCache = data.graph_formats;
+            if (!(data.block_scenarios === undefined)) {
+                Pipeline.scenarioColumnsCache = Utilities.keys(data.block_scenarios[0]);
+                Pipeline.scenarioValuesCache = data.block_scenarios[0];
+                Pipeline.valueColumnsCache = data.block_values[0];
+                Pipeline.formatStylesCache = data.format_styles;
+                Pipeline.graphFormatKeysCache = Utilities.keys(data.graph_formats);
+                Pipeline.graphFormatsCache = data.graph_formats;
 
-            var changed = false;
-            jQuery.each(Pipeline.blocks, function(i, block) {
-                if (i+1 >= data.block_scenarios.length) return;
-                Pipeline.blocks[i].scenarioColumnsCache = Utilities.keys(data.block_scenarios[i+1]);
-                Pipeline.blocks[i].scenarioValuesCache = data.block_scenarios[i+1];
-                Pipeline.blocks[i].valueColumnsCache = data.block_values[i+1];
+                var changed = false;
+                jQuery.each(Pipeline.blocks, function(i, block) {
+                    if (i+1 >= data.block_scenarios.length) return;
+                    Pipeline.blocks[i].scenarioColumnsCache = Utilities.keys(data.block_scenarios[i+1]);
+                    Pipeline.blocks[i].scenarioValuesCache = data.block_scenarios[i+1];
+                    Pipeline.blocks[i].valueColumnsCache = data.block_values[i+1];
 
-                if (!block.errorBeforeBlock) {
-                    changed |= Pipeline.blocks[i].refreshColumns();
-                    Pipeline.blocks[i].loadState();
+                    if (!block.errorBeforeBlock) {
+                        changed |= Pipeline.blocks[i].refreshColumns();
+                        Pipeline.blocks[i].loadState();
+                    }
+                });
+
+                if (changed) {
+                    Pipeline.refresh();
+                    return;
                 }
-            });
 
-            if (changed) {
-                Pipeline.refresh();
-                return;
+                var scenarioDisplay = jQuery.map(Pipeline.scenarioColumnsCache, function(col) {
+                    var colvals = Pipeline.scenarioValuesCache[col];
+                    var numvals = colvals.length;
+                    return '<b>' + col + '</b> (' + numvals + ') <font size="-2">[' + colvals.join(', ') + ']</font>';
+                });
+
+                Utilities.updateMultiSelect($("#select-scenario-cols"), scenarioDisplay, Pipeline.scenarioColumnsCache, Pipeline.selectedScenarioColumns);
+                Utilities.updateMultiSelect($("#select-value-cols"), Pipeline.valueColumnsCache, Pipeline.valueColumnsCache, Pipeline.selectedValueColumns);
             }
-
-            var scenarioDisplay = jQuery.map(Pipeline.scenarioColumnsCache, function(col) {
-                var colvals = Pipeline.scenarioValuesCache[col];
-                var numvals = colvals.length;
-                return '<b>' + col + '</b> (' + numvals + ') <font size="-2">[' + colvals.join(', ') + ']</font>';
-            });
-
-            Utilities.updateMultiSelect($("#select-scenario-cols"), scenarioDisplay, Pipeline.scenarioColumnsCache, Pipeline.selectedScenarioColumns);
-            Utilities.updateMultiSelect($("#select-value-cols"), Pipeline.valueColumnsCache, Pipeline.valueColumnsCache, Pipeline.selectedValueColumns);
 
             if (!error) {
                 $('#output').children().not('#loading-indicator').remove();

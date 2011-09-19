@@ -915,7 +915,7 @@ class GraphBlock(Block):
                 
                 title = "Graph"
                 if len(scenario_keys[scenario]) > 0:
-                    title = ', '.join([k + ' = ' + scenario_keys[scenario][k] for k in scenario_keys[scenario].keys()])
+                    title = ', '.join([k + ' = ' + str(scenario_keys[scenario][k]) for k in scenario_keys[scenario].keys()])
                 
                 graphs[title] = html
             
