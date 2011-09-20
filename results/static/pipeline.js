@@ -51,7 +51,7 @@ var Utilities = {
      * @return boolean True if the selection was kept (i.e. the selected value
      *   appears in list)
      */
-    updateSelect: function(element, list) {
+    updateSelect: function(element, displayList, list) {
         var jqElem = $(element);
         var oldValue = jqElem.val();
         var keptSelection = false;
@@ -59,7 +59,9 @@ var Utilities = {
         element.options.length = 0;
         element.options.add(new Option("[" + list.length + " options]", '-1', true));
         for ( var i = 0; i < list.length; i++ ) {
-            element.options.add(new Option(list[i], list[i]));
+            var o = new Option(list[i], list[i]);
+            o.innerHTML = displayList[i];
+            element.options.add(o);
             if ( list[i] == oldValue ) {
                 keptSelection = true;
                 element.options.selectedIndex = i+1;
@@ -158,6 +160,9 @@ var Utilities = {
         });
     },
 
+    /**
+     * Return the set of keys from a map.
+     */
     keys: function(theArray) {
         var keys = $.map(theArray, function(value, key) { return key; });
         keys.sort();
@@ -199,11 +204,17 @@ var Block = Base.extend({
      */
     scenarioColumnsCache: {},
 
+
     /**
-     * Caches the available values for scenario columns. Should be invalidated
-     * when the selected logs change.
+     * Caches the available values for scenario columns.
      */
     scenarioValuesCache: {},
+
+    /**
+     * Caches the corresponding display values for scenario columns.
+     */
+    scenarioDisplayCache: {},
+
 
     /**
      * Caches the available value columns.
@@ -509,7 +520,7 @@ var Blocks = {
             
             // Update the scenario columns
             $('.select-filter-column', this.element).each(function() {
-                Utilities.updateSelect(this, thisBlock.scenarioColumnsCache, true);
+                Utilities.updateSelect(this, thisBlock.scenarioColumnsCache, thisBlock.scenarioColumnsCache, true);
             });
 
             // Create new rows for each filter
@@ -526,10 +537,10 @@ var Blocks = {
                 scenarioSelect.val(filter.scenario);
                 isSelect.val(filter.is);
                 if ( filter.scenario != -1 ) {
-                    Utilities.updateSelect(valueSelect, thisBlock.scenarioValuesCache[filter.scenario]);
+                    Utilities.updateSelect(valueSelect, thisBlock.scenarioDisplayCache[filter.scenario], thisBlock.scenarioValuesCache[filter.scenario]);
                 }
                 else {
-                    Utilities.updateSelect(valueSelect, []);
+                    Utilities.updateSelect(valueSelect, [], []);
                 }
                 valueSelect.val(filter.value);
             });
@@ -719,7 +730,7 @@ var Blocks = {
             var typeSelect = $('.select-aggregate-type', this.element);
             var scenarioSelect = $('.select-aggregate-column', this.element);
             
-            Utilities.updateSelect(scenarioSelect, this.scenarioColumnsCache);
+            Utilities.updateSelect(scenarioSelect, this.scenarioColumnsCache, this.scenarioColumnsCache);
             
             typeSelect.val(this.type);
             scenarioSelect.val(this.column);
@@ -955,7 +966,7 @@ var Blocks = {
 
             // Update all the scenario columns
             $('.select-normalise-column', this.optionsTable.element).each(function() {
-                Utilities.updateSelect(this, thisBlock.scenarioColumnsCache, true);
+                Utilities.updateSelect(this, thisBlock.scenarioColumnsCache, thisBlock.scenarioColumnsCache, true);
             });
             // Update the groups
             Utilities.updateMultiSelect($('.select-normalise-group', this.element), thisBlock.scenarioColumnsCache, thisBlock.scenarioColumnsCache, true);
@@ -974,10 +985,10 @@ var Blocks = {
                     // Note here we assume the scenario dropdown has already been updated
                     scenarioSelect.val(norm.scenario);
                     if ( norm.scenario == -1 ) {
-                        Utilities.updateSelect(valueSelect, []);
+                        Utilities.updateSelect(valueSelect, [], []);
                     }
                     else {
-                        Utilities.updateSelect(valueSelect, thisBlock.scenarioValuesCache[norm.scenario]);
+                        Utilities.updateSelect(valueSelect, thisBlock.scenarioDisplayCache[norm.scenario], thisBlock.scenarioValuesCache[norm.scenario]);
                     }
                     valueSelect.val(norm.value);
                 });
@@ -1154,17 +1165,15 @@ var Blocks = {
             var thisBlock = this;
             $(this.element).delegate('select, input', 'change', function() {
                 thisBlock.readState();
-                Pipeline.refresh(Pipeline.constants.CASCADE_REASON_SELECTION_CHANGED);
+                Pipeline.refresh();
             });
 
             // Hook the load button for loading the format
             $("#pipeline-format-load-go", this.element).click(function() {
-                var key = $('.select-format-key', thisBlock.element).eq(0).val();
-
-                thisBlock.popupOpen(key);
-
-                $('.popupfilter', thisBlock.element).show();
-                $('.popup', thisBlock.element).show();
+                thisBlock.popupOpen($('.select-format-key', thisBlock.element).eq(0).val());
+            });
+            $("#pipeline-format-new-go", this.element).click(function() {
+                thisBlock.popupOpen('-1');
             });
 
             // Hook up the popup
@@ -1332,7 +1341,7 @@ var Blocks = {
             $('.graph-enable-errorbars', this.element).attr('checked', this.getFlag(this.FLAGS.ERRORBARS));
 
             var graphFormat = $('.select-format-key', this.element);
-            Utilities.updateSelect(graphFormat, Pipeline.graphFormatKeysCache);
+            Utilities.updateSelect(graphFormat, Pipeline.graphFormatKeysCache, Pipeline.graphFormatKeysCache);
             graphFormat.val(this.key);
 
             // These could be consolidated, but are left split as an example
@@ -1347,9 +1356,9 @@ var Blocks = {
                 var rowSelect = $('.select-graph-row', blockOptions);
                 var valueSelect = $('.select-graph-value', blockOptions);
 
-                Utilities.updateSelect(columnSelect, this.scenarioColumnsCache);
-                Utilities.updateSelect(rowSelect, this.scenarioColumnsCache);
-                Utilities.updateSelect(valueSelect, this.valueColumnsCache);
+                Utilities.updateSelect(columnSelect, this.scenarioColumnsCache, this.scenarioColumnsCache);
+                Utilities.updateSelect(rowSelect, this.scenarioColumnsCache, this.scenarioColumnsCache);
+                Utilities.updateSelect(valueSelect, this.valueColumnsCache, this.valueColumnsCache);
                 
                 columnSelect.val(this.options.column);
                 rowSelect.val(this.options.row);
@@ -1365,9 +1374,9 @@ var Blocks = {
                 var rowSelect = $('.select-graph-row', blockOptions);
                 var valueSelect = $('.select-graph-value', blockOptions);
 
-                Utilities.updateSelect(columnSelect, this.scenarioColumnsCache);
-                Utilities.updateSelect(rowSelect, this.scenarioColumnsCache);
-                Utilities.updateSelect(valueSelect, this.valueColumnsCache);
+                Utilities.updateSelect(columnSelect, this.scenarioColumnsCache, this.scenarioColumnsCache);
+                Utilities.updateSelect(rowSelect, this.scenarioColumnsCache, this.scenarioColumnsCache);
+                Utilities.updateSelect(valueSelect, this.valueColumnsCache, this.valueColumnsCache);
                 
                 columnSelect.val(this.options.column);
                 rowSelect.val(this.options.row);
@@ -1383,9 +1392,9 @@ var Blocks = {
                 var ySelect = $('.select-graph-y', blockOptions);
                 var seriesSelect = $('.select-graph-series', blockOptions);
 
-                Utilities.updateSelect(xSelect, this.valueColumnsCache);
-                Utilities.updateSelect(ySelect, this.valueColumnsCache);
-                Utilities.updateSelect(seriesSelect, this.scenarioColumnsCache);
+                Utilities.updateSelect(xSelect, this.valueColumnsCache, this.valueColumnsCache);
+                Utilities.updateSelect(ySelect, this.valueColumnsCache, this.valueColumnsCache);
+                Utilities.updateSelect(seriesSelect, this.scenarioColumnsCache, this.scenarioColumnsCache);
 
                 xSelect.val(this.options.x);
                 ySelect.val(this.options.y);
@@ -1446,6 +1455,9 @@ var Blocks = {
 
         popupOpen: function(key) {
             var popup = $('.popup', this.element);
+            popup.show();
+            $('.popupfilter', this.element).show();
+
             key = (key == -1) ? "" : key;
             $(popup).data("initial_key", key);
             
@@ -1454,7 +1466,7 @@ var Blocks = {
 
             // Update the parent drop-down
             var parentFormat = $('.select-format-parent', popup);
-            Utilities.updateSelect(parentFormat, Pipeline.graphFormatKeysCache);
+            Utilities.updateSelect(parentFormat, Pipeline.graphFormatKeysCache, Pipeline.graphFormatKeysCache);
 
             if (key == "") {
                 $('#popup-format-delete-go', popup).hide();
@@ -1571,7 +1583,7 @@ var Blocks = {
             };
             var addClosure = function() {
                 thisBlock.filters.push({column: -1, is: 1, lowerbound: '-inf', upperbound: '+inf'});
-                Pipeline.refresh(Pipeline.constants.CASCADE_REASON_SELECTION_CHANGED);
+                Pipeline.refresh();
             };
             
             // Create the option table
@@ -1580,7 +1592,7 @@ var Blocks = {
             // Hook the dropdowns and text inputs
             $(this.element).delegate('select, input', 'change', function() {
                 thisBlock.readState();
-                Pipeline.refresh(Pipeline.constants.CASCADE_REASON_SELECTION_CHANGED);
+                Pipeline.refresh();
             });
         },
         
@@ -1661,7 +1673,7 @@ var Blocks = {
             
             // Update the value columns
             $('.select-valuefilter-column', this.element).each(function() {
-                Utilities.updateSelect(this, thisBlock.valueColumnsCache, true);
+                Utilities.updateSelect(this, thisBlock.valueColumnsCache, thisBlock.valueColumnsCache, true);
             });
 
             // Create new rows for each filter
@@ -1799,7 +1811,7 @@ var Blocks = {
             };
             var addClosure = function() {
                 thisBlock.columns.push(-1);
-                Pipeline.refresh(Pipeline.constants.CASCADE_REASON_SELECTION_CHANGED);
+                Pipeline.refresh();
             };
             
             // Create the option table
@@ -1808,7 +1820,7 @@ var Blocks = {
             // Hook the dropdowns and text inputs
             $(this.element).delegate('select, input', 'change', function() {
                 thisBlock.readState();
-                Pipeline.refresh(Pipeline.constants.CASCADE_REASON_SELECTION_CHANGED);
+                Pipeline.refresh();
             });
         },
         
@@ -1842,7 +1854,7 @@ var Blocks = {
 
         seed: function(scenarioCols, valueCols) {
             $('.scenario-column', this.element).each(function() {
-                Utilities.updateSelect(this, scenarioCols);
+                Utilities.updateSelect(this, scenarioCols, scenarioCols);
             });
             column = this.columns.join('-');
             scenarioCols.push(column);
@@ -1888,7 +1900,7 @@ var Blocks = {
             
             // Update the scenario columns
             $('.select-compositescenario-column', this.element).each(function() {
-                Utilities.updateSelect(this, thisBlock.scenarioColumnsCache, true);
+                Utilities.updateSelect(this, thisBlock.scenarioColumnsCache, thisBlock.scenarioColumnsCache, true);
             });
             
             // Create new rows for each filter
@@ -2011,11 +2023,11 @@ var Blocks = {
             $("#pipeline-format-load-go", this.element).click(function() {
                 var col = $('.select-format-column', thisBlock.element).val();
                 var key = $('.select-format-key', thisBlock.element).eq(0).val();
-                
                 thisBlock.popupOpen(col, key);
-
-                $('.popupfilter', thisBlock.element).show();
-                $('.popup', thisBlock.element).show();
+            });
+            $("#pipeline-format-new-go", this.element).click(function() {
+                var col = $('.select-format-column', thisBlock.element).val();
+                thisBlock.popupOpen(col, '-1');
             });
 
             // Hook up the popup
@@ -2128,8 +2140,8 @@ var Blocks = {
             var scenarioSelect = $('.select-format-column', this.element);
             var keySelect = $('.select-format-key', this.element);
             
-            Utilities.updateSelect(scenarioSelect, this.scenarioColumnsCache);
-            Utilities.updateSelect(keySelect, Pipeline.formatStylesCache);
+            Utilities.updateSelect(scenarioSelect, this.scenarioColumnsCache, this.scenarioColumnsCache);
+            Utilities.updateSelect(keySelect, Pipeline.formatStyleKeysCache, Pipeline.formatStyleKeysCache);
 
             scenarioSelect.val(this.column);
             keySelect.val(this.key);
@@ -2141,7 +2153,7 @@ var Blocks = {
                 return true;
             }
 
-            if ( this.key != -1 && jQuery.inArray(this.key, Pipeline.formatStylesCache) == -1 ) {
+            if ( this.key != -1 && jQuery.inArray(this.key, Pipeline.formatStyleKeysCache) == -1 ) {
                 this.key = -1;
                 return true;
             }
@@ -2155,6 +2167,9 @@ var Blocks = {
         
         popupOpen: function(col, key) {
             var popup = $('.popup', this.element);
+            popup.show();
+            $('.popupfilter', this.element).show();
+
             key = (key == -1) ? "" : key;
             $(popup).data("initial_key", key);
             
@@ -2170,6 +2185,8 @@ var Blocks = {
 
             if (key == "") {
                 $('#popup-format-delete-go', popup).hide();
+                $('.text-format-color', popup).val('');
+                $('.text-format-color', row).change();
             } else {
                 $('#popup-format-delete-go', popup).show();
                 $('#popup-format-delete-go', popup).removeAttr("disabled");
@@ -2206,8 +2223,8 @@ var Blocks = {
                             $(".check-color", popup).removeAttr('checked');
                         }
                         if (foundGroup == 0) {
-                            $('.text-format-color', popup).attr('disabled', 'disabled');
-                            $(".check-color", popup).removeAttr('checked');
+                            $('.text-format-group', popup).attr('disabled', 'disabled');
+                            $(".check-group", popup).removeAttr('checked');
                         }
                     } else {
                         $(".popup", thisBlock.element).hide();
@@ -2228,8 +2245,10 @@ var Blocks = {
             $('tr', popup).not('.header').each(function(i, row) { 
                 value = $.trim($('.text-format-value', row).val());
                 display = $.trim($('.text-format-display', row).val());
-                group = useGroup ? $.trim($('.text-format-group', row).val()) : null; 
-                color = useColor ? $('.text-format-color', row).val() : null;
+                group = $.trim($('.text-format-group', row).val()); 
+                color = $('.text-format-color', row).val();
+                if (!useColor || color.length != 7) color = null;
+                if (!useGroup || group.length == 0) group = null;
                 if (value.length > 0 && display.length > 0 && (group == null || group.length > 0) && (color == null || color.length == 7)) {
                     var style = {'index': index, 'value': value, 'display': display, 'group': group, 'color': color};
                     var conflict = false;
@@ -2440,7 +2459,7 @@ var OptionsTable = Base.extend({
     _clearSelects: function(elements) {
         $('select', elements).each(function() {
             if ( $(this).is('.scenario-column, .value-column, .scenario-column-values') ) {
-                Utilities.updateSelect(this, []);
+                Utilities.updateSelect(this, [], []);
             }
             this.selectedIndex = 0;
         });
@@ -2515,6 +2534,11 @@ var Pipeline = {
     scenarioValuesCache: {},
     
     /**
+     * Caches the corresponding display values.
+     */
+    scenarioDisplayCache: {},
+
+    /**
      * Caches the available value columnss;
      */
     valueColumnsCache: [],
@@ -2529,6 +2553,11 @@ var Pipeline = {
      */
     newBlockScenarioValuesCache: {},
     
+    /**
+     * Caches the corresponding display values.
+     */
+    newBlockScenarioDisplayCache: {},
+
     /**
      * Caches the available value columnss;
      */
@@ -2557,7 +2586,7 @@ var Pipeline = {
     /**
      * Caches the keys of available formatting styles.
      */
-    formatStylesCache: [],
+    formatStyleKeysCache: [],
     
     /**
      * Caches the set of graph format keys
@@ -2830,22 +2859,26 @@ var Pipeline = {
         var index;
         var vc;
         var sc;
+        var sd;
         var sv;
         if ( typeof indexBlock === 'undefined' ) {
             index = Pipeline.blocks.length;
             sc = Pipeline.newBlockScenarioColumnsCache;
             sv = Pipeline.newBlockScenarioValuesCache;
+            sd = Pipeline.newBlockScenarioDisplayCache;
             vc = Pipeline.newBlockValueColumnsCache;
         }
         else {
             index = $(indexBlock).prevAll('.pipeline-block').length;
             sc = index == 0 ? Pipeline.scenarioColumnsCache : Pipeline.blocks[index-1].scenarioColumnsCache;
             sv = index == 0 ? Pipeline.scenarioValuesCache : Pipeline.blocks[index-1].scenarioValuesCache;
+            sd = index == 0 ? Pipeline.scenarioDisplayCache : Pipeline.blocks[index-1].scenarioDisplayCache;
             vc = index == 0 ? Pipeline.valueColumnsCache : Pipeline.blocks[index-1].valueColumnsCache;
         }
         var b =  new block(index);
         b.scenarioColumnsCache = sc;
         b.scenarioValuesCache = sv;
+        b.scenarioDisplayCache = sd;
         b.valueColumnsCache = vc;
         Pipeline.blocks.splice(index, 0, b);
         Pipeline.refresh();
@@ -2943,7 +2976,7 @@ var Pipeline = {
             error = true ;
             $('#pipeline-value-cols').addClass('incomplete-block');
         }
-        jQuery.each(this.blocks, function(i, block) {
+        jQuery.each(Pipeline.blocks, function(i, block) {
             block.errorBeforeBlock = error;
             if (error) {
                 //$('.select', block.element).attr("disabled","disabled");
@@ -2982,8 +3015,9 @@ var Pipeline = {
             if (!(data.block_scenarios === undefined)) {
                 Pipeline.scenarioColumnsCache = Utilities.keys(data.block_scenarios[0]);
                 Pipeline.scenarioValuesCache = data.block_scenarios[0];
+                Pipeline.scenarioDisplayCache = data.block_scenario_display[0];
                 Pipeline.valueColumnsCache = data.block_values[0];
-                Pipeline.formatStylesCache = data.format_styles;
+                Pipeline.formatStyleKeysCache = data.format_styles;
                 Pipeline.graphFormatKeysCache = Utilities.keys(data.graph_formats);
                 Pipeline.graphFormatsCache = data.graph_formats;
 
@@ -2992,6 +3026,7 @@ var Pipeline = {
                     if (i+1 >= data.block_scenarios.length) return;
                     Pipeline.blocks[i].scenarioColumnsCache = Utilities.keys(data.block_scenarios[i+1]);
                     Pipeline.blocks[i].scenarioValuesCache = data.block_scenarios[i+1];
+                    Pipeline.blocks[i].scenarioDisplayCache = data.block_scenario_display[i+1];
                     Pipeline.blocks[i].valueColumnsCache = data.block_values[i+1];
 
                     if (!block.errorBeforeBlock) {
@@ -3051,6 +3086,7 @@ var Pipeline = {
                 } else {
                     Pipeline.newBlockScenarioColumnsCache = Utilities.keys(data.block_scenarios[Pipeline.blocks.length+1]);
                     Pipeline.newBlockScenarioValuesCache = data.block_scenarios[Pipeline.blocks.length+1];
+                    Pipeline.newBlockScenarioDisplayCache = data.block_scenario_display[Pipeline.blocks.length+1];
                     Pipeline.newBlockValueColumnsCache = data.block_values[Pipeline.blocks.length+1];
                 }
             } 
@@ -3261,56 +3297,6 @@ var Pipeline = {
         Pipeline.refresh();
     },
 
-/*
-        // Load the log files into the table
-        // XXX TODO: if a logfile no longer exists? does this work?
-        Pipeline.logFileOptionsTable.reset();
-        jQuery.each(logFiles, function(i, log) {
-            var row = Pipeline.logFileOptionsTable.addRow();
-            $('.select-log', row).val(log);
-        });
-
-        // Load the available columns 
-        Pipeline.ajax.logValues(function(data, textStatus, xhr) {
-            if ( data.tabulating ) {
-                Pipeline.tabulating(data, function() {
-                    Pipeline.decode(encoded);
-                });
-                return;
-            }
-            Pipeline.scenarioColumnsCache = data.scenarioCols;
-            Pipeline.scenarioValuesCache = data.scenarioValues;
-            Pipeline.valueColumnsCache = data.valueCols;
-            Pipeline.newBlockScenarioColumnsCache = data.scenarioCols;
-            Pipeline.newBlockScenarioValuesCache = data.scenarioValues;
-            Pipeline.newBlockValueColumnsCache = data.valueCols;
-
-            Pipeline.updateAvailableColumns(data.scenarioCols, data.valueCols, scenarioCols, valueCols);
-
-            // Update the derived value cols
-            jQuery.each(derivedValueCols, function(index, value) {
-                var row = Pipeline.derivedValueColsOptionsTable.addRow();
-                $('.pipeline-derived-value-field', row).val(value);
-            });
-
-            // Remove any old vlocks
-            jQuery.each(Pipeline.blocks, function(i, block) {
-                block.removeBlock();
-            });
-            Pipeline.blocks = [];
-
-            // Start creating blocks
-            jQuery.each(blocks, function(i, params) {
-                if ( $.trim(params).length == 0 ) return;
-                var paramString = params.slice(1); // The first character is the block ID
-                var block = new Pipeline.encoder.MAPPINGS[params[0]](Pipeline.blocks.length);
-                block.decode(paramString);
-                Pipeline.blocks.push(block);
-            });
-
-            Pipeline.refresh();
-        });*/
-    
     /**
      * Attempt to decode an old-style URL and turn it into a new-style one.
      * Heavily untested - could be disastrous!

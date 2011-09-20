@@ -340,6 +340,9 @@ th.header {
 #output td {
     padding-right: 10px;
 }
+td.value {
+    text-align: right;
+}
 
 th.headerSortUp { 
     background-image: url(asc.gif); 

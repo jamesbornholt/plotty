@@ -6,8 +6,8 @@ which it describes.
 
 import math, copy, os, time
 import subprocess
-from plotty.results.DataTypes import DataRow, DataAggregate, FormattedScenario
-from plotty.results.Utilities import present_value, present_value_csv_graph, scenario_hash
+from plotty.results.DataTypes import DataRow, DataAggregate, ScenarioValue
+from plotty.results.Utilities import present_scenario, present_scenario_csv, present_value, present_value_csv_graph, scenario_hash
 from plotty.results.Exceptions import PipelineAmbiguityException, PipelineError, PipelineBlockException
 import plotty.results.PipelineEncoder as PipelineEncoder
 from plotty.results.models import *
@@ -81,7 +81,7 @@ class FormatBlock(Block):
         try:
             style = FormatStyle.objects.get(key=self.key);
             for dbe in FormatStyleEntry.objects.filter(formatstyle=style).order_by('index').all():
-                styles[dbe.value] = FormattedScenario(dbe.value, dbe.display, dbe.group, dbe.color)
+                styles[dbe.value] = ScenarioValue(dbe.index, dbe.value, dbe.display, dbe.group, dbe.color)
         except:
             raise PipelineError("Error loading style")
 
@@ -139,7 +139,7 @@ class CompositeScenarioBlock(Block):
 
         composite_col = '-'.join(self.columns)
         for row in data_table:
-            row.scenario[composite_col] = '-'.join(row.scenario[x] for x in self.columns) 
+            row.scenario[composite_col] = ScenarioValue('-'.join(ScenarioValue(row.scenario[x]).value for x in self.columns))
             for col in self.columns:
                 del row.scenario[col]
 
@@ -685,7 +685,7 @@ class GraphBlock(Block):
             
             # If there's already a value in this cell, we have am ambiguity
             if row.scenario[self.column] in pivot_rows[row.scenario[self.row]]:
-                raise PipelineAmbiguityException('More than one value exists for the graph cell (%s=%s, %s=%s)' % (self.row, row.scenario[self.row], self.column, row.scenario[self.column]))
+                raise PipelineAmbiguityException('More than one value exists for the graph cell (%s=%s, %s=%s)' % (self.row, present_scenario(row.scenario[self.row]), self.column, present_scenario(row.scenario[self.column])))
             # Populate this cell
             pivot_rows[row.scenario[self.row]][row.scenario[self.column]] = row.values[self.value]
             
@@ -751,10 +751,10 @@ class GraphBlock(Block):
         # Build the header row
         output = '"' + self.row + '",'
         for key in column_keys:
-            output += '"' + str(key) + '",'
+            output += '"' + present_scenario_csv(key) + '",'
             if has_cis:
-                output += '"' + str(key) + '.' + str(settings.CONFIDENCE_LEVEL * 100) + '%-CI.lowerBound",'
-                output += '"' + str(key) + '.' + str(settings.CONFIDENCE_LEVEL * 100) + '%-CI.upperBound",'
+                output += '"' + present_scenario_csv(key) + '.' + str(settings.CONFIDENCE_LEVEL * 100) + '%-CI.lowerBound",'
+                output += '"' + present_scenario_csv(key) + '.' + str(settings.CONFIDENCE_LEVEL * 100) + '%-CI.upperBound",'
         # Truncate the last comma to be clear
         if output[-1] == ',':
             output = output[:-1]
@@ -762,7 +762,7 @@ class GraphBlock(Block):
         
         # Build the rows
         for row_name in row_keys:
-            output += '"' + str(row_name) + '",'
+            output += '"' + present_scenario_csv(row_name) + '",'
             for key in column_keys:
                 if key in pivot_table[row_name]:
                     val = pivot_table[row_name][key]
@@ -827,15 +827,15 @@ class GraphBlock(Block):
         output += '</p>'
         output += '<table><thead><tr><th>' + self.row + '</th>'
         for key in column_keys:
-            output += '<th>' + self.column + '=' + str(key) + '</th>'
+            output += '<th>' + present_scenario(key) + '</th>'
         output += '</tr></thead><tbody>'
         for row_name in row_keys:
-            output += '<tr><td>' + str(row_name) + '</td>'
+            output += '<tr><td>' + present_scenario(row_name) + '</td>'
             for key in column_keys:
                 if key in pivot_table[row_name]:
-                    output += '<td>' + present_value(pivot_table[row_name][key]) + '</td>'
+                    output += '<td class="value">' + present_value(pivot_table[row_name][key]) + '</td>'
                 else:
-                    output += '<td>*</td>'
+                    output += '<td class="value">*</td>'
             output += '</tr>'
         output += '<tr><td>&nbsp;</td></tr>'
         if aggregates != None:
@@ -843,9 +843,9 @@ class GraphBlock(Block):
                 output += '<tr><td><i>' + agg + '</i></td>'
                 for key in column_keys:
                     if key in aggregates[agg]:
-                        output += '<td>%.3f</td>' % aggregates[agg][key]
+                        output += '<td class="value">%.3f</td>' % aggregates[agg][key]
                     else:
-                        output += '<td>*</td>'
+                        output += '<td class="value">*</td>'
                 output += '</tr>'
         output += '</tbody></table>'
 
@@ -870,18 +870,18 @@ class GraphBlock(Block):
                 # Pivot the data
                 pivot_table, aggregates, column_keys = self.pivot(rows)
                 
+
+                def sort_keys(l):
+                    # alphabetic, numeric, formatted
+                    l.sort(key=lambda x: None if isinstance(x, ScenarioValue) else str(x))
+                    l.sort(key=lambda x: None if isinstance(x, ScenarioValue) or isinstance(x, str) else float(x))
+                    l.sort(key=lambda x: x.index if isinstance(x, ScenarioValue) else 'inf')
+
                 # Sort the column and keys so they show nicely in the graph
-                column_keys = list(column_keys)
                 row_keys = pivot_table.keys()
-                try:
-                    row_keys.sort(key=float)
-                except ValueError:
-                    row_keys.sort(key=str)
-                
-                try:
-                    column_keys.sort(key=float)
-                except ValueError:
-                    column_keys.sort(key=str)
+                sort_keys(row_keys)
+                column_keys = list(column_keys)
+                sort_keys(column_keys)
                 
                 # Generate a hash for this graph
                 graph_hash = str(abs(hash(self.cache_key_base + scenario)))
@@ -903,7 +903,7 @@ class GraphBlock(Block):
     
                     # Plot the graph
                     if self.type == GraphBlock.TYPE['HISTOGRAM']:
-                        self.plotHistogram(graph_hash, graph_path, len(column_keys))
+                        self.plotHistogram(graph_hash, graph_path, column_keys)
                     elif self.type == GraphBlock.TYPE['XY']:
                         self.plotXYGraph(graph_hash, graph_path, len(column_keys))
                     
@@ -921,7 +921,7 @@ class GraphBlock(Block):
             
             return graphs
         elif self.type == GraphBlock.TYPE['SCATTER']:
-            if not (self.series in data_table.scenarioColumns and self.x in data_table.valueColumns and self.y in data_table.valueColumns):
+            if not ((self.series == '-1' or self.series in data_table.scenarioColumns) and self.x in data_table.valueColumns and self.y in data_table.valueColumns):
                 raise PipelineError("Invalid columns specified for block")
             # XXX TODO: this cache key doesn't work; we should implement a
             # cache key method on DataTable
@@ -930,6 +930,9 @@ class GraphBlock(Block):
 
             grouping = (self.series != '-1')
             group_values = set()
+
+            if not grouping:
+                group_values.add("all")
 
             csv_last_modified = 0
             if os.path.exists(graph_path + '.csv'):
@@ -949,10 +952,10 @@ class GraphBlock(Block):
                     if self.x in row.values and self.y in row.values:
                         if grouping:
                             if self.series in row.scenario:
-                                csv.append('"' + row.scenario[self.series] + '",' + present_value_csv_graph(row.values[self.x], True) + ',' + present_value_csv_graph(row.values[self.y], True))
+                                csv.append('"' + present_scenario_csv(row.scenario[self.series]) + '",' + present_value_csv_graph(row.values[self.x], True) + ',' + present_value_csv_graph(row.values[self.y], True))
                                 group_values.add(row.scenario[self.series])
                         else:
-                            csv.append('"",' + present_value_csv_graph(row.values[self.x], True) + ',' + present_value_csv_graph(row.values[self.y], True))
+                            csv.append('"all",' + present_value_csv_graph(row.values[self.x], True) + ',' + present_value_csv_graph(row.values[self.y], True))
                 csv_text = "\n".join(csv)
 
                 csv_file = open(graph_path + '.csv', 'w')
@@ -975,7 +978,7 @@ class GraphBlock(Block):
                     '<table><thead><tr><th>' + self.x + '</th><th>' + self.y + '</th></tr></thead><tbody>']
             for row in data_table:
                 if self.x in row.values and self.y in row.values:
-                    html.append('<tr><td>' + present_value(row.values[self.x]) + '</td><td>' + present_value(row.values[self.y]) + '</td></tr>')
+                    html.append('<tr><td class="value">' + present_value(row.values[self.x]) + '</td><td class="value">' + present_value(row.values[self.y]) + '</td></tr>')
             html.append('</tbody></table>')
             html_text = "\n".join(html)
 
@@ -1020,11 +1023,11 @@ set style line 3 lt 1 pt 0 lc rgb '#ADDFFF' lw 1
 """
         if self.errorbars:
           gnuplot += """
-plot for [COL=2:{num_cols}:3] "{graph_hash}.csv" u (column(1)):COL:xtic(1) title col(COL) w lines, for [COL=2:{num_cols}:3] "" u (column(1)):COL:COL+1:COL+2 notitle w yerr
+plot for [COL=1:{num_cols}] "{graph_hash}.csv" u (column(1)):COL*3+1:xtic(1) title col(COL*3+1) w lines, for [COL=1:{num_cols}] "" u (column(1)):COL*3+1:COL*3+2:COL*3+3 notitle w yerr
 """
         else:
           gnuplot += """
-plot for [COL=2:{num_cols}:3] "{graph_hash}.csv" u (column(COL)):xtic(1) lw 3 title col(COL) w lines
+plot for [COL=1:{num_cols}] "{graph_hash}.csv" u (column(COL*3+1)):xtic(1) lw 3 title col(COL*3+1) w lines
 """
         gnuplot += """
 
@@ -1037,21 +1040,20 @@ set output '{graph_hash}.wide.eps'
 replot
 """
         gp_file = open(graph_path + ".gpt", "w")
-        gp_file.write(gnuplot.format(graph_hash=graph_hash, num_cols=num_cols, yaxis_title=self.value, font_path=settings.GRAPH_FONT_PATH))
+        gp_file.write(gnuplot.format(graph_hash=graph_hash, num_cols=len(cols), yaxis_title=self.value, font_path=settings.GRAPH_FONT_PATH))
         gp_file.close()
         subprocess.call([settings.GNUPLOT_EXECUTABLE, gp_file.name], cwd=settings.GRAPH_CACHE_DIR)
         os.system("ps2pdf -dEPSCrop " + graph_path + ".wide.eps " + graph_path + ".wide.pdf")
         os.system("ps2pdf -dEPSCrop " + graph_path + ".eps " + graph_path + ".pdf")
 
 
-    def plotHistogram(self, graph_hash, graph_path, num_cols):
+    def plotHistogram(self, graph_hash, graph_path, cols):
         """ Plot a histogram csv file with gnuplot.
         
         csv_filename: the csv file where the graph data has been temporarily
                       stored.
         num_cols:     the number of columns of data (not including error bars)
         """
-        num_cols = num_cols * 3 - 1
         gnuplot = """
 set terminal svg fname "Arial" fsize 10 size 960,420
 set output '{graph_hash}.svg'
@@ -1072,22 +1074,29 @@ set boxwidth 1
 set xtic rotate by -30
 set key reverse Left spacing 1.35
 
-set style line 20 lt 1 pt 0 lc rgb '#000000' lw 0.25
-set grid linestyle 20
+set style line 80 lt 1 pt 0 lc rgb '#000000' lw 0.25
+set grid linestyle 80
 set grid noxtics
-set style line 1 lt 1 pt 0 lc rgb '#82CAFA' lw 1
-set style line 2 lt 1 pt 0 lc rgb '#4CC417' lw 1
-set style line 3 lt 1 pt 0 lc rgb '#ADDFFF' lw 1
+
+{line_colors}
 """
+
+        line_colors = ""
+        colindex = 1
+        for c in cols:
+            if isinstance(c, ScenarioValue) and c.color:
+                line_colors += "set style line " + str(colindex) + " linecolor rgb '" + c.color + "'\n"
+            colindex += 1
+
         if self.errorbars:
           gnuplot += """
 set style histogram errorbars gap 1 lw 0.25
-plot for [COL=2:{num_cols}:3] "{graph_hash}.csv" u (column(COL)):COL+1:COL+2:xtic(1) title col(COL)
+plot for [COL=0:{num_cols}-1] "{graph_hash}.csv" u (column(COL*3+2)):COL*3+3:COL*3+4:xtic(1) ls COL+1 title col(COL*3+2)
 """
         else:
           gnuplot += """
 set style histogram
-plot for [COL=2:{num_cols}:3] "{graph_hash}.csv" u (column(COL)):xtic(1) title col(COL)
+plot for [COL=0:{num_cols}-1] "{graph_hash}.csv" u (column(COL*3+2)):xtic(1) ls COL+1 title col(COL*3+2)
 """
         gnuplot += """
 set terminal postscript eps solid color "Helvetica" 18 size 5, 2.5
@@ -1099,7 +1108,7 @@ set output '{graph_hash}.wide.eps'
 replot
 """
         gp_file = open(graph_path + ".gpt", "w")
-        gp_file.write(gnuplot.format(graph_hash=graph_hash, num_cols=num_cols, yaxis_title=self.value, font_path=settings.GRAPH_FONT_PATH))
+        gp_file.write(gnuplot.format(graph_hash=graph_hash, line_colors=line_colors, num_cols=len(cols), yaxis_title=self.value, font_path=settings.GRAPH_FONT_PATH))
         gp_file.close()
         subprocess.call([settings.GNUPLOT_EXECUTABLE, gp_file.name], cwd=settings.GRAPH_CACHE_DIR)
         os.system("ps2pdf -dEPSCrop " + graph_path + ".wide.eps " + graph_path + ".wide.pdf")
@@ -1113,7 +1122,7 @@ replot
         series: a set() of all series. Empty if series were disabled.
         """
 
-        series_str = " ".join(series)
+        series_str = " ".join([present_scenario_csv(s) for s in series])
         gnuplot = """
 set terminal svg fname "Arial" fsize 10 size 960,420
 set output '{graph_hash}.svg'
@@ -1137,13 +1146,13 @@ set key reverse Left spacing 1.35
 #set style line 1 lt 1 pt 0 lc rgb '#82CAFA' lw 1
 #set style line 2 lt 1 pt 0 lc rgb '#4CC417' lw 1
 #set style line 3 lt 1 pt 0 lc rgb '#ADDFFF' lw 1
-X="Data"
+X="all"
 
 """
         if self.errorbars:
-          gnuplot += "plot {datafile} u (column(2)):5:3:4:6:7 with xyerrorbars title X"
+          gnuplot += "plot {datafile} u (column(2)):(stringcolumn(1) eq X ?$5:1/0):3:4:6:7 with xyerrorbars title X"
         else:
-          gnuplot += "plot {datafile} u (column(2)):5 lw 3 title X"
+          gnuplot += "plot {datafile} u (column(2)):(stringcolumn(1) eq X ?$5:1/0) lw 3 title X"
         gnuplot += """
 
 set terminal postscript eps solid color "Helvetica" 18 size 5, 2.5
@@ -1155,10 +1164,10 @@ set output '{graph_hash}.wide.eps'
 replot
 """
 
-        if series_str == "":
-          datafile = "'" + graph_path + ".csv'"
-        else:
-          datafile = "for [X in \"" + series_str + "\"] '<grep \"^\\\"'.X.'\\\",\" " + graph_path + ".csv'"
+#        if series_str == "":
+#          datafile = "'" + graph_path + ".csv'"
+#        else:
+        datafile = "for [X in \"" + series_str + "\"] '" + graph_path + ".csv'"
         gp_file = open(graph_path + '.gpt', 'w')
         gp_file.write(gnuplot.format(datafile=datafile, graph_hash=graph_hash, xaxis_title=self.x, yaxis_title=self.y, font_path=settings.GRAPH_FONT_PATH))
         gp_file.close()

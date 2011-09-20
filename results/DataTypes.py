@@ -296,17 +296,26 @@ class DataTable:
                     del row.scenario[key]
         self.scenarioColumns = set(cols)
 
-
     def getScenarioValues(self):
         scenarioValues = {}
         for row in self.rows:
             for col in row.scenario:
                 if col not in scenarioValues:
                     scenarioValues[col] = set()
-                scenarioValues[col].add(str(row.scenario[col]))
+                scenarioValues[col].add(row.scenario[col])
         for k in scenarioValues.iterkeys():
-            scenarioValues[k] = list(scenarioValues[k])
-            scenarioValues[k].sort()
+            valuesList = list(scenarioValues[k])
+            formattedValues = []
+            otherValues = []
+            for v in valuesList:
+                if isinstance(v, ScenarioValue):
+                    formattedValues.append(v)
+                else:
+                    otherValues.append(v)
+            formattedValues.sort(key=lambda fv: fv.index)
+            otherValues.sort()
+            formattedValues.extend(otherValues)
+            scenarioValues[k] = formattedValues
 
         return scenarioValues
 
@@ -324,7 +333,10 @@ class DataTable:
             s = '<tr>'
             for key in scenarios:
                 if key in row.scenario:
-                    s+= '<td>' + str(row.scenario[key]) + '</td>'
+                    if isinstance(row.scenario[key], ScenarioValue):
+                        s+= '<td title="' + row.scenario[key].value + '">' + row.scenario[key].display + '</td>'
+                    else:
+                        s+= '<td>' + str(row.scenario[key]) + '</td>'
                 else:
                     s+= '<td>*</td>'
             for key in values:
@@ -392,18 +404,52 @@ class DataRow:
     def __repr__(self):
         return '(DataRow scenario=%s values=%s)' % (self.scenario, self.values)
 
-class FormattedScenario:
-    def __init__(self, value, display, group = None, color = None):
-        self.value = value
-        self.display = display
-        self.group = group
-        self.color = color
+class ScenarioValue:
+
+    def __init__(self, indexOrOther, value=None, display=None, group = None, color = None):
+        if not value is None:
+            self.index = indexOrOther
+            self.value = value
+            self.display = display
+            self.group = group
+            self.color = color
+        elif isinstance(indexOrOther, ScenarioValue):
+            self.index = indexOrOther.index
+            self.value = indexOrOther.value
+            self.display = indexOrOther.display
+            self.group = indexOrOther.group
+            self.color = indexOrOther.color
+        else:
+            self.index = None
+            self.value = str(indexOrOther)
+            self.display = str(indexOrOther)
+            self.group = None
+            self.color = None
+
+    def isFormatted():
+        return not self.index is None
 
     def __str__(self):
+        raise Error("str on SV");
         return str(self.display)
 
     def __float__(self):
+        raise Error("str on SV");
         return float(self.value)
+
+    def __ne__(self, other):
+        return not (self == other)
+
+    def __eq__(self, other):
+        if isinstance(other, ScenarioValue):
+            return self.value == other.value
+        return self.value == other
+
+    def __cmp__(self, other):
+        raise Error("str on SV");
+
+    def __hash__(self):
+        return hash(self.value)
 
 class DataAggregate:
     """ Holds an aggregate of values that were mutliple rows but have been

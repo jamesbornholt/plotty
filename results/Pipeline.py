@@ -118,7 +118,14 @@ class Pipeline(object):
         
         graph_outputs = []
         block_scenario_values = []
+        block_scenario_display= []
         block_values = []
+
+        def extractValues(vs):
+            return dict([(key, list([v.value if isinstance(v, ScenarioValue) else str(v) for v in vs[key]])) for key in vs.iterkeys()])
+
+        def extractDisplay(vs):
+            return dict([(key, list([v.display if isinstance(v, ScenarioValue) else str(v) for v in vs[key]])) for key in vs.iterkeys()])
 
         # Preempt the pipeline if necessary
         if self.cacheAvailableIndex > -1:
@@ -127,6 +134,7 @@ class Pipeline(object):
             self.messages = self.dataTable.messages
             graph_outputs = cacheValue['graph_outputs']
             block_scenario_values = cacheValue['block_scenario_values']
+            block_scenario_display = cacheValue['block_scenario_display']
             block_values = cacheValue['block_values']
         else:
             try:
@@ -138,7 +146,9 @@ class Pipeline(object):
                 selectedScenarioCols = list(self.dataTable.scenarioColumns)
                 selectedScenarioCols.sort()
                 block_values.append(selectedValueCols)
-                block_scenario_values.append(self.dataTable.getScenarioValues())
+                scenarioValues = self.dataTable.getScenarioValues()
+                block_scenario_values.append(extractValues(scenarioValues))
+                block_scenario_display.append(extractDisplay(scenarioValues))
 
                 self.dataTable.selectScenarioColumns(self.scenarioCols)
                 self.dataTable.selectValueColumns(self.valueCols, self.derivedValueCols)
@@ -147,13 +157,17 @@ class Pipeline(object):
                 selectedScenarioCols = list(self.dataTable.scenarioColumns)
                 selectedScenarioCols.sort()
                 block_values.append(selectedValueCols)
-                block_scenario_values.append(self.dataTable.getScenarioValues())
+                scenarioValues = self.dataTable.getScenarioValues()
+                block_scenario_values.append(extractValues(scenarioValues))
+                block_scenario_display.append(extractDisplay(scenarioValues))
+
                 # Cache it
                 cache.set(self.cacheKeyBase, {
                     'last_modified': self.dataTable.lastModified,
                     'data_table': self.dataTable,
                     'block_values': block_values,
                     'block_scenario_values': block_scenario_values,
+                    'block_scenario_display': block_scenario_display,
                     'graph_outputs': graph_outputs
                 })
             except LogTabulateStarted:
@@ -162,6 +176,7 @@ class Pipeline(object):
                 e.block = 'selected data'
                 e.block_values = block_values
                 e.block_scenario_values = block_scenario_values
+                e.block_scenario_display = block_scenario_display
                 raise e
             except PipelineError:
                 raise
@@ -181,12 +196,13 @@ class Pipeline(object):
                 # This is safe - if we've gotten to this point, everything
                 # before this block has already worked
                 del self.blocks[i+firstBlockToRun:]
-                (block_scenario_values, block_values, graph_outputs) = self.apply()
+                (block_scenario_values, block_scenario_display, block_values, graph_outputs) = self.apply()
                 e.dataTable = self.dataTable
                 e.messages = self.messages
                 e.graph_outputs = graph_outputs
                 e.block_values = block_values
                 e.block_scenario_values = block_scenario_values
+                e.block_scenario_display = block_scenario_display
                 raise e
             except PipelineError as e :
                 e.block = i + firstBlockToRun
@@ -194,12 +210,13 @@ class Pipeline(object):
                 # This is safe - if we've gotten to this point, everything
                 # before this block has already worked
                 del self.blocks[i+firstBlockToRun:]
-                (block_scenario_values, block_values, graph_outputs) = self.apply()
+                (block_scenario_values, block_scenario_display, block_values, graph_outputs) = self.apply()
                 e.dataTable = self.dataTable
                 e.messages = self.messages
                 e.graph_outputs = graph_outputs
                 e.block_values = block_values
                 e.block_scenario_values = block_scenario_values
+                e.block_scenario_display = block_scenario_display
                 raise e
             except:
                 raise PipelineBlockException(i+firstBlockToRun, *sys.exc_info())
@@ -212,7 +229,9 @@ class Pipeline(object):
             selectedScenarioCols = list(self.dataTable.scenarioColumns)
             selectedScenarioCols.sort()
             block_values.append(selectedValueCols)
-            block_scenario_values.append(self.dataTable.getScenarioValues())
+            scenarioValues = self.dataTable.getScenarioValues()
+            block_scenario_values.append(extractValues(scenarioValues))
+            block_scenario_display.append(extractDisplay(scenarioValues))
 
             # Cache it
             cache.set(cacheKey, {
@@ -220,8 +239,9 @@ class Pipeline(object):
                 'data_table': self.dataTable,
                 'block_values': block_values,
                 'block_scenario_values': block_scenario_values,
+                'block_scenario_display': block_scenario_display,
                 'graph_outputs': graph_outputs
             })
 
 
-        return (block_scenario_values, block_values, graph_outputs)
+        return (block_scenario_values, block_scenario_display, block_values, graph_outputs)

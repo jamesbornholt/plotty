@@ -49,7 +49,7 @@ def pipeline(request, pipeline):
     try:
         p = Pipeline(web_client=True)
         p.decode(pipeline)
-        (block_scenario_values, block_values, graph_outputs) = p.apply()
+        (block_scenario_values, block_scenario_display, block_values, graph_outputs) = p.apply()
 
     except LogTabulateStarted as e:
         return HttpResponse(json.dumps({'tabulating': True, 'log': e.log, 'pid': e.pid, 'index': e.index, 'total': e.length}))
@@ -72,6 +72,7 @@ def pipeline(request, pipeline):
             graph_outputs = e.graph_outputs
             block_values = e.block_values
             block_scenario_values = e.block_scenario_values
+            block_scenario_display = e.block_scenario_display
     except PipelineAmbiguityException as e:
         if isinstance(e.block, str):
             # The exception occured early on - cols, probably
@@ -86,6 +87,7 @@ def pipeline(request, pipeline):
             graph_outputs = e.graph_outputs
             block_values = e.block_values
             block_scenario_values = e.block_scenario_values
+            block_scenario_display = e.block_scenario_display
     else:
         output = ''
         ambiguity = False
@@ -117,7 +119,7 @@ def pipeline(request, pipeline):
       output += msg_output
     format_styles = [f.key for f in FormatStyle.objects.all()]
     graph_formats = dict([(f.key, {'value': f.value, 'parent': f.parent.key if f.parent else None, 'full_value': unicode(f)}) for f in GraphFormat.objects.all()])
-    return HttpResponse(json.dumps({'error': False, 'ambiguity': ambiguity, 'index': index, 'block_scenarios': block_scenario_values, 'block_values': block_values, 'format_styles': format_styles, 'graph_formats': graph_formats, 'html': output, 'rows': len(dt.rows), 'graph': len(graph_outputs) > 0}))
+    return HttpResponse(json.dumps({'error': False, 'ambiguity': ambiguity, 'index': index, 'block_scenarios': block_scenario_values, 'block_scenario_display': block_scenario_display, 'block_values': block_values, 'format_styles': format_styles, 'graph_formats': graph_formats, 'html': output, 'rows': len(dt.rows), 'graph': len(graph_outputs) > 0}))
 
 def delete_saved_pipeline(request):
     if 'name' not in request.POST:

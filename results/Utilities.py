@@ -16,6 +16,21 @@ def scenario_hash(scenario, exclude=None, include=None):
             hashstr += str(key) + str(val)
     return hashstr
 
+def present_scenario(val):
+    from plotty.results.DataTypes import ScenarioValue
+    if isinstance(val, ScenarioValue):
+        if val.value != val.display:
+            return '<span title="' + val.value + '">' + val.display + '</span>'
+        else:
+            return val.value
+    return str(val)
+
+def present_scenario_csv(val):
+    from plotty.results.DataTypes import ScenarioValue
+    if isinstance(val, ScenarioValue):
+        return val.display
+    return str(val)
+
 def present_value(val):
     """ Turns a value into a state where it can be presented as HTML, including
         its confidence interval and sparkline if appropriate.
