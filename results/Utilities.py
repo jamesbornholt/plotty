@@ -8,6 +8,7 @@ def scenario_hash(scenario, exclude=None, include=None):
     i = 0
     for (key,val) in scenario.items():
         i += 1
+        hashstr += str(i)
         if exclude <> None and key not in exclude:
             hashstr += str(key) + str(val)
         elif include <> None and key in include:
