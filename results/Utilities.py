@@ -4,9 +4,12 @@ def scenario_hash(scenario, exclude=None, include=None):
     """ Hashes a scenario dictionary by either including or excluding values
         based on the specified lists.
     """
+    from plotty.results.DataTypes import ScenarioValue
     hashstr = ""
     i = 0
     for (key,val) in scenario.items():
+        if isinstance(val, ScenarioValue):
+            val = val.value
         i += 1
         hashstr += str(i)
         if exclude <> None and key not in exclude:
