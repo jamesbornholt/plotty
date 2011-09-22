@@ -69,7 +69,7 @@ var Utilities = {
         }
         return keptSelection;
     },
-    
+
     /**
      * Update a multiselect created by the toChecklist plugin. We can
      * optionally either maintain the current selection when updating, or
@@ -1114,39 +1114,33 @@ var Blocks = {
         ID: 4,
 
         /**
-         * The type of graph
-         */
-        TYPE: {
-            HISTOGRAM: 1,
-            XY: 2,
-            SCATTER: 3
-        },
-
-        /**
-         * Block-local flag types
-         */
-        FLAGS: {
-            ERRORBARS: 1 << 0
-        },
-
-        /**
          ** Object fields
          **/
         
         /**
-         * The type of graph. Should be a value from Pipeline.constants.graph
+         * The format for the graph.
          */
-        type: null,
+        format: -1,
+       
+        /**
+         * The column to use for series, includes a special value to use 'values'.
+         */ 
+        series: -1,
+
+        /**
+         * The column to use for pivoting
+         */
+        pivot: -1,
         
         /**
-         * The options for the specified graph
+         * The values selected in this graph 
          */
-        options: null,
-        
+        values: [-1],
+
         /**
-         * The format key for this graph.
+         * The options table for the values.
          */
-        key: -1,
+        valueOptionsTable: null,
 
         /**
          ** Object methods
@@ -1157,23 +1151,37 @@ var Blocks = {
          */
         constructor: function(insertIndex) {
             this.base(insertIndex);
-            this.type = this.TYPE.HISTOGRAM;
-            this.options = {};
-            this.key = -1;
             
-            // Hook the dropdowns
+            // Hook the dropdowns and text inputs
             var thisBlock = this;
             $(this.element).delegate('select, input', 'change', function() {
                 thisBlock.readState();
                 Pipeline.refresh();
             });
-
+            var removeClosure = function(row) {
+                var value = $('.select-value', row).val();
+            
+                for ( var i = 0; i < this.values.length; i++ ) {
+                    if ( this.values[i] == value) {
+                        this.values.splice(i, 1);
+                        break;
+                    }
+                }
+            };
+            var addClosure = function() {
+                thisBlock.values.push(-1);
+                Pipeline.refresh();
+            };
+            
+            // Create the option table
+            this.valueOptionsTable = new OptionsTable($('.pipeline-graph-value-table', this.element), removeClosure, Pipeline.refresh, addClosure);
+            
             // Hook the load button for loading the format
             $("#pipeline-format-load-go", this.element).click(function() {
                 thisBlock.popupOpen($('.select-format-key', thisBlock.element).eq(0).val());
             });
             $("#pipeline-format-new-go", this.element).click(function() {
-                thisBlock.popupOpen('-1');
+                thisBlock.popupOpen(-1);
             });
 
             // Hook up the popup
@@ -1207,11 +1215,6 @@ var Blocks = {
             $("#popup-format-delete-go", popup).click(function() {
                 thisBlock.popupDelete();
             });
-            
-            // Hide all blocks except our default one
-            $('.pipeline-graph-type-options', this.element).hide();
-            $('.graph-histogram', this.element).show();
-            $('.select-graph-type').val(this.type);
         },
         
         /**
@@ -1220,7 +1223,7 @@ var Blocks = {
          */
         decode: function(params) {
             var parts = params.split(Pipeline.encoder.GROUP_SEPARATOR);
-            // Exactly three parts - flagword, type, settings for that type
+            // Exactly three parts - flagword, settings, values
             if ( parts.length != 3 ) {
                 console.debug("Graph block invalid: incorrect number of parts");
                 return;
@@ -1228,33 +1231,29 @@ var Blocks = {
 
             this.flags = parseInt(parts[0]);
             
-            this.type = parts[1];
+            var settings = parts[1].split(Pipeline.encoder.PARAM_SEPARATOR);
+            
+            if (settings.length == 1) {
+                // Compatibility: load old style pipeline.
+                var type = parseInt(settings[0]);
+                settings = parts[2].split(Pipeline.encoder.PARAM_SEPARATOR);
 
-            var settings = parts[2].split(Pipeline.encoder.PARAM_SEPARATOR);
-
-            if ( this.type == this.TYPE.HISTOGRAM || this.type == this.TYPE.XY ) {
-                // Three settings: column, row, value
-                if ( settings.length != 3 ) {
-                    console.debug("Graph block invalid: incorrect number of histo/xy settings");
-                    return;
+                if (type == 0 || type == 1) {
+                    this.format = type == 0 ? "Histogram" : "XY"; 
+                    this.pivot = settings[0];
+                    this.series = settings[1];
+                    this.values = [settings[2]];
+                } else {
+                    this.format = "Scatter";
+                    this.values = [settings[0], settings[1]];
+                    this.series = settings[2];
+                    this.pivot = -1;
                 }
-                this.options = {
-                    column: settings[0],
-                    row: settings[1],
-                    value: settings[2]
-                };
-            }
-            else if ( this.type == this.TYPE.SCATTER ) {
-                // Three settings: x, y, series (may be -1 for null)
-                if ( settings.length != 3 ) {
-                    console.debug("Graph block invalid: incorrect number of scatter settings");
-                    return;
-                }
-                this.options = {
-                    x: settings[0],
-                    y: settings[1],
-                    series: settings[2]
-                };
+            } else {
+                this.format = settings[0];
+                this.series = settings[1] == '' ? -1 : settings[1];
+                this.pivot = settings[2] == '' ? -1 : settings[2];
+                this.values = parts[2] == '' ? [-1] : parts[2].split(Pipeline.encoder.PARAM_SEPARATOR);
             }
         },
         
@@ -1262,18 +1261,18 @@ var Blocks = {
          * Encode this block into a parameter string based on its configuration.
          */
         encode: function() {
-            var strs = [this.flags, this.type];
-
-            var settings = [];
-            if ( this.type == this.TYPE.HISTOGRAM || this.type == this.TYPE.XY ) {
-                settings = [this.options.column, this.options.row, this.options.value];
-            }
-            else if ( this.type == this.TYPE.SCATTER ) {
-                settings = [this.options.x, this.options.y, this.options.series];
-            }
-            strs.push(settings.join(Pipeline.encoder.PARAM_SEPARATOR));
+            var main = [this.format, this.series == -1 ? '' : this.series, this.pivot == -1 ? '' : this.pivot];
+            var valstrs = [] 
             
-            return strs.join(Pipeline.encoder.GROUP_SEPARATOR);
+            jQuery.each(this.values, function(i, value) {
+                if ( value != -1 ) {
+                    valstrs.push(value);
+                }
+            });
+
+            var groups = [this.flags, main.join(Pipeline.encoder.PARAM_SEPARATOR), valstrs.join(Pipeline.encoder.PARAM_SEPARATOR)];
+
+            return groups.join(Pipeline.encoder.GROUP_SEPARATOR);
         },
         
         /**
@@ -1281,50 +1280,9 @@ var Blocks = {
          * configuration.
          */
         readState: function() {
-            this.options = {};
-            
-            // Read the type
-            this.type = $('.select-graph-type', this.element).val();
-
-            this.setFlag(this.FLAGS.ERRORBARS, $('.graph-enable-errorbars', this.element).is(':checked'));
-            
-            this.key = $('.select-format-key', this.element).val();
-
-            // These could be consolidated, but are left split as an example
-            // of how to do more complicated graphs with different options.
-            if ( this.type == this.TYPE.HISTOGRAM ) {
-                var blockOptions = $('.graph-histogram', this.element);
-
-                var columnSelect = $('.select-graph-column', blockOptions);
-                var rowSelect = $('.select-graph-row', blockOptions);
-                var valueSelect = $('.select-graph-value', blockOptions);
-                
-                this.options.column = columnSelect.val();
-                this.options.row = rowSelect.val();
-                this.options.value = valueSelect.val();
-            }
-            else if ( this.type == this.TYPE.XY ) {
-                var blockOptions = $('.graph-xy', this.element);
-
-                var columnSelect = $('.select-graph-column', blockOptions);
-                var rowSelect = $('.select-graph-row', blockOptions);
-                var valueSelect = $('.select-graph-value', blockOptions);
-                
-                this.options.column = columnSelect.val();
-                this.options.row = rowSelect.val();
-                this.options.value = valueSelect.val();
-            }
-            else if ( this.type == this.TYPE.SCATTER ) {
-                var blockOptions = $('.graph-scatter', this.element);
-
-                var xSelect = $('.select-graph-x', blockOptions);
-                var ySelect = $('.select-graph-y', blockOptions);
-                var seriesSelect = $('.select-graph-series', blockOptions);
-
-                this.options.x = xSelect.val();
-                this.options.y = ySelect.val();
-                this.options.series = seriesSelect.val();
-            }
+            this.format = $('.select-format-key', this.element).val();
+            this.series = $('.select-graph-series', this.element).val();
+            this.pivot = $('.select-graph-pivot', this.element).val();
         },
         
         /**
@@ -1332,125 +1290,61 @@ var Blocks = {
          * HTML.
          */
         loadState: function() {
-            // Hide all the blocks (we'll show one soon)
-            $('.graph-type-options', this.element).hide();
-            
-            // Set the type dropdown
-            $('.select-graph-type', this.element).val(this.type);
-
-            $('.graph-enable-errorbars', this.element).attr('checked', this.getFlag(this.FLAGS.ERRORBARS));
-
             var graphFormat = $('.select-format-key', this.element);
             Utilities.updateSelect(graphFormat, Pipeline.graphFormatKeysCache, Pipeline.graphFormatKeysCache);
-            graphFormat.val(this.key);
+            graphFormat.val(this.format);
 
-            // These could be consolidated, but are left split as an example
-            // of how to do more complicated graphs with different options.
-            if ( this.type == this.TYPE.HISTOGRAM ) {
-                var blockOptions = $('.graph-histogram', this.element);
-                
-                // Show this block
-                blockOptions.show();
+            var seriesSelect = $('.select-graph-series', this.element);
+            Utilities.updateSelect(seriesSelect, this.scenarioColumnsCache, this.scenarioColumnsCache);
+            seriesSelect.val(this.series);
 
-                var columnSelect = $('.select-graph-column', blockOptions);
-                var rowSelect = $('.select-graph-row', blockOptions);
-                var valueSelect = $('.select-graph-value', blockOptions);
+            var pivotSelect = $('.select-graph-pivot', this.element);
+            Utilities.updateSelect(pivotSelect, this.scenarioColumnsCache, this.scenarioColumnsCache);
+            pivotSelect.val(this.pivot);
 
-                Utilities.updateSelect(columnSelect, this.scenarioColumnsCache, this.scenarioColumnsCache);
-                Utilities.updateSelect(rowSelect, this.scenarioColumnsCache, this.scenarioColumnsCache);
-                Utilities.updateSelect(valueSelect, this.valueColumnsCache, this.valueColumnsCache);
-                
-                columnSelect.val(this.options.column);
-                rowSelect.val(this.options.row);
-                valueSelect.val(this.options.value);
-            }
-            else if ( this.type == this.TYPE.XY ) {
-                var blockOptions = $('.graph-xy', this.element);
-                
-                // Show this block
-                blockOptions.show();
-
-                var columnSelect = $('.select-graph-column', blockOptions);
-                var rowSelect = $('.select-graph-row', blockOptions);
-                var valueSelect = $('.select-graph-value', blockOptions);
-
-                Utilities.updateSelect(columnSelect, this.scenarioColumnsCache, this.scenarioColumnsCache);
-                Utilities.updateSelect(rowSelect, this.scenarioColumnsCache, this.scenarioColumnsCache);
-                Utilities.updateSelect(valueSelect, this.valueColumnsCache, this.valueColumnsCache);
-                
-                columnSelect.val(this.options.column);
-                rowSelect.val(this.options.row);
-                valueSelect.val(this.options.value);
-            }
-            else if ( this.type == this.TYPE.SCATTER ) {
-                var blockOptions = $('.graph-scatter', this.element);
-
-                // Show this block
-                blockOptions.show();
-
-                var xSelect = $('.select-graph-x', blockOptions);
-                var ySelect = $('.select-graph-y', blockOptions);
-                var seriesSelect = $('.select-graph-series', blockOptions);
-
-                Utilities.updateSelect(xSelect, this.valueColumnsCache, this.valueColumnsCache);
-                Utilities.updateSelect(ySelect, this.valueColumnsCache, this.valueColumnsCache);
-                Utilities.updateSelect(seriesSelect, this.scenarioColumnsCache, this.scenarioColumnsCache);
-
-                xSelect.val(this.options.x);
-                ySelect.val(this.options.y);
-                seriesSelect.val(this.options.series);
-            }
+            // Update the value columns
+            this.valueOptionsTable.reset();
+            var thisBlock = this;
+            $('.select-graph-value', this.element).each(function() {
+                Utilities.updateSelect(this, thisBlock.valueColumnsCache, thisBlock.valueColumnsCache, true);
+            });
+            jQuery.each(this.values, function(i, value) {
+                var row = thisBlock.valueOptionsTable.addRow();
+                var valueSelect = $('.select-valuefilter-column', row);
+                valueSelect.val(value);
+            });
         },
         
         refreshColumns: function() {
             var changed = false;
-            if ( this.key != -1 && jQuery.inArray(this.key, Pipeline.graphFormatKeysCache) == -1 ) {
-                this.key = -1;
+            if ( this.format != -1 && jQuery.inArray(this.format, Pipeline.graphFormatKeysCache) == -1 ) {
+                this.format = -1;
+                changed = true;
+            }
+
+            if ( this.series != -1 && jQuery.inArray(this.series, this.scenarioColumnsCache) == -1 ) {
+                this.series = -1;
                 changed = true;
             }
             
-            if ( this.type == this.TYPE.HISTOGRAM || this.type == this.TYPE.XY ) {
-                if ( this.options.column != -1 && jQuery.inArray(this.options.column, this.scenarioColumnsCache) == -1 ) {
-                    this.options.column = -1;
-                    changed = true;
-                }
-                if ( this.options.row != -1 && jQuery.inArray(this.options.row, this.scenarioColumnsCache) == -1 ) {
-                    this.options.row = -1;
-                    changed = true;
-                }
-                if ( this.options.value != -1 && jQuery.inArray(this.options.value, this.valueColumnsCache) == -1 ) {
-                    this.options.value = -1;
-                    changed = true;
-                }
+            if ( this.pivot != -1 && jQuery.inArray(this.pivot, this.scenarioColumnsCache) == -1 ) {
+                this.pivot = -1;
+                changed = true;
             }
-            else if ( this.type == this.TYPE.SCATTER ) {
-                if ( this.options.x != -1 && jQuery.inArray(this.options.x, this.valueColumnsCache) == -1 ) {
-                    this.options.x = -1;
+
+            var thisBlock = this;
+            jQuery.each(this.values, function(i, value) {
+                if (value != -1 && jQuery.inArray(value, this.valueColumnsCache) == -1 ) {
+                    thisBlock.values[i] = -1;
                     changed = true;
                 }
-                if ( this.options.y != -1 && jQuery.inArray(this.options.y, this.valueColumnsCache) == -1 ) {
-                    this.options.y = -1;
-                    changed = true;
-                }
-                if ( this.options.series != -1 && jQuery.inArray(this.options.series, this.scenarioColumnsCache) == -1 ) {
-                    this.options.series = -1;
-                    changed = true;
-                }
-            }
+            });
+
             return changed;
         },
 
         complete: function() {
-            if ( this.type == this.TYPE.HISTOGRAM ) {
-                return this.options.column != -1 && this.options.row != -1 && this.options.value != -1;
-            }
-            else if ( this.type == this.TYPE.XY ) {
-                return this.options.column != -1 && this.options.row != -1 && this.options.value != -1;
-            }
-            else if ( this.type == this.TYPE.SCATTER ) {
-                return this.options.x != -1 && this.options.y != -1;
-            }
-            return false;
+            return this.format != -1;
         },
 
         popupOpen: function(key) {
@@ -1471,11 +1365,11 @@ var Blocks = {
             if (key == "") {
                 $('#popup-format-delete-go', popup).hide();
                 $('.textarea-format-value', popup).val('');
-                parentFormat.val('-1');
+                parentFormat.val(-1);
                 parentFormat.change();
             } else {
                 var data = Pipeline.graphFormatsCache[key];
-                parentFormat.val(data.parent != null ? data.parent : '-1');
+                parentFormat.val(data.parent != null ? data.parent : -1);
                 parentFormat.change();
                 $('.textarea-format-value', popup).val(data.value);
                 $('#popup-format-delete-go', popup).show();
@@ -1490,13 +1384,13 @@ var Blocks = {
             if (key != '') {
                 var value =  $('.textarea-format-value', popup).val();
                 var parent = $('.select-format-parent', popup).val();
-                if (parent == '-1') parent = null;
+                if (parent == -1) parent = null;
                 var thisBlock = this;
                 Pipeline.ajax.saveGraphFormat(key, parent, value, function(data) {
                     if (data.error == false) {
                         $('.popupfilter', thisBlock.element).hide();
                         $('.popup', thisBlock.element).hide();
-                        thisBlock.key = key;
+                        thisBlock.format = key;
                         thisBlock.loadState();
                         Pipeline.refresh();
                     }
@@ -1513,7 +1407,7 @@ var Blocks = {
                     if ( data.error == false ) {
                         $('.popupfilter', thisBlock.element).hide();
                         $('.popup', thisBlock.element).hide();
-                        thisBlock.format = '-1';
+                        thisBlock.format = -1;
                         thisBlock.loadState();
                         Pipeline.refresh();
                     }

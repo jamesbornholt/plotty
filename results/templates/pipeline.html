@@ -186,54 +186,34 @@
                 <span class="pipeline-header-right"><input type="image" class="insert-button" src="static/brick_add.png"/><input type="image" class="remove-button" src="static/cross.png"/></span>
                 <table>
                     <tr>
-                        <td>Type</td>
-                        <td><select class="select-graph-type"><option value="1">Histogram</option><option value="2">XY</option><option value="3">Scatter</option></select></td>
-                    </tr>
-                    <tr style="display:none;">
                         <td>Format</td>
                         <td><select class="select-format-key"><option></option></select>
                             <button id="pipeline-format-load-go" class="pipeline-button">Edit</button>
                             <button id="pipeline-format-new-go" class="pipeline-button">New</button>
                         </td>
                     </tr>
-                    <tr class="graph-histogram graph-type-options">
-                        <td>Series (x-axis)</td>
-                        <td><select class="select-graph-column scenario-column"><option></option></select></td>
-                    </tr>
-                    <tr class="graph-histogram graph-type-options">
-                        <td>Clusters (x-axis)</td>
-                        <td><select class="select-graph-row scenario-column"><option></option></select></td>
-                    </tr>
-                    <tr class="graph-histogram graph-type-options">
-                        <td>Value (y-axis)</td>
-                        <td><select class="select-graph-value value-column"><option></option></select></td>
-                    </tr>
-                    <tr class="graph-xy graph-type-options" style="display:none;">
-                        <td>Series</td>
-                        <td><select class="select-graph-column scenario-column><option></option></select></td>
-                    </tr>
-                    <tr class="graph-xy graph-type-options" style="display:none;">
-                        <td>x-axis</td>
-                        <td><select class="select-graph-row scenario-column"><option></option></select></td>
-                    </tr>
-                    <tr class="graph-xy graph-type-options" style="display:none;">
-                        <td>y-axis</td>
-                        <td><select class="select-graph-value value-column"><option></option></select></td>
-                    </tr>
-                    <tr class="graph-scatter graph-type-options" style="display:none;">
+                    <tr>
                         <td>Series</td>
                         <td><select class="select-graph-series scenario-column"><option></option></select></td>
                     </tr>
-                    <tr class="graph-scatter graph-type-options" style="display:none;">
-                        <td>x-axis</td>
-                        <td><select class="select-graph-x value-column"><option></option></select></td>
+                    <tr>
+                        <td>Pivot</td>
+                        <td><select class="select-graph-pivot scenario-column"><option></option></select></td>
                     </tr>
-                    <tr class="graph-scatter graph-type-options" style="display:none;">
-                        <td>y-axis</td>
-                        <td><select class="select-graph-y value-column"><option></option></select></td>
+                    <tr>
+                        <td>Values</td>
+                        <td></td>
                     </tr>
                 </table>
-                <label title="Shows errorbars on plots"><input type="checkbox" class="graph-enable-errorbars" checked="true" /> Show errorbars</label>
+                <table class="pipeline-graph-value-table">
+                    <tr>
+                        <td>
+                            <select class="select-graph-value value-column value-column-values-select"><option></option></select>
+                        </td>
+                        <td><input type="image" class="remove-row" disabled="disabled" src="static/delete.png"/></td>
+                        <td><input type="image" class="add-row" src="static/add.png"/></td>
+                    </tr>
+                </table>
             </div>
             <div class="pipeline-footer"></div>
             <div class="popupfilter"></div>
