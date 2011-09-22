@@ -691,7 +691,7 @@ class GraphBlock(Block):
             
             # Check for new min/max and update the aggregates
             if float(row.values[value_key]) < mins[row.scenario[column_key]]:
-                mins[row.scenario[self.column]] = float(row.values[value_key])
+                mins[row.scenario[column_key]] = float(row.values[value_key])
             if float(row.values[value_key]) > maxs[row.scenario[column_key]]:
                 maxs[row.scenario[column_key]] = float(row.values[value_key])
             sums[row.scenario[column_key]] += float(row.values[value_key])
@@ -744,7 +744,7 @@ class GraphBlock(Block):
     def renderPivotCSV(self, table, column_keys, row_keys, aggregates=None):
         output = []
         # Build the header row
-        line = '"' + self.row + '",'
+        line = '"",'
         for key in column_keys:
             line += '"' + present_scenario_csv(key) + '",'
             line += '"' + present_scenario_csv(key) + '.' + str(settings.CONFIDENCE_LEVEL * 100) + '%-CI.lowerBound",'
@@ -798,7 +798,7 @@ class GraphBlock(Block):
         output += '<a href="graph/' + graph_hash + '.pdf">pdf</a> '
         output += '<a href="graph/' + graph_hash + '.wide.pdf">wide pdf</a>'
         output += '</p>'
-        output += '<table><thead><tr><th>' + self.row + '</th>'
+        output += '<table><thead><tr><th></th>'
         for key in column_keys:
             output += '<th>' + present_scenario(key) + '</th>'
         output += '</tr></thead><tbody>'
