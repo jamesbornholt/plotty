@@ -826,19 +826,19 @@ class GraphBlock(Block):
 
     def apply(self, data_table, messages):
         """ Render the graph to HTML, including images """
-        def do_cleanup():
-          # Clean up graph directory.
-          one_week_ago = time.time() - 60*60*24*7
-          for graph_entry in os.listdir(settings.GRAPH_CACHE_DIR):
-            graph_file = os.path.join(settings.GRAPH_CACHE_DIR, graph_entry)
-            if os.path.getmtime(graph_file) < one_week_ago:
-              os.unlink(graph_file)
 
         def sort_keys(l):
             # alphabetic, numeric, formatted
             l.sort(key=lambda x: None if isinstance(x, ScenarioValue) else str(x))
             l.sort(key=lambda x: None if isinstance(x, ScenarioValue) or isinstance(x, str) else float(x))
             l.sort(key=lambda x: x.index if isinstance(x, ScenarioValue) else 'inf')
+
+        # Clean up graph directory.
+        one_week_ago = time.time() - settings.CACHE_TIMEOUT
+        for graph_entry in os.listdir(settings.GRAPH_CACHE_DIR):
+            graph_file = os.path.join(settings.GRAPH_CACHE_DIR, graph_entry)
+            if os.path.getmtime(graph_file) < one_week_ago:
+                os.unlink(graph_file)
 
         bound_scenario = [s for s in [self.row, self.column, self.series] if s in data_table.scenarioColumns]
         bound_value = [v for v in [self.value, self.series, self.x, self.y] if v in data_table.valueColumns]
@@ -871,28 +871,21 @@ class GraphBlock(Block):
                 
                     # If the csv doesn't exist or is out of date (the data_table has
                     # logs newer than it), replot the data
-                    csv_last_modified = 0 
-                    if os.path.exists(graph_path + '.csv'):
-                        csv_last_modified = os.path.getmtime(graph_path + '.csv')
-                    if csv_last_modified <= data_table.lastModified:
-                        logging.debug("Regenerating graph %s" % graph_path)
-                        do_cleanup()
-                        # Render the CSV
-                        csv = self.renderPivotCSV(pivot_table, column_keys, row_keys, aggregates)
-                        csv_file = open(graph_path + '.csv', "w")
-                        csv_file.write(csv)
-                        csv_file.close()
-    
-                        # Plot the graph
-                        if self.type == GraphBlock.TYPE['HISTOGRAM']:
-                            code = self.histogramCode(self.errorbars)
-                        elif self.type == GraphBlock.TYPE['XY']:
-                            code = self.xyCode(self.errorbars)
+                    logging.debug("Regenerating graph %s" % graph_path)
 
-                        self.produceGraph(graph_hash, graph_path, code, column_keys, [value_key])
-                    
-                    else:
-                        logging.debug("Using graph %s from cache" % graph_path)
+                    # Render the CSV
+                    csv = self.renderPivotCSV(pivot_table, column_keys, row_keys, aggregates)
+                    csv_file = open(graph_path + '.csv', "w")
+                    csv_file.write(csv)
+                    csv_file.close()
+   
+                    # Plot the graph
+                    if self.type == GraphBlock.TYPE['HISTOGRAM']:
+                        code = self.histogramCode(self.errorbars)
+                    elif self.type == GraphBlock.TYPE['XY']:
+                        code = self.xyCode(self.errorbars)
+
+                    self.produceGraph(graph_hash, graph_path, code, column_keys, [value_key])
                 
                     # Render the HTML!
                     html = self.renderPivotHTML(pivot_table, column_keys, row_keys, graph_hash, aggregates)
@@ -921,35 +914,28 @@ class GraphBlock(Block):
                 series = bound_scenario[0] if grouping else None
                 series_title = series if grouping else "series"
 
-                csv_last_modified = 0
-                if os.path.exists(graph_path + '.csv'):
-                    csv_last_modified = os.path.getmtime(graph_path + '.csv')
-                if csv_last_modified <= data_table.lastModified:
-                    logging.debug("Regenerating graph %s" % graph_path)
-                    do_cleanup()
+                logging.debug("Regenerating graph %s" % graph_path)
 
-                    csv = ['"' + series_title + '",' + ",".join(['"%(v)s","%(v)s.%(ci)d%%-CI.lowerBound","%(v)s.%(ci)d%%-CI.upperBound"' % {'v': v, 'ci': settings.CONFIDENCE_LEVEL * 100} for v in bound_value])]
+                csv = ['"' + series_title + '",' + ",".join(['"%(v)s","%(v)s.%(ci)d%%-CI.lowerBound","%(v)s.%(ci)d%%-CI.upperBound"' % {'v': v, 'ci': settings.CONFIDENCE_LEVEL * 100} for v in bound_value])]
 
-                    for row in rows:
-                        values = ",".join([present_value_csv_graph(row.values[v], True) for v in bound_value])
-                        if grouping:
-                            if series in row.scenario:
-                                csv.append('"' + (present_scenario_csv(row.scenario[series])) + '",' + values)
-                                group_values.add(row.scenario[series])
-                        else:
-                            csv.append('"all",' + values)
-                        
-                    csv_text = "\n".join(csv)
+                for row in rows:
+                    values = ",".join([present_value_csv_graph(row.values[v], True) for v in bound_value])
+                    if grouping:
+                        if series in row.scenario:
+                            csv.append('"' + (present_scenario_csv(row.scenario[series])) + '",' + values)
+                            group_values.add(row.scenario[series])
+                    else:
+                        csv.append('"all",' + values)
+                    
+                csv_text = "\n".join(csv)
 
-                    csv_file = open(graph_path + '.csv', 'w')
-                    csv_file.write(csv_text)
-                    csv_file.close()
+                csv_file = open(graph_path + '.csv', 'w')
+                csv_file.write(csv_text)
+                csv_file.close()
 
-                    # Plot the graph
-                    code = self.scatterCode(self.errorbars)
-                    self.produceGraph(graph_hash, graph_path, code, bound_scenario, bound_value, group_values)
-                else:
-                    logging.debug("Using graph %s from cache" % graph_path)
+                # Plot the graph
+                code = self.scatterCode(self.errorbars)
+                self.produceGraph(graph_hash, graph_path, code, bound_scenario, bound_value, group_values)
             
                 html = ['<object width=100% height=50% data="graph/' + graph_hash + '.svg" type="image/svg+xml"></object>' + \
                         '<p>Download: ' + \

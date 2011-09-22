@@ -10,6 +10,7 @@ class SavedPipeline(models.Model):
 class FormatStyle(models.Model):
     id = models.AutoField(primary_key=True)
     key = models.CharField(max_length=200,unique=True)
+    modified = models.DateTimeField(auto_now=True)
 
     def __unicode__(self):
         return self.key
@@ -26,6 +27,7 @@ class GraphFormat(models.Model):
     key = models.CharField(max_length=200,unique=True)
     parent = models.ForeignKey('self',null=True)
     value = models.TextField()
+    modified = models.DateTimeField(auto_now=True)
 
     def __unicode__(self):
         return self.safeInherit(set(self.key))

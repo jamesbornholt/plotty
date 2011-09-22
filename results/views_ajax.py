@@ -216,6 +216,7 @@ def save_formatstyle(request, key):
             FormatStyleEntry.objects.filter(formatstyle=style).delete()
         for row in in_rows:
             row.save()
+        style.save()
     except:
         return HttpResponse(json.dumps({'error': True}))
     return HttpResponse(json.dumps({'error': False}))

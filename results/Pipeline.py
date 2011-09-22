@@ -1,10 +1,11 @@
 import plotty.results.PipelineEncoder
 from django.core.cache import cache
+from django.db.models import Max
 from plotty.results.DataTypes import DataTable, DataRow, DataAggregate, Messages
 from plotty.results.Blocks import *
 from plotty.results.Exceptions import *
 import plotty.results.PipelineEncoder as PipelineEncoder
-import sys, traceback, logging, copy, os
+import sys, traceback, logging, copy, os, time
 
 BLOCK_MAPPINGS = {
     '1': FilterBlock,
@@ -27,6 +28,7 @@ class Pipeline(object):
     FLAG_NOTHING = 0
 
     def __init__(self, web_client=False):
+        self.timestamp = time.time()
         self.flags = 0
         self.logs = []
         self.scenarioCols = set()
@@ -92,6 +94,15 @@ class Pipeline(object):
                 mtime = os.path.getmtime(os.path.join(settings.BM_LOG_DIR, l))
                 if mtime > lastModified:
                     lastModified = mtime
+
+
+            usedFormats = [b.key for (b, ec) in self.blocks if isinstance(b, FormatBlock)]
+            if len(usedFormats) > 0:
+                lastModifiedFormat = FormatStyle.objects.filter(key__in=usedFormats).aggregate(Max('modified'))['modified__max']
+                lastModifiedFormat = time.mktime(lastModifiedFormat.timetuple())
+                if (lastModifiedFormat > lastModified):
+                    lastModified = lastModifiedFormat
+
             # Now work backwards, checking where we can break into the
             # pipeline. 
             for idx in range(len(parts), 1, -1):
@@ -163,7 +174,7 @@ class Pipeline(object):
 
                 # Cache it
                 cache.set(self.cacheKeyBase, {
-                    'last_modified': self.dataTable.lastModified,
+                    'last_modified': self.timestamp,
                     'data_table': self.dataTable,
                     'block_values': block_values,
                     'block_scenario_values': block_scenario_values,
@@ -235,7 +246,7 @@ class Pipeline(object):
 
             # Cache it
             cache.set(cacheKey, {
-                'last_modified': self.dataTable.lastModified,
+                'last_modified': self.timestamp,
                 'data_table': self.dataTable,
                 'block_values': block_values,
                 'block_scenario_values': block_scenario_values,
