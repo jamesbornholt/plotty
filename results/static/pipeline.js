@@ -435,7 +435,6 @@ var Blocks = {
             };
             var addClosure = function() {
                 thisBlock.filters.push({scenario: -1, is: 1, value: -1});
-                Pipeline.refresh();
             };
             
             // Create the option table
@@ -823,7 +822,6 @@ var Blocks = {
             };
             var addClosure = function() {
                 thisBlock.normaliser.push({scenario: -1, value: -1});
-                Pipeline.refresh();
             };
             
             // Create the option table
@@ -1159,18 +1157,17 @@ var Blocks = {
                 Pipeline.refresh();
             });
             var removeClosure = function(row) {
-                var value = $('.select-value', row).val();
-            
-                for ( var i = 0; i < this.values.length; i++ ) {
-                    if ( this.values[i] == value) {
-                        this.values.splice(i, 1);
+                var value = $('.select-graph-value', row).val();
+                for ( var i = 0; i < thisBlock.values.length; i++ ) {
+                    if ( thisBlock.values[i] == value) {
+                        thisBlock.values.splice(i, 1);
                         break;
                     }
                 }
             };
-            var addClosure = function() {
+            var addClosure = function(row) {
+                Utilities.updateSelect($('.select-graph-value', row), thisBlock.valueColumnsCache, thisBlock.valueColumnsCache, true);
                 thisBlock.values.push(-1);
-                Pipeline.refresh();
             };
             
             // Create the option table
@@ -1255,6 +1252,7 @@ var Blocks = {
                 this.pivot = settings[2] == '' ? -1 : settings[2];
                 this.values = parts[2] == '' ? [-1] : parts[2].split(Pipeline.encoder.PARAM_SEPARATOR);
             }
+
         },
         
         /**
@@ -1283,6 +1281,12 @@ var Blocks = {
             this.format = $('.select-format-key', this.element).val();
             this.series = $('.select-graph-series', this.element).val();
             this.pivot = $('.select-graph-pivot', this.element).val();
+
+            var thisBlock = this;
+            this.values = [];
+            $('.select-graph-value', this.element).each(function(i, row) {
+                thisBlock.values.push($(row).val());
+            });
         },
         
         /**
@@ -1310,7 +1314,7 @@ var Blocks = {
             });
             jQuery.each(this.values, function(i, value) {
                 var row = thisBlock.valueOptionsTable.addRow();
-                var valueSelect = $('.select-valuefilter-column', row);
+                var valueSelect = $('.select-graph-value', row);
                 valueSelect.val(value);
             });
         },
@@ -1334,7 +1338,7 @@ var Blocks = {
 
             var thisBlock = this;
             jQuery.each(this.values, function(i, value) {
-                if (value != -1 && jQuery.inArray(value, this.valueColumnsCache) == -1 ) {
+                if (value != -1 && jQuery.inArray(value, thisBlock.valueColumnsCache) == -1 ) {
                     thisBlock.values[i] = -1;
                     changed = true;
                 }
@@ -1344,7 +1348,11 @@ var Blocks = {
         },
 
         complete: function() {
-            return this.format != -1;
+            var missingValue = false;
+            jQuery.each(this.values, function(i, value) {
+                if (value == -1) missingValue = true;
+            });
+            return this.format != -1 && (!missingValue || this.values.length == 1);
         },
 
         popupOpen: function(key) {
@@ -1477,7 +1485,6 @@ var Blocks = {
             };
             var addClosure = function() {
                 thisBlock.filters.push({column: -1, is: 1, lowerbound: '-inf', upperbound: '+inf'});
-                Pipeline.refresh();
             };
             
             // Create the option table
@@ -1705,7 +1712,6 @@ var Blocks = {
             };
             var addClosure = function() {
                 thisBlock.columns.push(-1);
-                Pipeline.refresh();
             };
             
             // Create the option table
