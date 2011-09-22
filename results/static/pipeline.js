@@ -1309,8 +1309,9 @@ var Blocks = {
             // Update the value columns
             this.valueOptionsTable.reset();
             var thisBlock = this;
+            var valueColumns = thisBlock.valueColumnsCache;
             $('.select-graph-value', this.element).each(function() {
-                Utilities.updateSelect(this, thisBlock.valueColumnsCache, thisBlock.valueColumnsCache, true);
+                Utilities.updateSelect(this, valueColumns, valueColumns, true);
             });
             jQuery.each(this.values, function(i, value) {
                 var row = thisBlock.valueOptionsTable.addRow();
@@ -2336,13 +2337,13 @@ var OptionsTable = Base.extend({
      * @param button Element The button that triggered the removal
      */
     _removeBlockTableRow: function(button) {
-        var row = $(button).parents('tr');
+        var row = $(button).parents('tr').eq(0);
         
         if ( this.preRemoveCallback !== null ) {
             this.preRemoveCallback.call(this, row);
         }
         
-        $(button).parents('tr').remove();
+        row.remove();
         this._updateAddRemoveButtons();
         
         if ( this.postRemoveCallback !== null ) {
