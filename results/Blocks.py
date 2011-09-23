@@ -726,7 +726,7 @@ class GraphBlock(Block):
     def renderPivotCSV(self, table, column_keys, row_keys, aggregates=None):
         output = []
         # Build the header row
-        line = '"",'
+        line = '"type","","",'
         for key in column_keys:
             line += '"' + present_scenario_csv(key) + '",'
             line += '"' + present_scenario_csv(key) + '.' + str(settings.CONFIDENCE_LEVEL * 100) + '%-CI.lowerBound",'
@@ -736,7 +736,7 @@ class GraphBlock(Block):
         
         # Build the rows
         for row in row_keys:
-            line = '"' + present_scenario_csv(row) + '",'
+            line = '"data","","' + present_scenario_csv(row) + '",'
             for col in column_keys:
                 if col in table[row]:
                     val = table[row][col]
@@ -756,7 +756,7 @@ class GraphBlock(Block):
 
         if aggregates:
             for agg in ['min', 'max', 'mean', 'geomean']:
-                line = '"' + agg + '",'
+                line = '"agg","","' + agg + '","",'
                 for col in column_keys:
                     if col in aggregates[agg]:
                         # gnuplot expects non-empty data, with error cols containing the absolute val
@@ -874,7 +874,7 @@ class GraphBlock(Block):
                 
                     title = present_scenario(value_key)
                     if len(scenario_keys[scenario]) > 0:
-                        title += "[" + ', '.join([present_scenario(k) + ' = ' + present_scenario(scenario_keys[scenario][k]) for k in scenario_keys[scenario].keys()]) + "]"
+                        title += " [" + ', '.join([present_scenario(k) + ' = ' + present_scenario(scenario_keys[scenario][k]) for k in scenario_keys[scenario].keys()]) + "]"
                 
                     graphs[title] = html
             
@@ -898,16 +898,16 @@ class GraphBlock(Block):
 
                 logging.debug("Regenerating graph %s" % graph_path)
 
-                csv = ['"' + series_title + '",' + ",".join(['"%(v)s","%(v)s.%(ci)d%%-CI.lowerBound","%(v)s.%(ci)d%%-CI.upperBound"' % {'v': v, 'ci': settings.CONFIDENCE_LEVEL * 100} for v in bound_value])]
+                csv = ['"type","","' + series_title + '",' + ",".join(['"%(v)s","%(v)s.%(ci)d%%-CI.lowerBound","%(v)s.%(ci)d%%-CI.upperBound"' % {'v': v, 'ci': settings.CONFIDENCE_LEVEL * 100} for v in bound_value])]
 
                 for row in rows:
                     values = ",".join([present_value_csv_graph(row.values[v], True) for v in bound_value])
                     if grouping:
                         if self.series_key in row.scenario:
-                            csv.append('"' + (present_scenario_csv(row.scenario[self.series_key])) + '",' + values)
+                            csv.append('"data","","' + (present_scenario_csv(row.scenario[self.series_key])) + '",' + values)
                             group_values.add(row.scenario[self.series_key])
                     else:
-                        csv.append('"all",' + values)
+                        csv.append('"data","","all",' + values)
                     
                 csv_text = "\n".join(csv)
 

@@ -103,6 +103,13 @@ class Pipeline(object):
                 if (lastModifiedFormat > lastModified):
                     lastModified = lastModifiedFormat
 
+            usedFormats = [b.format_key for (b, ec) in self.blocks if isinstance(b, GraphBlock)]
+            if len(usedFormats) > 0:
+                lastModifiedFormat = GraphFormat.objects.filter(key__in=usedFormats).aggregate(Max('modified'))['modified__max']
+                lastModifiedFormat = time.mktime(lastModifiedFormat.timetuple())
+                if (lastModifiedFormat > lastModified):
+                    lastModified = lastModifiedFormat
+
             # Now work backwards, checking where we can break into the
             # pipeline. 
             for idx in range(len(parts), 1, -1):
