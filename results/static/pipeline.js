@@ -2706,6 +2706,12 @@ var Pipeline = {
             }
         });
 
+        // Hook the create short URL button
+        $("#pipeline-shorturl-go").click(function() {
+            Pipeline.createShortURL();
+            return false;
+        });
+
         // Hook the load button for loading pipelines
         $("#pipeline-new-go").click(function() {
             window.location = ".";
@@ -3055,6 +3061,9 @@ var Pipeline = {
         if ( typeof forceRefresh === 'undefined' ) {
             Pipeline.hash = encoded;
         }
+        // Reset the short URL field
+        $('#pipeline-shorturl-text').hide();
+        $('#pipeline-shorturl-go').show();
         window.location.hash = encoded;
     },
 
@@ -3324,6 +3333,26 @@ var Pipeline = {
     },
 
     /**
+     * Create a short URL for this pipeline.
+     */
+    createShortURL: function() {
+        var encoded = Pipeline.hash;
+        if ( encoded == '' ) {
+            return;
+        }
+        Pipeline.ajax.createShortURL(encoded, function(data, textStatus, xhr) {
+            if ( data.error === false ) {
+                var textField = $("#pipeline-shorturl-text");
+                textField.val(data.url);
+                $("#pipeline-shorturl-go").hide();
+                textField.show();
+                textField.get(0).focus();
+                textField.select();
+            }
+        });
+    },
+
+    /**
      * Set the flagword. This should also update the UI state according to
      * the flags.
      */
@@ -3385,6 +3414,14 @@ var Pipeline = {
          */
         savePipeline: function(name, encoded, callback) {
             $.post('ajax/save-pipeline/', {'name': name, 'encoded': encoded}, callback, 'json');
+        },
+
+        /**
+         * ajax/create-shorturl/<pipeline> creates a short url for the given
+         * pipeline string
+         */
+        createShortURL: function(encoded, callback) {
+            $.post('ajax/create-shorturl/', {'encoded': encoded}, callback, 'json');
         },
 
         saveFormatStyle: function(key, items, callback) {

@@ -2,11 +2,11 @@
 
 import os, datetime, math, logging, shutil
 from django.shortcuts import render_to_response
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponsePermanentRedirect
 from django.template import RequestContext
 from plotty.results.DataTypes import *
 from plotty.results.Blocks import *
-from plotty.results.models import SavedPipeline
+from plotty.results.models import SavedPipeline, ShortURL
 from plotty.results.Pipeline import *
 import plotty.results.PipelineEncoder
 from plotty import settings
@@ -72,6 +72,13 @@ def pipeline(request):
         'pipelines': pipelines,
         'debug': settings.DEBUG
     }, context_instance=RequestContext(request))
+
+def shorturl(request, url):
+    try:
+        shorturlentry = ShortURL.objects.get(url=url)
+    except ShortURL.DoesNotExist:
+        return HttpResponse("Invalid short URL")
+    return HttpResponsePermanentRedirect('../#' + shorturlentry.encoded)
 
 def debug_clear_cache(request):
     path = os.path.join(settings.CACHE_ROOT, 'log/')

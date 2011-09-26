@@ -7,6 +7,10 @@ class SavedPipeline(models.Model):
     def __unicode__(self):
         return self.name
 
+class ShortURL(models.Model):
+    url = models.CharField(max_length=6, primary_key=True)
+    encoded = models.TextField()
+
 class FormatStyle(models.Model):
     id = models.AutoField(primary_key=True)
     key = models.CharField(max_length=200,unique=True)

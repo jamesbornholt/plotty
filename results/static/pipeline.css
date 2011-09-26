@@ -120,6 +120,9 @@ input:disabled {
 #pipeline-new-go {
     background-image: url('page_lightning.png');
 }
+#pipeline-shorturl-go {
+    background-image: url('link_go.png');
+}
 #add-filter, #insert-filter {
     width: 32%;
     background-image: url('world_delete.png');
@@ -229,6 +232,11 @@ input:disabled {
     border-bottom: 1px solid black;
     margin-bottom: 20px;
 }
+#pipeline-shorturl-text {
+    display: none;
+    width: 200px;
+}
+
 .filter {
     background: #efd3f2;
 }

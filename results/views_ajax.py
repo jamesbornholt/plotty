@@ -7,7 +7,7 @@ from plotty.results.Blocks import *
 from plotty.results.models import *
 from plotty.results.Pipeline import *
 from plotty import settings
-import json, csv, logging, os, shutil
+import json, csv, logging, os, shutil, math
 from datetime import datetime
 
 def filter_values(request, logs, col):
@@ -230,7 +230,39 @@ def delete_formatstyle(request, key):
         return HttpResponse(json.dumps({'error': True, 'reason': 'No style for that key'}))
     style.delete()
     return HttpResponse(json.dumps({'error': False}))
-    
+
+def create_shorturl(request):
+    if 'encoded' not in request.POST:
+        return HttpResponse(json.dumps({'error': True}))
+    try:
+        old = ShortURL.objects.get(encoded=request.POST['encoded'])
+        return HttpResponse(json.dumps({'error': False, 'url': request.build_absolute_uri('../../p/'+old.url)}))
+    except ShortURL.DoesNotExist:
+        # Create a short URL
+        url = ""
+        num = float(abs(hash(request.POST['encoded']))) # could be random instead
+        # To avoid confusion, don't use 0/o/O, l/L/i/I/1
+        valid_chars = "ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789"
+        base = len(valid_chars)
+        url_length = 6
+        if num < base**url_length:
+            t = math.floor(math.log(num, base))
+            while t <= url_length:
+                num *= base**t
+        num = num % (base**url_length)
+        for t in xrange(url_length-1, -1, -1):
+            factor = base**t
+            i = int(math.floor(num / factor) % base)
+            url += valid_chars[i]
+            num -= i * factor
+        
+        # Save it
+        new = ShortURL(url=url, encoded=request.POST['encoded'])
+        new.save()
+        return HttpResponse(json.dumps({'error': False, 'url': request.build_absolute_uri('../../p/'+url)}))
+    except:
+        return HttpResponse(json.dumps({'error': True}))
+
 def purge_cache(request):
     try:
       for cache_part in ('log', 'csv', 'graph'):
