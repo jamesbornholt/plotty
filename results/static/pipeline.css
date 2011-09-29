@@ -290,6 +290,10 @@ input:disabled {
     width: 100%;
 }
 
+.select-normalise-normaliser-value {
+    display: none;
+}
+
 #header {
     margin-left: 440px;
     position: fixed;

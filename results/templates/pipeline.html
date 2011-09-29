@@ -158,7 +158,7 @@
             <div class="pipeline-content">
                 <span class="pipeline-header"><img src="static/table_relationship.png"/> Normalise</span>
                 <span class="pipeline-header-right"><input type="image" class="insert-button" src="static/brick_add.png"/><input type="image" class="remove-button" src="static/cross.png"/></span> <br/>
-                <label><input type="radio" name="normalise-type" value="1" checked="checked"/> to specific value</label> <br />
+                <label><input type="radio" name="normalise-type" class="radio-normalise-type" value="1" checked="checked"/> to specific scenario</label> <br />
                 <table class="pipeline-normalise-table">
                     <tr>
                         <td>
@@ -174,9 +174,13 @@
                         <td><input type="image" class="add-row" src="static/add.png"/></td>
                     </tr>
                 </table>
-                <label><input type="radio" name="normalise-type" value="2" /> to best value</label> <br />
+                <label><input type="radio" name="normalise-type" class="radio-normalise-type" value="2" /> to best value</label> <br />
                 <strong>Grouping</strong><br />
                 <select name="select-normalise-group" class="select-normalise-group" multiple="multiple"><option></option></select>
+                <strong>Settings</strong><br />
+                <label><input type="radio" name="normalise-value-type" value="0" class="radio-normalise-value-type" checked="checked" /> Normalise to corresponding normaliser value</label><br />
+                <label><input type="radio" name="normalise-value-type" value="1" class="radio-normalise-value-type" /> Normalise to specific value in normaliser</label> <br />
+                <select class="value-column select-normalise-normaliser-value"><option></option></select>
             </div>
             <div class="pipeline-footer"></div>
         </div>

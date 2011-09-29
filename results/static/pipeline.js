@@ -779,6 +779,13 @@ var Blocks = {
         },
 
         /**
+         * The available flags for this block
+         */
+        FLAGS: {
+            NORMALISE_TO_SPECIFIC_VALUE: 1 << 0
+        },
+
+        /**
          ** Object fields
          **/
         
@@ -800,6 +807,12 @@ var Blocks = {
          * is SELECT), but not both.
          */
         group: null,
+
+        /**
+         * The value column to use as normaliser if we're normalising to a
+         * specific column
+         */
+        normaliserValue: null,
         
         /**
          ** Object methods
@@ -813,6 +826,7 @@ var Blocks = {
 
             this.normaliser = [{scenario: -1, value: -1}];
             this.group = [];
+            this.normaliserValue = -1;
             
             // Create a closure to use as the callback for removing objects.
             // This way, the scope of this block is maintained.
@@ -835,15 +849,23 @@ var Blocks = {
             
             // We need to give the radio buttons a unique name to make sure
             // they toggle correctly.
-            var radios = $('input:radio', this.element);
-            radios.attr('name', 'normalise-type-' + parseInt(Math.random() * 1E7));
-            
-            // By default we are selecting a specific normaliser
-            radios.first().attr('checked', true);
+            var allradios = $('input:radio', this.element);
+            var typeradios = allradios.filter('.radio-normalise-type');
+            var valueradios = allradios.filter('.radio-normalise-value-type');
+
+            var randomId = parseInt(Math.random() * 1E7);
+            allradios.each(function(i, elem) {
+                $(this).attr('name', $(this).attr('name') + randomId);
+            });
+
+            // By default we are selecting a specific normaliser and normalising
+            // to the corresponding normaliser
+            typeradios.first().attr('checked', true);
+            valueradios.first().attr('checked', true);
             this.type = this.TYPE.SELECT;
             
             // Hook the radio buttons to show/hide the table
-            radios.change(function() {
+            typeradios.change(function() {
                 if ( !this.checked ) {
                     return;
                 }
@@ -855,6 +877,20 @@ var Blocks = {
                 }
                 thisBlock.readState();
                 Pipeline.refresh()
+            });
+
+            valueradios.change(function() {
+                if ( !this.checked ) {
+                    return;
+                }
+                if ( this.value == thisBlock.FLAGS.NORMALISE_TO_SPECIFIC_VALUE ) {
+                    $('.select-normalise-normaliser-value', thisBlock.element).show();
+                }
+                else {
+                    $('.select-normalise-normaliser-value', thisBlock.element).hide();
+                }
+                thisBlock.readState();
+                Pipeline.refresh();
             });
         },
 
@@ -900,6 +936,16 @@ var Blocks = {
                     this.normaliser.push({scenario: elements[0], value: elements[1]});
                 }
             }
+
+            // If we are normalising to a specific column, part 5 is that column
+            if ( this.getFlag(this.FLAGS.NORMALISE_TO_SPECIFIC_VALUE) ) {
+                var nextIdx = (this.type == this.TYPE.SELECT ? 4 : 3);
+                if ( parts.length <= nextIdx ) {
+                    console.debug("Normalise block invalid: no column for normalise value");
+                    return;
+                }
+                this.normaliserValue = $.trim(parts[nextIdx]);
+            }
         },
         
         /**
@@ -918,6 +964,10 @@ var Blocks = {
                     }
                 });
                 strs.push(pairs.join(Pipeline.encoder.PARAM_SEPARATOR));
+            }
+
+            if ( this.getFlag(this.FLAGS.NORMALISE_TO_SPECIFIC_VALUE) ) {
+                strs.push(this.normaliserValue);
             }
             
             return strs.join(Pipeline.encoder.GROUP_SEPARATOR);
@@ -950,6 +1000,15 @@ var Blocks = {
         
             // Read the grouping
             this.group = Utilities.multiSelectValue($('.select-normalise-group', this.element));
+
+            // Read the normaliser column setting
+            var n = $('input.radio-normalise-value-type:checked', this.element).val();
+            this.setFlag(this.FLAGS.NORMALISE_TO_SPECIFIC_VALUE, n == this.FLAGS.NORMALISE_TO_SPECIFIC_VALUE);
+
+            // Read the value column is needed
+            if ( n == this.FLAGS.NORMALISE_TO_SPECIFIC_VALUE ) {
+                this.normaliserValue = $('.select-normalise-normaliser-value', this.element).val();
+            }
         },
     
         /**
@@ -957,12 +1016,17 @@ var Blocks = {
          * HTML.
          */
         loadState: function() {
-            var thisBlock = this;
-            var radios = $('input:radio', this.element);
-            radios.removeAttr('checked');
-            radios.filter('[value=' + this.type + ']').attr('checked', true);
+            var typeradios = $('.radio-normalise-type', this.element);
+            var valueradios = $('.radio-normalise-value-type', this.element);
+
+            typeradios.removeAttr('checked');
+            typeradios.filter('[value=' + this.type + ']').attr('checked', true);
+
+            valueradios.removeAttr('checked');
+            valueradios.filter('[value=' + (this.getFlag(this.FLAGS.NORMALISE_TO_SPECIFIC_VALUE) & 1) + ']').attr('checked', true);
 
             // Update all the scenario columns
+            var thisBlock = this;
             $('.select-normalise-column', this.optionsTable.element).each(function() {
                 Utilities.updateSelect(this, thisBlock.scenarioColumnsCache, thisBlock.scenarioColumnsCache, true);
             });
@@ -1005,6 +1069,15 @@ var Blocks = {
                     $(this).removeAttr('checked');
                 }
             });
+
+            Utilities.updateSelect($('.select-normalise-normaliser-value', this.element), this.valueColumnsCache, this.valueColumnsCache);
+            if ( this.getFlag(this.FLAGS.NORMALISE_TO_SPECIFIC_VALUE) ) {
+                $('.select-normalise-normaliser-value', this.element).val(this.normaliserValue).show();
+            }
+            else {
+                $('.select-normalise-normaliser-value', this.element).hide();
+            }
+            
         },
         
         refreshColumns: function() {
@@ -1042,6 +1115,13 @@ var Blocks = {
                 }
             });
 
+            if ( this.getFlag(this.FLAGS.NORMALISE_TO_SPECIFIC_VALUE) ) {
+                if ( this.normaliserValue != -1 && jQuery.inArray(this.normaliserValue, this.valueColumnsCache) == -1 ) {
+                    this.normaliserValue = -1;
+                    changed = true;
+                }
+            }
+
             return changed;
         },
 
@@ -1055,6 +1135,12 @@ var Blocks = {
                         valid = false;
                     }
                 });
+            }
+
+            if ( this.getFlag(this.FLAGS.NORMALISE_TO_SPECIFIC_VALUE) ) {
+                if ( this.normaliserValue == -1 ) {
+                    valid = false;
+                }
             }
 
             return valid;

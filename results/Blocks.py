@@ -431,12 +431,17 @@ class NormaliseBlock(Block):
         'BEST': '2'
     }
 
+    FLAGS = {
+        'NORMALISE_TO_SPECIFIC_VALUE': 1 << 0
+    }
+
     def __init__(self):
         super(NormaliseBlock, self).__init__()
 
         self.group = []
         self.type = None
         self.normaliser = []
+        self.normaliserValue = None
 
     def decode(self, param_string, cache_key):
         """ Decode a normalise block from an encoded pipeline string.
@@ -473,6 +478,13 @@ class NormaliseBlock(Block):
                     'scenario': elements[0],
                     'value':    elements[1]
                 })
+        
+        # If normalising with a specific column, the next part is that column
+        if self.getFlag(NormaliseBlock.FLAGS['NORMALISE_TO_SPECIFIC_VALUE']):
+            nextIdx = 4 if self.type == NormaliseBlock.TYPE['SELECT'] else 3
+            if len(parts) <= nextIdx or len(parts[nextIdx].strip()) == 0:
+                raise PipelineError("Normalise block invalid: no column for normalise value")
+            self.normaliserValue = parts[nextIdx].strip()
     
     def apply(self, data_table, messages):
         """ Apply this block to the given data table.
@@ -489,6 +501,9 @@ class NormaliseBlock(Block):
             for n in self.normaliser:
                 if not n['scenario'] in data_table.scenarioColumns:
                     raise PipelineError("Invalid columns specified for block")
+        if self.getFlag(NormaliseBlock.FLAGS['NORMALISE_TO_SPECIFIC_VALUE']):
+            if not self.normaliserValue in data_table.valueColumns:
+                raise PipelineError("Invalid columns specified for block")
 
         # Group the rows up as needed
         for row in data_table:
@@ -523,10 +538,15 @@ class NormaliseBlock(Block):
                 continue
             for row in rows:
                 for key in row.values.keys():
-                    if key in normalisers[scenario]:
-                        row.values[key] = row.values[key] / normalisers[scenario][key]
+                    if self.getFlag(NormaliseBlock.FLAGS['NORMALISE_TO_SPECIFIC_VALUE']):
+                        normaliserValueKey = self.normaliserValue
+                    else:
+                        normaliserValueKey = key
+                    if normaliserValueKey in normalisers[scenario]:
+                        row.values[key] = row.values[key] / normalisers[scenario][normaliserValueKey]
                     else:
                         del row.values[key]
+                        
             new_rows.extend(rows)
         
         # Wrap it all up
