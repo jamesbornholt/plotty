@@ -900,15 +900,30 @@ class GraphBlock(Block):
 
                 csv = ['"type","","' + series_title + '",' + ",".join(['"%(v)s","%(v)s.%(ci)d%%-CI.lowerBound","%(v)s.%(ci)d%%-CI.upperBound"' % {'v': v, 'ci': settings.CONFIDENCE_LEVEL * 100} for v in bound_value])]
 
-                for row in rows:
-                    values = ",".join([present_value_csv_graph(row.values[v], True) for v in bound_value])
-                    if grouping:
+                data = {}
+                if not grouping:
+                    data['all'] = rows
+                else:
+                    for row in rows:
                         if self.series_key in row.scenario:
-                            csv.append('"data","","' + (present_scenario_csv(row.scenario[self.series_key])) + '",' + values)
-                            group_values.add(row.scenario[self.series_key])
-                    else:
-                        csv.append('"data","","all",' + values)
-                    
+                            if row.scenario[self.series_key] in data:
+                                data[row.scenario[self.series_key]].append(row)
+                            else:
+                                data[row.scenario[self.series_key]] = [row]
+
+                data_keys = list(data.keys())
+                sort_keys(data_keys)
+                
+                for key in data_keys:
+                    for row in data[key]:
+                        values = ",".join([present_value_csv_graph(row.values[v], True) for v in bound_value])
+                        if grouping:
+                            if self.series_key in row.scenario:
+                                csv.append('"data","","' + (present_scenario_csv(row.scenario[self.series_key])) + '",' + values)
+                                group_values.add(row.scenario[self.series_key])
+                        else:
+                            csv.append('"data","","all",' + values)
+
                 csv_text = "\n".join(csv)
 
                 csv_file = open(graph_path + '.csv', 'w')
@@ -928,13 +943,15 @@ class GraphBlock(Block):
                         '</p>' + \
                         '<table><thead><tr>' + ('<th>' + series_title + '</th>' if grouping else '') + ''.join(['<th>' + v + '</th>' for v in bound_value]) + '</tr></thead><tbody>']
 
-                for row in rows:
-                    values = "".join(['<td class="value">' + present_value(row.values[v]) + '</td>' for v in bound_value])
-                    if grouping:
-                        if self.series_key in row.scenario:
-                            html.append('<tr><td>' + (present_scenario(row.scenario[self.series_key])) + '</td>' + values + '</tr>')
-                        else:
-                            html.append(values)
+
+                for key in data_keys:
+                    for row in data[key]:
+                        values = "".join(['<td class="value">' + present_value(row.values[v]) + '</td>' for v in bound_value])
+                        if grouping:
+                            if self.series_key in row.scenario:
+                                html.append('<tr><td>' + (present_scenario(row.scenario[self.series_key])) + '</td>' + values + '</tr>')
+                            else:
+                                html.append(values)
 
                 html.append('</tbody></table>')
                 html_text = "\n".join(html)
