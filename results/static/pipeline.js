@@ -435,6 +435,7 @@ var Blocks = {
             };
             var addClosure = function() {
                 thisBlock.filters.push({scenario: -1, is: 1, value: -1});
+                thisBlock.loadState();
             };
             
             // Create the option table
@@ -836,6 +837,7 @@ var Blocks = {
             };
             var addClosure = function() {
                 thisBlock.normaliser.push({scenario: -1, value: -1});
+                thisBlock.loadState();
             };
             
             // Create the option table
@@ -1577,6 +1579,7 @@ var Blocks = {
             };
             var addClosure = function() {
                 thisBlock.filters.push({column: -1, is: 1, lowerbound: '-inf', upperbound: '+inf'});
+                thisBlock.loadState();
             };
             
             // Create the option table
@@ -1804,6 +1807,7 @@ var Blocks = {
             };
             var addClosure = function() {
                 thisBlock.columns.push(-1);
+                thisBlock.loadState();
             };
             
             // Create the option table
