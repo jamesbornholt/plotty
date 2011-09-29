@@ -1111,6 +1111,10 @@ var Blocks = {
          */
         ID: 4,
 
+        FLAGS: {
+            GROUPED: 1
+        },
+
         /**
          ** Object fields
          **/
@@ -1150,6 +1154,8 @@ var Blocks = {
         constructor: function(insertIndex) {
             this.base(insertIndex);
             
+            this.setFlag(FLAGS.GROUPED);
+
             // Hook the dropdowns and text inputs
             var thisBlock = this;
             $(this.element).delegate('select, input', 'change', function() {
@@ -1227,7 +1233,6 @@ var Blocks = {
             }
 
             this.flags = parseInt(parts[0]);
-
             
             var settings = parts[1].split(Pipeline.encoder.PARAM_SEPARATOR);
             

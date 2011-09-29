@@ -812,7 +812,7 @@ class GraphBlock(Block):
         def sort_keys(l):
             # alphabetic, numeric, formatted
             l.sort(key=lambda x: None if isinstance(x, ScenarioValue) else str(x))
-            l.sort(key=lambda x: None if isinstance(x, ScenarioValue) or isinstance(x, str) else float(x))
+            l.sort(key=lambda x: None if isinstance(x, ScenarioValue) or isinstance(x, basestring) else float(x))
             l.sort(key=lambda x: x.index if isinstance(x, ScenarioValue) else 'inf')
 
         # Clean up graph directory.
@@ -916,7 +916,7 @@ class GraphBlock(Block):
                 csv_file.close()
 
                 # Plot the graph
-                self.produceGraph(graph_hash, graph_path, code, bound_scenario, bound_value, group_values)
+                self.produceGraph(graph_hash, graph_path, code, bound_value, bound_value, group_values)
             
                 html = ['<object width=100% height=50% data="graph/' + graph_hash + '.svg" type="image/svg+xml"></object>' + \
                         '<p>Download: ' + \
