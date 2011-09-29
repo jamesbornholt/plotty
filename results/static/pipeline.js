@@ -1227,24 +1227,30 @@ var Blocks = {
             }
 
             this.flags = parseInt(parts[0]);
+
             
             var settings = parts[1].split(Pipeline.encoder.PARAM_SEPARATOR);
             
             if (settings.length == 1) {
                 // Compatibility: load old style pipeline.
+                var errorbars = this.flags == 1;
+                this.flags = 0;
                 var type = parseInt(settings[0]);
                 settings = parts[2].split(Pipeline.encoder.PARAM_SEPARATOR);
 
-                if (type == 0 || type == 1) {
-                    this.format = type == 0 ? "Histogram" : "XY"; 
-                    this.pivot = settings[0];
-                    this.series = settings[1];
+                if (type == 1 || type == 2) {
+                    this.format = type == 1 ? "Histogram" : "XY"; 
+                    this.series = settings[0];
+                    this.pivot = settings[1];
                     this.values = [settings[2]];
                 } else {
                     this.format = "Scatter";
                     this.values = [settings[0], settings[1]];
                     this.series = settings[2];
                     this.pivot = -1;
+                }
+                if (errorbars) {
+                    this.format += " (with CI)";
                 }
             } else {
                 this.format = settings[0];

@@ -756,7 +756,7 @@ class GraphBlock(Block):
 
         if aggregates:
             for agg in ['min', 'max', 'mean', 'geomean']:
-                line = '"agg","","' + agg + '","",'
+                line = '"agg","","' + agg + '",'
                 for col in column_keys:
                     if col in aggregates[agg]:
                         # gnuplot expects non-empty data, with error cols containing the absolute val
