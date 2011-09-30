@@ -382,6 +382,7 @@ th.headerSortDown {
     border: 1px solid black;
     margin-bottom: 10px;
     display: block;
+    overflow:auto;
 }
 
 .foldable h1 {
