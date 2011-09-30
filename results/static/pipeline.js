@@ -2765,7 +2765,7 @@ var Pipeline = {
 
         // Hook the foldable things
         $("#output").delegate('.foldable h1 button', 'click', function() {
-            var foldable_content = $(this).parents('.foldable').children('.foldable-content');
+            var foldable_content = $(this).parents('.foldable').eq(0).children('.foldable-content').eq(0);
             if ( foldable_content.hasClass('hidden') ) {
                 foldable_content.removeClass('hidden');
                 $(this).replaceWith('<button class="foldable-toggle-hide pipeline-button">Hide</button>');
@@ -3069,12 +3069,20 @@ var Pipeline = {
                 output.children().not('#loading-indicator').remove();
                 output.hide();
                 output.append(data.error_html);
+                output.append('<table width="100%" class="graph-table"></table>');
+                var graphs = $('.graph-table', output);
+
+                var graphCount = 0;
+                jQuery.each(data.graphs, function(i, gb) { jQuery.each(gb, function(i, g) { graphCount++; }); });
+                var perRow = graphCount > 4 ? 3 : (graphCount > 1 ? 2 : 1);
+                var row_count = 0;
+                var row_html = '';
 
                 jQuery.each(data.graphs, function(i, gb) {
                     jQuery.each(gb, function(i, g) {
                         //'title': title, 'hash': graph_hash, 'table': table_html, 'output': plot_output, 'suffixes
                         // svg
-                        var html = '<embed width="100%" src="graph/' + g.hash + '.svg" type="image/svg+xml"/>';
+                        var html = '<img width="100%" src="graph/' + g.hash + '.svg"/>';
                         // links
                         html += '<p>' + jQuery.map(g.suffixes, function(s) {
                             return '<a href="graph/' + g.hash + '.' + s + '">' + s + '</a>';
@@ -3083,11 +3091,16 @@ var Pipeline = {
                         if (g.output != "") html += '<pre>' + g.output + '</pre>';
                         // table
                         html += Utilities.makeFoldable('Data', g.table, false);
-                        output.append(Utilities.makeFoldable(g.title, html, true));
+                        row_html += '<td width=' + Math.floor(100*(1/perRow)) + '%>' + Utilities.makeFoldable(g.title, html, true) + '</td>';
+                        if (++row_count == perRow) {
+                            graphs.append('<tr>' + row_html + '</tr>');
+                            row_html = '';
+                            row_count = 0;
+                        }
                     });
                 });
                  
-                output.append(Utilities.makeFoldable('Table', data.table_html, data.graphs.length > 0));
+                output.append(Utilities.makeFoldable('Table', data.table_html, graphCount > 0));
                 output.append(data.warn_html);
                 if ( data.rows > Pipeline.constants.MAX_TABLE_ROWS_AUTO_RENDER && !data.graph) {
                     $('#output table, #output .foldable.table').hide();
