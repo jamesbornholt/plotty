@@ -87,14 +87,17 @@ input:disabled {
     opacity: 0.3;
 }
 .foldable-toggle-zoom {
+    line-height: 12px;
     float: right;
     background-image: url('zoom.png');
 }
 .foldable-toggle-show {
+    line-height: 12px;
     float: right;
     background-image: url('book_open.png');
 }
 .foldable-toggle-hide {
+    line-height: 12px;
     float: right;
     background-image: url('book.png');
 }
@@ -380,24 +383,17 @@ th.headerSortDown {
 
 .foldable {
     border: 1px solid black;
-    margin-bottom: 10px;
     display: block;
     overflow:auto;
+    margin: 2px;
 }
 
 .foldable h1 {
     display: block;
     margin: 0;
     padding: 0.2em;
-    font-size: 110%;
+    font-size: 100%;
     background-color: #abcdef;
-}
-
-.foldable h1 a {
-    float: right;
-    font-weight: normal;
-    color: blue;
-    margin-left: 1em;
 }
 
 .foldable-content {

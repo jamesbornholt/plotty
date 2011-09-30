@@ -3089,13 +3089,13 @@ var Pipeline = {
                         // svg
                         var html = '<img width="100%" src="graph/' + g.hash + '.svg"/>';
                         // links
-                        html += '<p>' + jQuery.map(g.suffixes, function(s) {
+                        links = jQuery.map(g.suffixes, function(s) {
                             return '<a href="graph/' + g.hash + '.' + s + '">' + s + '</a>';
-                        }).join("\n") + '</p>';
+                        }).join(" ");
                         // error
                         if (g.output != "") html += '<pre>' + g.output + '</pre>';
                         // table
-                        html += Utilities.makeFoldable('Data', g.table, false);
+                        html += Utilities.makeFoldable(links, g.table, false);
                         graphs.append('<div class="table-cell" style="position:relative;float:left;">' + Utilities.makeFoldable(g.title, html, true, true) + '</div><span class="table-break"></span>');
                         graphCount++;
                     });
