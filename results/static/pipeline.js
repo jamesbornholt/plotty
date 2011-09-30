@@ -42,6 +42,17 @@ if ( typeof Array.prototype.remove === 'undefined' ) {
 
 
 var Utilities = {
+
+    /**
+     * Create the html for a foldable div
+     */
+    makeFoldable: function(title, inner_html, visible) {
+        if (visible) {
+            return '<div class="foldable"><h1>'+ title +'<button class="foldable-toggle-hide pipeline-button">Hide</button></h1><div class="foldable-content">' + inner_html + '</div></div>'
+        }
+        return '<div class="foldable"><h1>'+ title +'<button class="foldable-toggle-show pipeline-button">Show</button></h1><div class="foldable-content hidden">' + inner_html + '</div></div>'
+    },
+
     /**
      * Update a select element with new options. The old value will be
      * preserved if it appears in the new list.
@@ -3054,21 +3065,42 @@ var Pipeline = {
             }
 
             if (!error) {
-                $('#output').children().not('#loading-indicator').remove();
-                $('#output').hide();
-                $('#output').append(data.html);
+                var output = $('#output');
+                output.children().not('#loading-indicator').remove();
+                output.hide();
+                output.append(data.error_html);
+
+                jQuery.each(data.graphs, function(i, gb) {
+                    jQuery.each(gb, function(i, g) {
+                        //'title': title, 'hash': graph_hash, 'table': table_html, 'output': plot_output, 'suffixes
+                        // svg
+                        var html = '<embed width="100%" src="graph/' + g.hash + '.svg" type="image/svg+xml"/>';
+                        // links
+                        html += '<p>' + jQuery.map(g.suffixes, function(s) {
+                            return '<a href="graph/' + g.hash + '.' + s + '">' + s + '</a>';
+                        }).join("\n") + '</p>';
+                        // error
+                        if (g.output != "") html += '<pre>' + g.output + '</pre>';
+                        // table
+                        html += Utilities.makeFoldable('Data', g.table, false);
+                        output.append(Utilities.makeFoldable(g.title, html, true));
+                    });
+                });
+                 
+                output.append(Utilities.makeFoldable('Table', data.table_html, data.graphs.length > 0));
+                output.append(data.warn_html);
                 if ( data.rows > Pipeline.constants.MAX_TABLE_ROWS_AUTO_RENDER && !data.graph) {
                     $('#output table, #output .foldable.table').hide();
                     $('#large-table-confirm span').html(data.rows);
                     $('#large-table-confirm').show();
-                    $('#output').css('paddingTop', '6em');
+                    output.css('paddingTop', '6em');
                 }
                 else {
                     $('#large-table-confirm').hide();
-                    $('#output').css('paddingTop', '60px');
+                    output.css('paddingTop', '60px');
                     Utilities.outputTableSort();
                 }
-                $('#output').show();
+                output.show();
     
                 $('.error-block').removeClass('error-block');
                 $('.ambiguous-block').removeClass('ambiguous-block');

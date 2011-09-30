@@ -10,41 +10,6 @@ from plotty import settings
 import json, csv, logging, os, shutil, math
 from datetime import datetime
 
-def filter_values(request, logs, col):
-    """ Given a particular scenario column, find all possible values of that
-        column inside the given log files """
-    values = []
-    # The log files are almost certainly cached by now, so this is quick
-    dt = DataTable(logs.split(','))
-    for row in dt:
-        if col in row.scenario and row.scenario[col] not in values:
-            values.append(row.scenario[col])
-    values.sort()
-    return HttpResponse(json.dumps(values))
-    
-def log_values(request, logs):
-    """ Given a set of log files, find all possible scenario variables in those
-        logs, and all possible value keys """
-    
-    if logs == '':
-        return HttpResponse(json.dumps({'scenarioCols': [], 'valueCols': [], 'scenairoValues': []}))
-    
-    try:
-        dt = DataTable(logs.split(','), wait=False)
-    except LogTabulateStarted as e:
-        return HttpResponse(json.dumps({'tabulating': True, 'log': e.log, 'pid': e.pid, 'index': e.index, 'total': e.length}))
-
-    # Grab and sort scenario and value columns
-    scenarioCols = list(dt.scenarioColumns)
-    valueCols = list(dt.valueColumns)
-    scenarioCols.sort()
-    valueCols.sort()
-    
-    # Grab possible values for scenario columns
-    scenarioValues = dt.getScenarioValues()
-    
-    return HttpResponse(json.dumps({'scenarioCols': scenarioCols, 'valueCols': valueCols, 'scenarioValues': scenarioValues}))
-
 def pipeline(request, pipeline):
     try:
         p = Pipeline(web_client=True)
@@ -55,16 +20,16 @@ def pipeline(request, pipeline):
         return HttpResponse(json.dumps({'tabulating': True, 'log': e.log, 'pid': e.pid, 'index': e.index, 'total': e.length}))
     except PipelineBlockException as e:
         output = '<div class="exception"><h1>Exception in executing block ' + str(e.block + 1) + '</h1>' + e.msg + '<div class="foldable"><h1>Traceback<button class="foldable-toggle-show pipeline-button">Show</button></h1><div class="foldable-content hidden"><pre>' + e.traceback + '</pre></div></div>'
-        return HttpResponse(json.dumps({'error': True, 'index': e.block, 'html': output, 'rows': 1}))
+        return HttpResponse(json.dumps({'error': True, 'index': e.block, 'error_html': output, 'rows': 1}))
     except PipelineLoadException as e:
         output = '<div class="exception"><h1>Exception in loading data</h1>' + e.msg + '<div class="foldable"><h1>Traceback<button class="foldable-toggle-show pipeline-button">Show</button></h1><div class="foldable-content hidden"><pre>' + e.traceback + '</pre></div></div>'
-        return HttpResponse(json.dumps({'error': True, 'html': output, 'rows': 1}))
+        return HttpResponse(json.dumps({'error': True, 'error_html': output, 'rows': 1}))
     except PipelineError as e:
         if isinstance(e.block, str):
             output = '<div class="exception"><h1>Error in' + e.block + '</h1>' + e.msg + '</div>'
-            return HttpResponse(json.dumps({'error': True, 'index': e.block, 'html': output, 'rows': 1}))
+            return HttpResponse(json.dumps({'error': True, 'index': e.block, 'error_html': output, 'rows': 1}))
         else:
-            output = '<div class="exception"><h1>Error in block ' + str(e.block + 1) + '</h1>' + e.msg + '</div>'
+            error_output = '<div class="exception"><h1>Error in block ' + str(e.block + 1) + '</h1>' + e.msg + '</div>'
             ambiguity = False
             index = e.block
             dt = e.dataTable
@@ -77,9 +42,9 @@ def pipeline(request, pipeline):
         if isinstance(e.block, str):
             # The exception occured early on - cols, probably
             output = '<div class="ambiguity"><h1>Ambiguity in ' + e.block + '</h1>' + e.msg + '<div></strong></div></div>'
-            return HttpResponse(json.dumps({'error': False, 'ambiguity': True, 'index': e.block, 'html': output, 'rows': 1}))
+            return HttpResponse(json.dumps({'error': False, 'ambiguity': True, 'index': e.block, 'error_html': output, 'rows': 1}))
         else:
-            output = '<div class="ambiguity"><h1>Ambiguity in block ' + str(e.block + 1) + '</h1>' + e.msg + '<div><strong>The data below shows the output of the pipeline up to but not including block ' + str(e.block + 1) + '</strong></div></div>'
+            error_output = '<div class="ambiguity"><h1>Ambiguity in block ' + str(e.block + 1) + '</h1>' + e.msg + '<div><strong>The data below shows the output of the pipeline up to but not including block ' + str(e.block + 1) + '</strong></div></div>'
             ambiguity = True
             index = e.block
             dt = e.dataTable
@@ -89,23 +54,18 @@ def pipeline(request, pipeline):
             block_scenario_values = e.block_scenario_values
             block_scenario_display = e.block_scenario_display
     else:
-        output = ''
+        error_output = ''
         ambiguity = False
         index = -1
         dt = p.dataTable
         msg = p.messages
 
     
-    if len(graph_outputs) > 0:
-        for i, graph_set in enumerate(graph_outputs, start=1):
-            titles = graph_set.keys()
-            titles.sort()
-            for title in titles:
-                output += '<div class="foldable"><h1>' + title + ' (block ' + str(i) + ')</h1>' + graph_set[title] + '</div>'
-        output += '<div class="foldable"><h1>Table<button class="foldable-toggle-show pipeline-button">Show</button></h1><div class="foldable-content hidden">' + dt.renderToTable() + '</div></div>'
-    else:
-        output += dt.renderToTable()
+    # Main data table
+    table_output = dt.renderToTable()
 
+    # Messages
+    msg_output = ''
     if not msg.empty():
       msg_output = '<div class="messages"><h1>Messages</h1>'
 
@@ -116,10 +76,25 @@ def pipeline(request, pipeline):
         msg_output += '<img src="static/information.png"/> <span class="message-information-main">' + t + '</span> <span class="message-information-extra">' + e + '</span><br/>'
 
       msg_output += '</div>'
-      output += msg_output
+
+    # Style stuff
     format_styles = [f.key for f in FormatStyle.objects.all()]
     graph_formats = dict([(f.key, {'value': f.value, 'parent': f.parent.key if f.parent else None, 'full_value': unicode(f)}) for f in GraphFormat.objects.all()])
-    return HttpResponse(json.dumps({'error': False, 'ambiguity': ambiguity, 'index': index, 'block_scenarios': block_scenario_values, 'block_scenario_display': block_scenario_display, 'block_values': block_values, 'format_styles': format_styles, 'graph_formats': graph_formats, 'html': output, 'rows': len(dt.rows), 'graph': len(graph_outputs) > 0}))
+
+    error_output
+    return HttpResponse(json.dumps({'error': False, 
+                                    'ambiguity': ambiguity,
+                                    'index': index,
+                                    'block_scenarios': block_scenario_values,
+                                    'block_scenario_display': block_scenario_display,
+                                    'block_values': block_values,
+                                    'format_styles': format_styles,
+                                    'graph_formats': graph_formats,
+                                    'error_html': error_output,
+                                    'warn_html': msg_output,
+                                    'table_html': table_output,
+                                    'rows': len(dt.rows),
+                                    'graphs': graph_outputs}))
 
 def delete_saved_pipeline(request):
     if 'name' not in request.POST:

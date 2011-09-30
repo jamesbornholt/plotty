@@ -791,16 +791,16 @@ class GraphBlock(Block):
         return "\n".join(output)
 
     def renderPivotHTML(self, pivot_table, column_keys, row_keys, graph_hash, aggregates=None):
-        output  = '<object width=100% data="graph/' + graph_hash + '.svg" type="image/svg+xml"></object>'
-        output += '<p>Download: '
-        output += '<a href="graph/' + graph_hash + '.csv">csv</a> '
-        output += '<a href="graph/' + graph_hash + '.gpt">gpt</a> '
-        output += '<a href="graph/' + graph_hash + '.svg">svg</a> '
-        output += '<a href="graph/' + graph_hash + '.pdf">pdf</a> '
-        output += '<a href="graph/' + graph_hash + '.wide.pdf">wide pdf</a>'
-        output += '</p>'
-        output += ('<pre>' + plot_output + '</pre>' if not str.strip(plot_output) == '' else '')
-        output += '<div class="foldable"><h1>Traceback<button class="foldable-toggle-show pipeline-button">Show</button></h1><div class="foldable-content hidden">'
+        #output  = '<object width=100% data="graph/' + graph_hash + '.svg" type="image/svg+xml"></object>'
+        #output += '<p>Download: '
+        #output += '<a href="graph/' + graph_hash + '.csv">csv</a> '
+        #output += '<a href="graph/' + graph_hash + '.gpt">gpt</a> '
+        #output += '<a href="graph/' + graph_hash + '.svg">svg</a> '
+        #output += '<a href="graph/' + graph_hash + '.pdf">pdf</a> '
+        #output += '<a href="graph/' + graph_hash + '.wide.pdf">wide pdf</a>'
+        #output += '</p>'
+        #output += ('<pre>' + plot_output + '</pre>' if not str.strip(plot_output) == '' else '')
+        #output += '<div class="foldable"><h1>Traceback<button class="foldable-toggle-show pipeline-button">Show</button></h1><div class="foldable-content hidden">'
         output += '<table><thead><tr><th></th>'
         for key in column_keys:
             output += '<th>' + present_scenario(key) + '</th>'
@@ -824,7 +824,7 @@ class GraphBlock(Block):
                         output += '<td class="value">*</td>'
                 output += '</tr>'
         output += '</tbody></table>'
-        output += '</div></div>'
+        #output += '</div></div>'
 
         return output
 
@@ -860,7 +860,7 @@ class GraphBlock(Block):
 
         if self.pivot_key:
             # this is a pivot table
-            graphs = {}
+            graphs = []
             for value_key in bound_value: 
                 sets, scenario_keys = self.group(data_table, False, [self.series_key, self.pivot_key], [value_key])
 
@@ -892,17 +892,17 @@ class GraphBlock(Block):
                     plot_output = self.produceGraph(graph_hash, graph_path, code, column_keys, [value_key])
                 
                     # Render the HTML!
-                    html = self.renderPivotHTML(pivot_table, column_keys, row_keys, graph_hash, aggregates, plot_output)
+                    table_html = self.renderPivotHTML(pivot_table, column_keys, row_keys, graph_hash, aggregates)
                 
                     title = present_scenario(value_key)
                     if len(scenario_keys[scenario]) > 0:
                         title += " [" + ', '.join([present_scenario(k) + ' = ' + present_scenario(scenario_keys[scenario][k]) for k in scenario_keys[scenario].keys()]) + "]"
                 
-                    graphs[title] = html
+                    graphs.append({'title': title, 'hash': graph_hash, 'table': table_html, 'output': plot_output, 'suffixes': ['csv','gpt','svg','pdf','wide.pdf']})
             
             return graphs
         else:
-            graphs = {}
+            graphs = []
             bound_scenario = [self.series_key] if self.series_key else []
             # this is straight copy, single scenario, multiple values, each row must have all requested values
             sets, scenario_keys = self.group(data_table, True, bound_scenario, bound_value)
@@ -955,17 +955,7 @@ class GraphBlock(Block):
                 # Plot the graph
                 plot_output = self.produceGraph(graph_hash, graph_path, code, bound_value, bound_value, group_values)
             
-                html = ['<object width=100% height=50% data="graph/' + graph_hash + '.svg" type="image/svg+xml"></object>' + \
-                        '<p>Download: ' + \
-                        '<a href="graph/' + graph_hash + '.csv">csv</a> ' + \
-                        '<a href="graph/' + graph_hash + '.gpt">gpt</a> ' + \
-                        '<a href="graph/' + graph_hash + '.svg">svg</a> ' + \
-                        '<a href="graph/' + graph_hash + '.pdf">pdf</a> ' + \
-                        '<a href="graph/' + graph_hash + '.wide.pdf">wide pdf</a>' + \
-                        '</p>' + \
-                        ('<pre>' + plot_output + '</pre>' if not str.strip(plot_output) == '' else '') + \
-                        '<div class="foldable"><h1>Plot Data<button class="foldable-toggle-show pipeline-button">Show</button></h1><div class="foldable-content hidden">' + \
-                        '<table><thead><tr>' + ('<th>' + series_title + '</th>' if grouping else '') + ''.join(['<th>' + v + '</th>' for v in bound_value]) + '</tr></thead><tbody>']
+                html = ['<table><thead><tr>' + ('<th>' + series_title + '</th>' if grouping else '') + ''.join(['<th>' + v + '</th>' for v in bound_value]) + '</tr></thead><tbody>']
 
 
                 for key in data_keys:
@@ -977,15 +967,15 @@ class GraphBlock(Block):
                             else:
                                 html.append(values)
 
-                html.append('</tbody></table></div></div>')
-                html_text = "\n".join(html)
+                html.append('</tbody></table>')
+                table_html = "\n".join(html)
                 
                 if len(scenario_keys[scenario]) == 0:
                     title = 'all'
                 else:
                     title = ', '.join([present_scenario(k) + ' = ' + present_scenario(scenario_keys[scenario][k]) for k in scenario_keys[scenario].keys()])
                 
-                graphs[title] = html_text
+                graphs.append({'title': title, 'hash': graph_hash, 'table': table_html, 'output': plot_output, 'suffixes': ['csv','gpt','svg','pdf','wide.pdf']})
 
             return graphs
     
