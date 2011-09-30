@@ -46,9 +46,12 @@ var Utilities = {
     /**
      * Create the html for a foldable div
      */
-    makeFoldable: function(title, inner_html, visible) {
+    makeFoldable: function(title, inner_html, visible, zoomable) {
+        if (zoomable) {
+            title += '<button class="foldable-toggle-zoom pipeline-button">Zoom</button>';
+        }
         if (visible) {
-            return '<div class="foldable"><h1>'+ title +'<button class="foldable-toggle-hide pipeline-button">Hide</button></h1><div class="foldable-content">' + inner_html + '</div></div>'
+            return '<div class="foldable"><h1>'+ title + '<button class="foldable-toggle-hide pipeline-button">Hide</button></h1><div class="foldable-content">' + inner_html + '</div></div>'
         }
         return '<div class="foldable"><h1>'+ title +'<button class="foldable-toggle-show pipeline-button">Show</button></h1><div class="foldable-content hidden">' + inner_html + '</div></div>'
     },
@@ -2764,7 +2767,7 @@ var Pipeline = {
         });
 
         // Hook the foldable things
-        $("#output").delegate('.foldable h1 button', 'click', function() {
+        $("#output").delegate('.foldable h1 button:not(.foldable-toggle-zoom)', 'click', function() {
             var foldable_content = $(this).parents('.foldable').eq(0).children('.foldable-content').eq(0);
             if ( foldable_content.hasClass('hidden') ) {
                 foldable_content.removeClass('hidden');
@@ -3069,14 +3072,13 @@ var Pipeline = {
                 output.children().not('#loading-indicator').remove();
                 output.hide();
                 output.append(data.error_html);
-                output.append('<table width="100%" class="graph-table"></table>');
+                output.append('<div width="100%" class="graph-table" style="position:relative;"></div>');//<table width="100%" class="graph-table"></table>');
                 var graphs = $('.graph-table', output);
 
                 var graphCount = 0;
                 jQuery.each(data.graphs, function(i, gb) { jQuery.each(gb, function(i, g) { graphCount++; }); });
                 var perRow = graphCount > 4 ? 3 : (graphCount > 1 ? 2 : 1);
                 var row_count = 0;
-                var row_html = '';
 
                 jQuery.each(data.graphs, function(i, gb) {
                     jQuery.each(gb, function(i, g) {
@@ -3091,16 +3093,56 @@ var Pipeline = {
                         if (g.output != "") html += '<pre>' + g.output + '</pre>';
                         // table
                         html += Utilities.makeFoldable('Data', g.table, false);
-                        row_html += '<td width=' + Math.floor(100*(1/perRow)) + '%>' + Utilities.makeFoldable(g.title, html, true) + '</td>';
-                        if (++row_count == perRow) {
-                            graphs.append('<tr>' + row_html + '</tr>');
-                            row_html = '';
-                            row_count = 0;
-                        }
+                        graphs.append('<div class="table-cell" style="position:relative;float:left;">' + Utilities.makeFoldable(g.title, html, true, true) + '</div><span class="table-break"></span>');
                     });
                 });
+                perRow=2;
+                graphs.append('<br style="clear:both;"/>');
+
+                $(".foldable-toggle-zoom", graphs).click(function() {
+                    var tc = $(this).parents(".table-cell").eq(0);
+                    var zoomed = $(tc).data('zoomed');
+                    if (zoomed) {
+                        var tcbefore = $(tc).prev(".table-cell");
+                        if (tcbefore.length > 0 && !tcbefore.data('breakafter')) {
+                            tc.prev().html('');
+                        }
+                        if (!tc.data('breakafter')) {
+                            tc.next().html('');
+                        }
+                        tc.css('width', tc.data('normalwidth'));
+                    } else {
+                        tc.prev().html('<br style="clear:both;"/>');
+                        tc.next().html('<br style="clear:both;"/>');
+                        tc.css('width', '100%');
+                    }
+                    $(tc).data('zoomed', !zoomed)
+                });
+
+
+                var cellWidth = Math.floor(100*(1/perRow)) + '%';
+                $(".table-cell", graphs).each(function(i, tc) {
+                    var tb = $(tc).next();
+                    var zoom = $(".foldable-toggle-zoom", tc);
+                    if (perRow > 1) {
+                        zoom.show();
+                    } else {
+                        zoom.hide();
+                    }
+                    $(tc).css('width', cellWidth);
+                    var breakafter = (i+1) % perRow == 0;
+                    $(tc).data('breakafter', breakafter);
+                    $(tc).data('zoomed', false);
+                    $(tc).data('normalwidth', cellWidth);
+                    if (breakafter) {
+                        $(tb).html('<br style="clear:both;"/>');
+                    } else {
+                        $(tb).html('');
+                    }
+                });
+                $(".table-break", graphs).last().html('<br style="clear:both;"/>');
                  
-                output.append(Utilities.makeFoldable('Table', data.table_html, graphCount > 0));
+                output.append(Utilities.makeFoldable('Table', data.table_html, graphCount > 0, false));
                 output.append(data.warn_html);
                 if ( data.rows > Pipeline.constants.MAX_TABLE_ROWS_AUTO_RENDER && !data.graph) {
                     $('#output table, #output .foldable.table').hide();
