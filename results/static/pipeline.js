@@ -444,7 +444,8 @@ var Blocks = {
             // Hook the dropdowns
             $(this.element).delegate('select', 'change', function() {
                 thisBlock.readState();
-                Pipeline.refresh();
+                thisBlock.loadState();
+                if (thisBlock.complete()) Pipeline.refresh();
             });
         },
         
@@ -2752,15 +2753,15 @@ var Pipeline = {
         });
 
         // Hook the foldable things
-        $("#output").delegate('.foldable h1 a.toggle', 'click', function() {
+        $("#output").delegate('.foldable h1 button', 'click', function() {
             var foldable_content = $(this).parents('.foldable').children('.foldable-content');
             if ( foldable_content.hasClass('hidden') ) {
                 foldable_content.removeClass('hidden');
-                $(this).html('[hide]');
+                $(this).replaceWith('<button class="foldable-toggle-hide pipeline-button">Hide</button>');
             }
             else {
                 foldable_content.addClass('hidden');
-                $(this).html('[show]');
+                $(this).replaceWith('<button class="foldable-toggle-show pipeline-button">Show</button>');
             }
             return false;
         });

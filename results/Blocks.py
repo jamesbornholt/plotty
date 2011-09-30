@@ -791,8 +791,7 @@ class GraphBlock(Block):
         return "\n".join(output)
 
     def renderPivotHTML(self, pivot_table, column_keys, row_keys, graph_hash, aggregates=None):
-        #output  = '<img src="graph/' + graph_hash + '.svg" />'
-        output  = '<object width=100% height=50% data="graph/' + graph_hash + '.svg" type="image/svg+xml"></object>'
+        output  = '<object width=100% data="graph/' + graph_hash + '.svg" type="image/svg+xml"></object>'
         output += '<p>Download: '
         output += '<a href="graph/' + graph_hash + '.csv">csv</a> '
         output += '<a href="graph/' + graph_hash + '.gpt">gpt</a> '
@@ -800,6 +799,8 @@ class GraphBlock(Block):
         output += '<a href="graph/' + graph_hash + '.pdf">pdf</a> '
         output += '<a href="graph/' + graph_hash + '.wide.pdf">wide pdf</a>'
         output += '</p>'
+        output += ('<pre>' + plot_output + '</pre>' if not str.strip(plot_output) == '' else '')
+        output += '<div class="foldable"><h1>Traceback<button class="foldable-toggle-show pipeline-button">Show</button></h1><div class="foldable-content hidden">'
         output += '<table><thead><tr><th></th>'
         for key in column_keys:
             output += '<th>' + present_scenario(key) + '</th>'
@@ -823,6 +824,7 @@ class GraphBlock(Block):
                         output += '<td class="value">*</td>'
                 output += '</tr>'
         output += '</tbody></table>'
+        output += '</div></div>'
 
         return output
 
@@ -887,10 +889,10 @@ class GraphBlock(Block):
                     csv_file.write(csv)
                     csv_file.close()
    
-                    self.produceGraph(graph_hash, graph_path, code, column_keys, [value_key])
+                    plot_output = self.produceGraph(graph_hash, graph_path, code, column_keys, [value_key])
                 
                     # Render the HTML!
-                    html = self.renderPivotHTML(pivot_table, column_keys, row_keys, graph_hash, aggregates)
+                    html = self.renderPivotHTML(pivot_table, column_keys, row_keys, graph_hash, aggregates, plot_output)
                 
                     title = present_scenario(value_key)
                     if len(scenario_keys[scenario]) > 0:
@@ -951,7 +953,7 @@ class GraphBlock(Block):
                 csv_file.close()
 
                 # Plot the graph
-                self.produceGraph(graph_hash, graph_path, code, bound_value, bound_value, group_values)
+                plot_output = self.produceGraph(graph_hash, graph_path, code, bound_value, bound_value, group_values)
             
                 html = ['<object width=100% height=50% data="graph/' + graph_hash + '.svg" type="image/svg+xml"></object>' + \
                         '<p>Download: ' + \
@@ -961,6 +963,8 @@ class GraphBlock(Block):
                         '<a href="graph/' + graph_hash + '.pdf">pdf</a> ' + \
                         '<a href="graph/' + graph_hash + '.wide.pdf">wide pdf</a>' + \
                         '</p>' + \
+                        ('<pre>' + plot_output + '</pre>' if not str.strip(plot_output) == '' else '') + \
+                        '<div class="foldable"><h1>Plot Data<button class="foldable-toggle-show pipeline-button">Show</button></h1><div class="foldable-content hidden">' + \
                         '<table><thead><tr>' + ('<th>' + series_title + '</th>' if grouping else '') + ''.join(['<th>' + v + '</th>' for v in bound_value]) + '</tr></thead><tbody>']
 
 
@@ -973,7 +977,7 @@ class GraphBlock(Block):
                             else:
                                 html.append(values)
 
-                html.append('</tbody></table>')
+                html.append('</tbody></table></div></div>')
                 html_text = "\n".join(html)
                 
                 if len(scenario_keys[scenario]) == 0:
@@ -1007,9 +1011,11 @@ class GraphBlock(Block):
         gp_file = open(graph_path + ".gpt", "w")
         gp_file.write(code.format(graph_hash=graph_hash, line_colors=line_colors, num_cols=len(columns), col=columns, val=values, series=series, font_path=settings.GRAPH_FONT_PATH))
         gp_file.close()
-        subprocess.call([settings.GNUPLOT_EXECUTABLE, gp_file.name], cwd=settings.GRAPH_CACHE_DIR)
+        process = subprocess.Popen([settings.GNUPLOT_EXECUTABLE, gp_file.name], cwd=settings.GRAPH_CACHE_DIR, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        (stdout, stderr) = process.communicate()
         os.system("ps2pdf -dEPSCrop " + graph_path + ".wide.eps " + graph_path + ".wide.pdf")
         os.system("ps2pdf -dEPSCrop " + graph_path + ".eps " + graph_path + ".pdf")
+        return stdout + stderr
     
     def generateStyles(self, columns):
         styles = []

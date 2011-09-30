@@ -54,10 +54,10 @@ def pipeline(request, pipeline):
     except LogTabulateStarted as e:
         return HttpResponse(json.dumps({'tabulating': True, 'log': e.log, 'pid': e.pid, 'index': e.index, 'total': e.length}))
     except PipelineBlockException as e:
-        output = '<div class="exception"><h1>Exception in executing block ' + str(e.block + 1) + '</h1>' + e.msg + '<div class="foldable"><h1>Traceback<a href="" class="toggle">[show]</a></h1><div class="foldable-content hidden"><pre>' + e.traceback + '</pre></div></div>'
+        output = '<div class="exception"><h1>Exception in executing block ' + str(e.block + 1) + '</h1>' + e.msg + '<div class="foldable"><h1>Traceback<button class="foldable-toggle-show pipeline-button">Show</button></h1><div class="foldable-content hidden"><pre>' + e.traceback + '</pre></div></div>'
         return HttpResponse(json.dumps({'error': True, 'index': e.block, 'html': output, 'rows': 1}))
     except PipelineLoadException as e:
-        output = '<div class="exception"><h1>Exception in loading data</h1>' + e.msg + '<div class="foldable"><h1>Traceback<a href="" class="toggle">[show]</a></h1><div class="foldable-content hidden"><pre>' + e.traceback + '</pre></div></div>'
+        output = '<div class="exception"><h1>Exception in loading data</h1>' + e.msg + '<div class="foldable"><h1>Traceback<button class="foldable-toggle-show pipeline-button">Show</button></h1><div class="foldable-content hidden"><pre>' + e.traceback + '</pre></div></div>'
         return HttpResponse(json.dumps({'error': True, 'html': output, 'rows': 1}))
     except PipelineError as e:
         if isinstance(e.block, str):
@@ -102,7 +102,7 @@ def pipeline(request, pipeline):
             titles.sort()
             for title in titles:
                 output += '<div class="foldable"><h1>' + title + ' (block ' + str(i) + ')</h1>' + graph_set[title] + '</div>'
-        output += '<div class="foldable"><h1>Table</h1>' + dt.renderToTable() + '</div>'
+        output += '<div class="foldable"><h1>Table<button class="foldable-toggle-show pipeline-button">Show</button></h1><div class="foldable-content hidden">' + dt.renderToTable() + '</div></div>'
     else:
         output += dt.renderToTable()
 

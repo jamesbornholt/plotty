@@ -86,6 +86,14 @@ div {
 input:disabled {
     opacity: 0.3;
 }
+.foldable-toggle-show {
+    float: right;
+    background-image: url('book_open.png');
+}
+.foldable-toggle-hide {
+    float: right;
+    background-image: url('book.png');
+}
 
 #popup-graph-save-go {
     background-image: url('chart_line_add.png');
