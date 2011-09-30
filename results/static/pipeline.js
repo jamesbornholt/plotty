@@ -2779,6 +2779,11 @@ var Pipeline = {
             }
             return false;
         });
+        $(window).resize(function() {
+            $(".graph-table").each(function(i, g) {
+                $(g).data('reformat')(g);
+            });
+        });
 
         // Hook the hashchange event for history nav. Based on
         // http://www.bcherry.net/static/lib/js/jquery.pathchange.js
@@ -3076,8 +3081,6 @@ var Pipeline = {
                 var graphs = $('.graph-table', output);
 
                 var graphCount = 0;
-                jQuery.each(data.graphs, function(i, gb) { jQuery.each(gb, function(i, g) { graphCount++; }); });
-                var perRow = graphCount > 4 ? 3 : (graphCount > 1 ? 2 : 1);
                 var row_count = 0;
 
                 jQuery.each(data.graphs, function(i, gb) {
@@ -3094,54 +3097,56 @@ var Pipeline = {
                         // table
                         html += Utilities.makeFoldable('Data', g.table, false);
                         graphs.append('<div class="table-cell" style="position:relative;float:left;">' + Utilities.makeFoldable(g.title, html, true, true) + '</div><span class="table-break"></span>');
+                        graphCount++;
                     });
                 });
-                perRow=2;
                 graphs.append('<br style="clear:both;"/>');
+
+                var reformatGraphs = function(graphs) {
+                    var perRow = Math.min(graphCount, Math.floor(output.width() / 400));
+                    var cellWidth = Math.floor(100*(1/perRow)) + '%';
+                    var cell_count = 0;
+                    $(".table-cell", graphs).each(function(i, tc) {
+                        var tb = $(tc).next();
+                        var zoom = $(".foldable-toggle-zoom", tc);
+                        if (perRow > 1) {
+                            zoom.show();
+                        } else {
+                            zoom.hide();
+                        }
+                        var breakafter = (++cell_count) % perRow == 0;
+                        if ($(tc).data('zoomed')) {
+                            if ($(tc).prev(".table-cell").length > 0) {
+                                tc.prev().html('<br style="clear:both;"/>');
+                            }
+                            $(tc).css('width', '100%');
+                            breakafter = true;
+                            cell_count = 0;
+                        } else {
+                            $(tc).css('width', cellWidth);
+                        }
+                        if (breakafter) {
+                            $(tb).html('<br style="clear:both;"/>');
+                        } else {
+                            $(tb).html('');
+                        }
+                    });
+                    $(".table-break", graphs).last().html('<br style="clear:both;"/>');
+                };
+                graphs.data('reformat', reformatGraphs);
 
                 $(".foldable-toggle-zoom", graphs).click(function() {
                     var tc = $(this).parents(".table-cell").eq(0);
                     var zoomed = $(tc).data('zoomed');
-                    if (zoomed) {
-                        var tcbefore = $(tc).prev(".table-cell");
-                        if (tcbefore.length > 0 && !tcbefore.data('breakafter')) {
-                            tc.prev().html('');
-                        }
-                        if (!tc.data('breakafter')) {
-                            tc.next().html('');
-                        }
-                        tc.css('width', tc.data('normalwidth'));
-                    } else {
-                        tc.prev().html('<br style="clear:both;"/>');
-                        tc.next().html('<br style="clear:both;"/>');
-                        tc.css('width', '100%');
-                    }
                     $(tc).data('zoomed', !zoomed)
-                });
-
-
-                var cellWidth = Math.floor(100*(1/perRow)) + '%';
-                $(".table-cell", graphs).each(function(i, tc) {
-                    var tb = $(tc).next();
-                    var zoom = $(".foldable-toggle-zoom", tc);
-                    if (perRow > 1) {
-                        zoom.show();
-                    } else {
-                        zoom.hide();
-                    }
-                    $(tc).css('width', cellWidth);
-                    var breakafter = (i+1) % perRow == 0;
-                    $(tc).data('breakafter', breakafter);
-                    $(tc).data('zoomed', false);
-                    $(tc).data('normalwidth', cellWidth);
-                    if (breakafter) {
-                        $(tb).html('<br style="clear:both;"/>');
-                    } else {
-                        $(tb).html('');
+                    reformatGraphs(graphs,perRow);
+                    if ($(tc).prev().html() == '') {
+                        $(document).scrollTop($(tc).offset().top);
                     }
                 });
-                $(".table-break", graphs).last().html('<br style="clear:both;"/>');
+
                  
+                reformatGraphs(graphs);
                 output.append(Utilities.makeFoldable('Table', data.table_html, graphCount > 0, false));
                 output.append(data.warn_html);
                 if ( data.rows > Pipeline.constants.MAX_TABLE_ROWS_AUTO_RENDER && !data.graph) {

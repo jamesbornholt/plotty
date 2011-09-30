@@ -86,6 +86,10 @@ div {
 input:disabled {
     opacity: 0.3;
 }
+.foldable-toggle-zoom {
+    float: right;
+    background-image: url('zoom.png');
+}
 .foldable-toggle-show {
     float: right;
     background-image: url('book_open.png');
