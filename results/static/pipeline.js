@@ -3139,7 +3139,7 @@ var Pipeline = {
                     var tc = $(this).parents(".table-cell").eq(0);
                     var zoomed = $(tc).data('zoomed');
                     $(tc).data('zoomed', !zoomed)
-                    reformatGraphs(graphs,perRow);
+                    reformatGraphs(graphs);
                     if ($(tc).prev().html() == '') {
                         $(document).scrollTop($(tc).offset().top);
                     }
