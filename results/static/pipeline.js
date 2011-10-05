@@ -447,8 +447,8 @@ var Blocks = {
             var removeClosure = function(row) {
                 thisBlock.removeFilter.call(thisBlock, row); 
             };
-            var addClosure = function() {
-                thisBlock.filters.push({scenario: -1, is: 1, value: -1});
+            var addClosure = function(row, i) {
+                thisBlock.filters.splice(i, 0, {scenario: -1, is: 1, value: -1});
                 thisBlock.loadState();
             };
             
@@ -850,8 +850,8 @@ var Blocks = {
             var removeClosure = function(row) {
                 thisBlock.removeNormaliser.call(thisBlock, row); 
             };
-            var addClosure = function() {
-                thisBlock.normaliser.push({scenario: -1, value: -1});
+            var addClosure = function(row, i) {
+                thisBlock.normaliser.splice(i, 0, {scenario: -1, value: -1});
                 thisBlock.loadState();
             };
             
@@ -1268,9 +1268,9 @@ var Blocks = {
                     }
                 }
             };
-            var addClosure = function(row) {
+            var addClosure = function(row, i) {
                 Utilities.updateSelect($('.select-graph-value', row), thisBlock.valueColumnsCache, thisBlock.valueColumnsCache, true);
-                thisBlock.values.push(-1);
+                thisBlock.values.splice(i, 0, -1);
             };
             
             // Create the option table
@@ -1592,8 +1592,8 @@ var Blocks = {
             var removeClosure = function(row) {
                 thisBlock.removeFilter.call(thisBlock, row); 
             };
-            var addClosure = function() {
-                thisBlock.filters.push({column: -1, is: 1, lowerbound: '-inf', upperbound: '+inf'});
+            var addClosure = function(row, i) {
+                thisBlock.filters.splice(i, 0, {column: -1, is: 1, lowerbound: '-inf', upperbound: '+inf'});
                 thisBlock.loadState();
             };
             
@@ -1820,8 +1820,8 @@ var Blocks = {
             var removeClosure = function(row) {
                 thisBlock.removeColumn.call(thisBlock, row); 
             };
-            var addClosure = function() {
-                thisBlock.columns.push(-1);
+            var addClosure = function(row, i) {
+                thisBlock.columns.splice(i, 0, -1);
                 thisBlock.loadState();
             };
             
@@ -2074,7 +2074,7 @@ var Blocks = {
                 }
             });
             $('.text-format-color', popup).attr('disabled', 'disabled');
-            var addClosure = function(row) {
+            var addClosure = function(row, i) {
                 $('.text-format-value', row).val('');
                 $('.text-format-display', row).val('');
                 $('.text-format-group', row).val('');
@@ -2367,7 +2367,8 @@ var OptionsTable = Base.extend({
         }
         // Hook elements on the table
         this.element.delegate(".add-row", "click", {table: this}, function(e) {
-            e.data.table._addBlockTableRow.call(e.data.table);
+            var row = $(this).parents("tr").eq(0);
+            e.data.table._addBlockTableRow.call(e.data.table, row);
         });
         this.element.delegate(".remove-row", "click", {table: this}, function(e) {
             // Strange IE bug where disabled buttons still fire click events 
@@ -2413,7 +2414,6 @@ var OptionsTable = Base.extend({
         var rows = $('tr', this.element).not('.header');
         if ( rows.length > 1 ) {
             $('.remove-row', rows).removeAttr('disabled');
-            $('.add-row', rows).hide();
         }
         else {
             $('.remove-row', rows).attr('disabled', 'disabled');
@@ -2424,19 +2424,20 @@ var OptionsTable = Base.extend({
     /**
      * Add a new row to a table of option rows
      */
-    _addBlockTableRow: function() {
+    _addBlockTableRow: function(row) {
         var newRow = $('tr', this.element).not('.header').eq(0).clone();
 
         this.numRows += 1;
 
         this._clearSelects(newRow);
 
-        this.element.append(newRow);
+        row.after(newRow);
 
         this._updateAddRemoveButtons();
 
         if ( this.addCallback !== null ) {
-            this.addCallback.call(this, newRow);
+            var insertAt = row.prevAll("tr").not('.header').length + 1;
+            this.addCallback.call(this, newRow, insertAt);
         }
     },
     
