@@ -878,6 +878,11 @@ class GraphBlock(Block):
                     # Generate a hash for this graph
                     graph_hash = str(abs(hash(self.cache_key_base + value_key + scenario)))
                     graph_path = os.path.join(settings.GRAPH_CACHE_DIR, graph_hash)
+
+                    for e in os.listdir(settings.GRAPH_CACHE_DIR):
+                        if e.startswith(graph_hash):
+                            graph_file = os.path.join(settings.GRAPH_CACHE_DIR, e)
+                            os.unlink(graph_file)
                 
                     # If the csv doesn't exist or is out of date (the data_table has
                     # logs newer than it), replot the data
@@ -889,7 +894,7 @@ class GraphBlock(Block):
                     csv_file.write(csv)
                     csv_file.close()
    
-                    plot_output = self.produceGraph(graph_hash, graph_path, code, column_keys, [value_key])
+                    (plot_output, suffixes) = self.produceGraph(graph_hash, graph_path, code, column_keys, [value_key])
                 
                     # Render the HTML!
                     table_html = self.renderPivotHTML(pivot_table, column_keys, row_keys, graph_hash, aggregates)
@@ -898,7 +903,7 @@ class GraphBlock(Block):
                     if len(scenario_keys[scenario]) > 0:
                         title += " [" + ', '.join([present_scenario(k) + ' = ' + present_scenario(scenario_keys[scenario][k]) for k in scenario_keys[scenario].keys()]) + "]"
                 
-                    graphs.append({'title': title, 'hash': graph_hash, 'table': table_html, 'output': plot_output, 'suffixes': ['csv','gpt','svg','pdf','wide.pdf']})
+                    graphs.append({'title': title, 'hash': graph_hash, 'table': table_html, 'output': plot_output, 'suffixes': suffixes})
             
             return graphs
         else:
@@ -910,9 +915,14 @@ class GraphBlock(Block):
             for (scenario, rows) in sets.iteritems():
                 # get the subset of rows we want
                 
-                    # Generate a hash for this graph
+                # Generate a hash for this graph
                 graph_hash = str(abs(hash(self.cache_key_base + scenario)))
                 graph_path = os.path.join(settings.GRAPH_CACHE_DIR, graph_hash)
+
+                for e in os.listdir(settings.GRAPH_CACHE_DIR):
+                    if e.startswith(graph_hash):
+                        graph_file = os.path.join(settings.GRAPH_CACHE_DIR, e)
+                        os.unlink(graph_file)
                 
                 grouping = self.series_key != None
                 group_values = set() if grouping else set(["all"])
@@ -953,7 +963,7 @@ class GraphBlock(Block):
                 csv_file.close()
 
                 # Plot the graph
-                plot_output = self.produceGraph(graph_hash, graph_path, code, bound_value, bound_value, group_values)
+                (plot_output, suffixes) = self.produceGraph(graph_hash, graph_path, code, bound_value, bound_value, group_values)
             
                 html = ['<table><thead><tr>' + ('<th>' + series_title + '</th>' if grouping else '') + ''.join(['<th>' + v + '</th>' for v in bound_value]) + '</tr></thead><tbody>']
 
@@ -975,7 +985,7 @@ class GraphBlock(Block):
                 else:
                     title = ', '.join([present_scenario(k) + ' = ' + present_scenario(scenario_keys[scenario][k]) for k in scenario_keys[scenario].keys()])
                 
-                graphs.append({'title': title, 'hash': graph_hash, 'table': table_html, 'output': plot_output, 'suffixes': ['csv','gpt','svg','pdf','wide.pdf']})
+                graphs.append({'title': title, 'hash': graph_hash, 'table': table_html, 'output': plot_output, 'suffixes': suffixes})
 
             return graphs
     
@@ -1003,9 +1013,20 @@ class GraphBlock(Block):
         gp_file.close()
         process = subprocess.Popen([settings.GNUPLOT_EXECUTABLE, gp_file.name], cwd=settings.GRAPH_CACHE_DIR, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         (stdout, stderr) = process.communicate()
-        os.system("ps2pdf -dEPSCrop " + graph_path + ".wide.eps " + graph_path + ".wide.pdf")
-        os.system("ps2pdf -dEPSCrop " + graph_path + ".eps " + graph_path + ".pdf")
-        return stdout + stderr
+
+        suffixes = set()
+        for s in [e.replace(graph_hash + '.','') for e in os.listdir(settings.GRAPH_CACHE_DIR) if e.startswith(graph_hash)]:
+            if s.endswith('eps'):
+                pdf = s.replace('eps','pdf')
+                suffixes.add(pdf)
+                os.system("ps2pdf -dEPSCrop -dPDFSETTINGS=/prepress " + graph_path + "." + s + " " + graph_path + "." + pdf)
+            else:
+                suffixes.add(s)
+            
+        suffixes = list(suffixes)
+        suffixes.sort()
+
+        return (stdout + stderr, suffixes)
     
     def generateStyles(self, columns):
         styles = []

@@ -3077,76 +3077,79 @@ var Pipeline = {
                 output.children().not('#loading-indicator').remove();
                 output.hide();
                 output.append(data.error_html);
-                output.append('<div width="100%" class="graph-table" style="position:relative;"></div>');//<table width="100%" class="graph-table"></table>');
+                output.append('<div width="100%" class="graph-table" style="position:relative;"></div>');
                 var graphs = $('.graph-table', output);
 
                 var graphCount = 0;
-                var row_count = 0;
 
-                jQuery.each(data.graphs, function(i, gb) {
-                    jQuery.each(gb, function(i, g) {
-                        //'title': title, 'hash': graph_hash, 'table': table_html, 'output': plot_output, 'suffixes
-                        // svg
-                        var html = '<img width="100%" src="graph/' + g.hash + '.svg"/>';
-                        // links
-                        links = jQuery.map(g.suffixes, function(s) {
-                            return '<a href="graph/' + g.hash + '.' + s + '">' + s + '</a>';
-                        }).join(" ");
-                        // error
-                        if (g.output != "") html += '<pre>' + g.output + '</pre>';
-                        // table
-                        html += Utilities.makeFoldable(links, g.table, false);
-                        graphs.append('<div class="table-cell" style="position:relative;float:left;">' + Utilities.makeFoldable(g.title, html, true, true) + '</div><span class="table-break"></span>');
-                        graphCount++;
+                if (data.graphs && data.graphs.length > 0) {
+                    var row_count = 0;
+
+                    jQuery.each(data.graphs, function(i, gb) {
+                        jQuery.each(gb, function(i, g) {
+                            //'title': title, 'hash': graph_hash, 'table': table_html, 'output': plot_output, 'suffixes
+                            // svg
+                            var html = '<img width="100%" src="graph/' + g.hash + '.svg"/>';
+                            // links
+                            links = jQuery.map(g.suffixes, function(s) {
+                                return '<a href="graph/' + g.hash + '.' + s + '">' + s + '</a>';
+                            }).join(" ");
+                            // error
+                            if (g.output != "") html += '<pre>' + g.output + '</pre>';
+                            // table
+                            html += Utilities.makeFoldable(links, g.table, false);
+                            graphs.append('<div class="table-cell" style="position:relative;float:left;">' + Utilities.makeFoldable(g.title, html, true, true) + '</div><span class="table-break"></span>');
+                            graphCount++;
+                        });
                     });
-                });
-                graphs.append('<br style="clear:both;"/>');
+                    graphs.append('<br style="clear:both;"/>');
 
-                var reformatGraphs = function(graphs) {
-                    var perRow = Math.min(graphCount, Math.floor(output.width() / 400));
-                    var cellWidth = Math.floor(100*(1/perRow)) + '%';
-                    var cell_count = 0;
-                    $(".table-cell", graphs).each(function(i, tc) {
-                        var tb = $(tc).next();
-                        var zoom = $(".foldable-toggle-zoom", tc);
-                        if (perRow > 1) {
-                            zoom.show();
-                        } else {
-                            zoom.hide();
-                        }
-                        var breakafter = (++cell_count) % perRow == 0;
-                        if ($(tc).data('zoomed')) {
-                            if ($(tc).prev(".table-cell").length > 0) {
-                                tc.prev().html('<br style="clear:both;"/>');
+                    var reformatGraphs = function(graphs) {
+                        var perRow = Math.min(graphCount, Math.floor(output.width() / 400));
+                        var cellWidth = Math.floor(100*(1/perRow)) + '%';
+                        var cell_count = 0;
+                        $(".table-cell", graphs).each(function(i, tc) {
+                            var tb = $(tc).next();
+                            var zoom = $(".foldable-toggle-zoom", tc);
+                            if (perRow > 1) {
+                                zoom.show();
+                            } else {
+                                zoom.hide();
                             }
-                            $(tc).css('width', '100%');
-                            breakafter = true;
-                            cell_count = 0;
-                        } else {
-                            $(tc).css('width', cellWidth);
-                        }
-                        if (breakafter) {
-                            $(tb).html('<br style="clear:both;"/>');
-                        } else {
-                            $(tb).html('');
+                            var breakafter = (++cell_count) % perRow == 0;
+                            if ($(tc).data('zoomed')) {
+                                if ($(tc).prev(".table-cell").length > 0) {
+                                    tc.prev().html('<br style="clear:both;"/>');
+                                }
+                                $(tc).css('width', '100%');
+                                breakafter = true;
+                                cell_count = 0;
+                            } else {
+                                $(tc).css('width', cellWidth);
+                            }
+                            if (breakafter) {
+                                $(tb).html('<br style="clear:both;"/>');
+                            } else {
+                                $(tb).html('');
+                            }
+                        });
+                        $(".table-break", graphs).last().html('<br style="clear:both;"/>');
+                    };
+                    graphs.data('reformat', reformatGraphs);
+
+                    $(".foldable-toggle-zoom", graphs).click(function() {
+                        var tc = $(this).parents(".table-cell").eq(0);
+                        var zoomed = $(tc).data('zoomed');
+                        $(tc).data('zoomed', !zoomed)
+                        reformatGraphs(graphs);
+                        if ($(tc).prev().html() == '') {
+                            $(document).scrollTop($(tc).offset().top);
                         }
                     });
-                    $(".table-break", graphs).last().html('<br style="clear:both;"/>');
-                };
-                graphs.data('reformat', reformatGraphs);
-
-                $(".foldable-toggle-zoom", graphs).click(function() {
-                    var tc = $(this).parents(".table-cell").eq(0);
-                    var zoomed = $(tc).data('zoomed');
-                    $(tc).data('zoomed', !zoomed)
-                    reformatGraphs(graphs);
-                    if ($(tc).prev().html() == '') {
-                        $(document).scrollTop($(tc).offset().top);
-                    }
-                });
 
                  
-                reformatGraphs(graphs);
+                    reformatGraphs(graphs);
+                }
                 output.append(Utilities.makeFoldable('Table', data.table_html, graphCount > 0, false));
                 output.append(data.warn_html);
                 if ( data.rows > Pipeline.constants.MAX_TABLE_ROWS_AUTO_RENDER && !data.graph) {
