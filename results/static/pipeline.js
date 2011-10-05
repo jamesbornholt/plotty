@@ -3080,11 +3080,11 @@ var Pipeline = {
                 output.append(data.error_html);
                 output.append('<div width="100%" class="graph-table" style="position:relative;"></div>');
                 var graphs = $('.graph-table', output);
-
-                var graphCount = 0;
+                var showTable = true;
 
                 if (data.graphs && data.graphs.length > 0) {
                     var row_count = 0;
+                    var graphCount = 0;
 
                     jQuery.each(data.graphs, function(i, gb) {
                         jQuery.each(gb, function(i, g) {
@@ -3148,10 +3148,10 @@ var Pipeline = {
                         }
                     });
 
-                 
+                    showTable = graphCount == 0; 
                     reformatGraphs(graphs);
                 }
-                output.append(Utilities.makeFoldable('Table', data.table_html, graphCount == 0, false));
+                output.append(Utilities.makeFoldable('Table', data.table_html, showTable, false));
                 output.append(data.warn_html);
                 if ( data.rows > Pipeline.constants.MAX_TABLE_ROWS_AUTO_RENDER && !data.graph) {
                     $('#output table, #output .foldable.table').hide();

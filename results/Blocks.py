@@ -688,24 +688,37 @@ class GraphBlock(Block):
             # If there's already a value in this cell, we have am ambiguity
             if row.scenario[column_key] in pivot_rows[row.scenario[row_key]]:
                 raise PipelineAmbiguityException('More than one value exists for the graph cell (%s=%s, %s=%s)' % (row_key, present_scenario(row.scenario[row_key]), column_key, present_scenario(row.scenario[column_key])))
+
             # Populate this cell
             pivot_rows[row.scenario[row_key]][row.scenario[column_key]] = row.values[value_key]
-            
-            # Check for new min/max and update the aggregates
-            if float(row.values[value_key]) < mins[row.scenario[column_key]]:
-                mins[row.scenario[column_key]] = float(row.values[value_key])
-            if float(row.values[value_key]) > maxs[row.scenario[column_key]]:
-                maxs[row.scenario[column_key]] = float(row.values[value_key])
-            sums[row.scenario[column_key]] += float(row.values[value_key])
-            products[row.scenario[column_key]] *= float(row.values[value_key])
-            counts[row.scenario[column_key]] += 1
         
+        incomplete_rows = []
+        for row_key in pivot_rows.keys():
+            row = pivot_rows[row_key]
+            full_row = True
+            for key in column_keys:
+                if full_row and not key in row:
+                    incomplete_rows.append(row_key)
+                    full_row = False
+            if full_row:
+                for key in column_keys:
+                    val = float(row[key])
+                    # Check for new min/max and update the aggregates
+                    if val < mins[key]:
+                        mins[key] = val
+                    if val > maxs[key]:
+                        maxs[key] = val 
+                    sums[key] += val
+                    products[key] *= val
+                    counts[key] += 1
+
         aggregates = {
             'min': mins,
             'max': maxs,
             'mean': {},
             'geomean': {}
         }
+
         for key in column_keys:
             if counts[key] > 0:
                 aggregates['mean'][key] = sums[key] / counts[key]
@@ -713,8 +726,8 @@ class GraphBlock(Block):
             else:
                 aggregates['mean'][key] = 0
                 aggregates['geomean'][key] = 1
-        
-        return pivot_rows, aggregates, column_keys
+
+        return pivot_rows, aggregates, column_keys, incomplete_rows
 
     def group(self, table, include_all, bound_scenario, bound_value):
         """ Split the rows in the datatable into groups based on the
@@ -743,7 +756,7 @@ class GraphBlock(Block):
         
         return sets, scenario_keys
 
-    def renderPivotCSV(self, table, column_keys, row_keys, aggregates=None):
+    def renderPivotCSV(self, table, column_keys, row_keys, aggregates, incomplete_rows):
         output = []
         # Build the header row
         line = '"type","","",'
@@ -756,7 +769,8 @@ class GraphBlock(Block):
         
         # Build the rows
         for row in row_keys:
-            line = '"data","","' + present_scenario_csv(row) + '",'
+            mark_incomplete = 'miss' if row in incomplete_rows else 'full' 
+            line = '"data","' + mark_incomplete + '","' + present_scenario_csv(row) + '",'
             for col in column_keys:
                 if col in table[row]:
                     val = table[row][col]
@@ -776,7 +790,7 @@ class GraphBlock(Block):
 
         if aggregates:
             for agg in ['min', 'max', 'mean', 'geomean']:
-                line = '"agg","","' + agg + '",'
+                line = '"agg","full","' + agg + '",'
                 for col in column_keys:
                     if col in aggregates[agg]:
                         # gnuplot expects non-empty data, with error cols containing the absolute val
@@ -790,7 +804,7 @@ class GraphBlock(Block):
         
         return "\n".join(output)
 
-    def renderPivotHTML(self, pivot_table, column_keys, row_keys, graph_hash, aggregates=None):
+    def renderPivotHTML(self, pivot_table, column_keys, row_keys, graph_hash, aggregates, incomplete_rows):
         #output  = '<object width=100% data="graph/' + graph_hash + '.svg" type="image/svg+xml"></object>'
         #output += '<p>Download: '
         #output += '<a href="graph/' + graph_hash + '.csv">csv</a> '
@@ -866,7 +880,7 @@ class GraphBlock(Block):
 
                 for (scenario, rows) in sets.iteritems():
                     # Pivot the data
-                    pivot_table, aggregates, column_keys = self.pivot(rows, self.pivot_key, self.series_key, value_key)
+                    pivot_table, aggregates, column_keys, incomplete_rows = self.pivot(rows, self.pivot_key, self.series_key, value_key)
 
 
                     # Sort the column and keys so they show nicely in the graph
@@ -889,7 +903,7 @@ class GraphBlock(Block):
                     logging.debug("Regenerating graph %s" % graph_path)
 
                     # Render the CSV
-                    csv = self.renderPivotCSV(pivot_table, column_keys, row_keys, aggregates)
+                    csv = self.renderPivotCSV(pivot_table, column_keys, row_keys, aggregates, incomplete_rows)
                     csv_file = open(graph_path + '.csv', "w")
                     csv_file.write(csv)
                     csv_file.close()
@@ -897,7 +911,7 @@ class GraphBlock(Block):
                     (plot_output, suffixes) = self.produceGraph(graph_hash, graph_path, code, column_keys, [value_key])
                 
                     # Render the HTML!
-                    table_html = self.renderPivotHTML(pivot_table, column_keys, row_keys, graph_hash, aggregates)
+                    table_html = self.renderPivotHTML(pivot_table, column_keys, row_keys, graph_hash, aggregates, incomplete_rows)
                 
                     title = present_scenario(value_key)
                     if len(scenario_keys[scenario]) > 0:
@@ -1031,9 +1045,16 @@ class GraphBlock(Block):
     def generateStyles(self, columns):
         styles = []
         index = 1
+
+        def halve(color):
+            r, g, b = [int(p, 16) for p in (color[1:3], color[3:5], color[5:7])]
+            r, g, b = [c + ((256 - c) / 2) for c in (r,g,b)]
+            return '#%02x%02x%02x' % (r,g,b)
+
         for c in columns:
             if isinstance(c, ScenarioValue) and c.color:
                 styles.append("set style line " + str(index) + " linecolor rgb '" + c.color + "'\n")
+                styles.append("set style line " + str(index + 100) + " linecolor rgb '" + halve(c.color) + "'\n")
             index += 1
-        return " ".join(styles)
+        return "".join(styles)
 
