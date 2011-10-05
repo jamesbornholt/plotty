@@ -3150,7 +3150,7 @@ var Pipeline = {
                  
                     reformatGraphs(graphs);
                 }
-                output.append(Utilities.makeFoldable('Table', data.table_html, graphCount > 0, false));
+                output.append(Utilities.makeFoldable('Table', data.table_html, graphCount == 0, false));
                 output.append(data.warn_html);
                 if ( data.rows > Pipeline.constants.MAX_TABLE_ROWS_AUTO_RENDER && !data.graph) {
                     $('#output table, #output .foldable.table').hide();
