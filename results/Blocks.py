@@ -801,7 +801,7 @@ class GraphBlock(Block):
         #output += '</p>'
         #output += ('<pre>' + plot_output + '</pre>' if not str.strip(plot_output) == '' else '')
         #output += '<div class="foldable"><h1>Traceback<button class="foldable-toggle-show pipeline-button">Show</button></h1><div class="foldable-content hidden">'
-        output += '<table><thead><tr><th></th>'
+        output = '<table><thead><tr><th></th>'
         for key in column_keys:
             output += '<th>' + present_scenario(key) + '</th>'
         output += '</tr></thead><tbody>'
