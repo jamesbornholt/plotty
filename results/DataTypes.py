@@ -480,48 +480,48 @@ class DataAggregate:
             DataAggregates) should be handled by the appropriate operator
             overload below.
         """
-        valSum = 0.0
-        valProduct = 1.0
-        valSquareSum = 0.0
         valMin = float('+inf')
         valMax = float('-inf')
-        
+        valMean = 0.0
+        valM2 = 0.0
+        valLogSum = 0.0
+        n = 0
+
+        allow_cis = len(self._values) > 1
+
         for val in self._values:
             # We can also aggregate sets of DataAggregates
             if isinstance(val, DataAggregate):
                 val = val.value()
-            valSum += val
-            valProduct *= val
-            valSquareSum += val**2
+                allow_cis = False
+            n += 1
+            delta = val - valMean
+            valMean += delta/n
+            valM2 += delta * (val - valMean)
             if val < valMin:
                 valMin = val
             if val > valMax:
                 valMax = val
+            valLogSum += math.log(val)
 
         self._min = valMin
         self._max = valMax
         if self.type == 'geomean':
-            self._value = math.pow(valProduct, 1.0/len(self._values))
-        elif self.type == 'mean':
-            self._value = valSum / len(self._values)
-        
-        # Confidence intervals/stdev/etc only make sense for more than one value
-        if len(self._values) > 1:
-            # http://en.wikipedia.org/wiki/Computational_formula_for_the_variance
-            # s^2 = (n/n-1)( (1/n)(sum[x_i^2]) - x_bar^2 )
-            #     = (1/n-1)(sum[x_i^2]) - (n/n-1)(x_bar^2 )
-            #     = (1/n-1)( sum[x_i^2] - n(sum[x]/n)^2 )
-            #     = (1/n-1)( sum[x_i^2] - (sum[x]^2 / n) )
-            #     = (1/n-1)( valSquareSum - (valSum * valSum / n) )
-            n = len(self._values)
-            self._stdev = math.sqrt( (1.0/(n-1)) * ( valSquareSum - (valSum * valSum / n) ) )
-
-            ciDelta = stats.t.isf((1 - settings.CONFIDENCE_LEVEL) / 2, n-1) * self._stdev / math.sqrt(n)
-            self._ciUp = self._value + ciDelta
-            self._ciDown = self._value - ciDelta
-        else:
+            self._value = math.exp(valLogSum / n)
             self._stdev = 0
             self._ciUp = self._ciDown = self._value
+        elif self.type == 'mean':
+            self._value = valMean
+        
+            if allow_cis:
+                self._stdev = math.sqrt(valM2 / (n - 1))
+    
+                ciDelta = stats.t.isf((1 - settings.CONFIDENCE_LEVEL) / 2, n-1) * self._stdev / math.sqrt(n)
+                self._ciUp = self._value + ciDelta
+                self._ciDown = self._value - ciDelta
+            else:
+                self._stdev = 0
+                self._ciUp = self._ciDown = self._value
         
         self._isValid = True
 
