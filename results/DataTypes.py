@@ -509,7 +509,7 @@ class DataAggregate:
         if self.type == 'geomean':
             self._value = math.exp(valLogSum / n)
             self._stdev = 0
-            self._ciUp = self._ciDown = self._value
+            self._ciUp = self._ciDown = float('nan')
         elif self.type == 'mean':
             self._value = valMean
         
@@ -521,7 +521,7 @@ class DataAggregate:
                 self._ciDown = self._value - ciDelta
             else:
                 self._stdev = 0
-                self._ciUp = self._ciDown = self._value
+                self._ciUp = self._ciDown = float('nan')
         
         self._isValid = True
 
