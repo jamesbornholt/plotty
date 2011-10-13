@@ -2972,6 +2972,8 @@ var Pipeline = {
         $(block).before(addBlock);
     },
     
+    refreshCount: 0,
+
     /**
      * Try to refresh the pipeline by cascading down the blocks and building
      * the encoded string.
@@ -2982,6 +2984,8 @@ var Pipeline = {
     refresh: function() {
         var encoded = [Pipeline.encodeHeader()];
         var error = false;
+        var myRefresh = ++Pipeline.refreshCount;
+
         // Reset any incomplete block styles
         $('.incomplete-block').removeClass('incomplete-block');
         if ( Pipeline.selectedLogFiles.length == 0 ) {
@@ -3034,6 +3038,7 @@ var Pipeline = {
                 });
                 return;
             }
+            if (myRefresh != Pipeline.refreshCount) return;
 
             if (!(data.block_scenarios === undefined)) {
                 Pipeline.scenarioColumnsCache = Utilities.keys(data.block_scenarios[0]);
