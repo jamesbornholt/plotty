@@ -150,7 +150,8 @@
             <div class="pipeline-content">
                 <span class="pipeline-header"><img src="static/sum.png"/> Aggregate</span>
                 <span class="pipeline-header-right"><input type="image" class="insert-button" src="static/brick_add.png"/><input type="image" class="remove-button" src="static/cross.png"/></span>
-                <select class="select-aggregate-type" name="aggregate[0]['type']"><option value="1">mean</option><option value="2">geomean</option></select> over <select class="select-aggregate-column scenario-column" name="aggregate[0]['col']"><option></option></select>
+                <select class="select-aggregate-type" name="aggregate[0]['type']"><option value="1">mean</option><option value="2">geomean</option></select> over <select class="select-aggregate-column scenario-column" name="aggregate[0]['col']"><option></option></select><br />
+                <label><input type="checkbox" value="1" class="aggregate-add-column" /> Add as new value column</label>
             </div>
             <div class="pipeline-footer"></div>
         </div>

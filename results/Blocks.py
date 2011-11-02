@@ -337,6 +337,10 @@ class AggregateBlock(Block):
         '2': 'geomean'
     }
 
+    FLAGS = {
+        'ADD_SEPARATE_COLUMN': 1 << 0
+    }
+
     def __init__(self):
         super(AggregateBlock, self).__init__()
         self.column = None
@@ -381,32 +385,45 @@ class AggregateBlock(Block):
                 continue
             schash = scenario_hash(scenario=row.scenario)
             if schash in basescenarios:
-              raise PipelineAmbiguityException("Base scenario not unique %s" % row.scenario)
+                raise PipelineAmbiguityException("Base scenario not unique %s" % row.scenario)
             else:
-              basescenarios.add(schash)
+                basescenarios.add(schash)
             schash = scenario_hash(scenario=row.scenario, exclude=[self.column])
             if schash not in scenarios:
                 groups[schash] = []
                 scenarios[schash] = copy.copy(row.scenario)
-                del scenarios[schash][self.column]
+                if not self.getFlag(AggregateBlock.FLAGS['ADD_SEPARATE_COLUMN']):
+                    del scenarios[schash][self.column]
             groups[schash].append(row.values)
         
         # Create the DataAggregate objects for each group
-        new_rows = []
-        for (scenario, rows) in groups.items():
-            aggregates = {}
+        aggregates = {}
+        for sc,rows in groups.items():
+            vals = {}
             for row in rows:
-                for (key, val) in row.items():
-                    if key not in aggregates:
-                        aggregates[key] = DataAggregate(AggregateBlock.TYPE[self.type])
-                    aggregates[key].append(val)
-            new_row = DataRow()
-            new_row.scenario = scenarios[scenario]
-            new_row.values = aggregates
-            new_rows.append(new_row)
+                for key,val in row.items():
+                    if key not in vals:
+                        vals[key] = DataAggregate(AggregateBlock.TYPE[self.type])
+                    vals[key].append(val)
+            aggregates[sc] = vals
+
+        # Update the rows
+        if self.getFlag(AggregateBlock.FLAGS['ADD_SEPARATE_COLUMN']):
+            for row in data_table:
+                schash = scenario_hash(scenario=row.scenario, exclude=[self.column])
+                if schash in aggregates:
+                    for key,agg in aggregates[schash].items():
+                        row.values[key + "." + self.TYPE[self.type]] = agg
+        else:
+            new_rows = []
+            for sc,rows in groups.items():
+                new_row = DataRow()
+                new_row.scenario = scenarios[sc]
+                new_row.values = aggregates[sc]
+                new_rows.append(new_row)
+            data_table.rows = new_rows
+            data_table.scenarioColumns -= set([self.column])
         
-        data_table.rows = new_rows
-        data_table.scenarioColumns -= set([self.column])
         if ignored_rows > 0:
             logging.info('Aggregate block (%s over %s) ignored %d rows.', self.type, self.column, ignored_rows)
 

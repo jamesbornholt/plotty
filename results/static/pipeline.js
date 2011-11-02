@@ -660,6 +660,13 @@ var Blocks = {
             MEAN: 1,
             GEOMEAN: 2
         },
+
+        /**
+         * The available flags for this block
+         */
+        FLAGS: {
+            ADD_SEPARATE_COLUMN: 1 << 0
+        },
         
         /**
          ** Object fields
@@ -689,7 +696,7 @@ var Blocks = {
             
             // Hook the dropdowns
             var thisBlock = this;
-            $(this.element).delegate('select', 'change', function() {
+            $(this.element).delegate('select, input', 'change', function() {
                 thisBlock.readState();
                 Pipeline.refresh();
             });
@@ -732,9 +739,11 @@ var Blocks = {
         readState: function() {
             var typeSelect = $('.select-aggregate-type', this.element);
             var scenarioSelect = $('.select-aggregate-column', this.element);
-            
+            var sepColCheck = $('input.aggregate-add-column', this.element);
+
             this.type = typeSelect.val();
             this.column = scenarioSelect.val();
+            this.setFlag(this.FLAGS.ADD_SEPARATE_COLUMN, sepColCheck.is(':checked'));
         },
         
         /**
@@ -749,6 +758,13 @@ var Blocks = {
             
             typeSelect.val(this.type);
             scenarioSelect.val(this.column);
+
+            if ( this.getFlag(this.FLAGS.ADD_SEPARATE_COLUMN) ) {
+                $('input.aggregate-add-column', this.element).attr('checked', 'checked');
+            }
+            else {
+                $('input.aggregate-add-column', this.element).removeAttr('checked');
+            }
         },
        
         refreshColumns: function() {
