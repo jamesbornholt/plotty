@@ -495,14 +495,16 @@ class DataAggregate:
                 val = val.value()
                 allow_cis = False
             n += 1
-            delta = val - valMean
-            valMean += delta/n
-            valM2 += delta * (val - valMean)
             if val < valMin:
                 valMin = val
             if val > valMax:
                 valMax = val
-            valLogSum += math.log(val)
+            if self.type == 'geomean':
+                valLogSum += math.log(val)
+            else:
+                delta = val - valMean
+                valMean += delta/n
+                valM2 += delta * (val - valMean)
 
         self._min = valMin
         self._max = valMax
