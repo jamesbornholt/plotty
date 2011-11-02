@@ -3154,7 +3154,6 @@ var Pipeline = {
                     });
 
                     showTable = graphCount == 0; 
-                    reformatGraphs(graphs);
                 }
                 output.append(Utilities.makeFoldable('Table', data.table_html, showTable, false));
                 output.append(data.warn_html);
@@ -3170,6 +3169,9 @@ var Pipeline = {
                     Utilities.outputTableSort();
                 }
                 output.show();
+                if (data.graphs && data.graphs.length > 0) {
+                    reformatGraphs(graphs);
+                }
     
                 $('.error-block').removeClass('error-block');
                 $('.ambiguous-block').removeClass('ambiguous-block');
