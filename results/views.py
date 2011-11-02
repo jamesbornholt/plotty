@@ -78,7 +78,9 @@ def shorturl(request, url):
         shorturlentry = ShortURL.objects.get(url=url)
     except ShortURL.DoesNotExist:
         return HttpResponse("Invalid short URL")
-    return HttpResponsePermanentRedirect('../#' + shorturlentry.encoded)
+    #return HttpResponsePermanentRedirect('../#' + shorturlentry.encoded)
+    # IE doesn't like 301/2 redirects with very long URLs :(
+    return HttpResponse('<meta http-equiv="refresh" content="0; url=../#' + shorturlentry.encoded + '">')
 
 def debug_clear_cache(request):
     path = os.path.join(settings.CACHE_ROOT, 'log/')
