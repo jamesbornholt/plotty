@@ -74,9 +74,8 @@ class FormatBlock(Block):
     def apply(self, data_table, messages):
         """ Apply this block to the given data table.
         """
-        if self.column == -2:
-            raise PipelineError("Feature not yet supported");
-        if self.column != -2 and not self.column in data_table.scenarioColumns:
+        isValues = self.column == '<VALUES>'
+        if not isValues or self.column in data_table.scenarioColumns:
             raise PipelineError("Invalid column specified for block")
 
         styles = {}
@@ -89,12 +88,19 @@ class FormatBlock(Block):
             raise PipelineError("Error loading style")
 
         missing = set()
-        for row in data_table:
-            val = row.scenario[self.column]
-            if val not in styles:
-                missing.add(val)
-            else:
-                row.scenario[self.column] = styles[val]
+        if isValues:
+            for valCol in data_table.valueColumns:
+                if valCol not in styles:
+                    missing.add(valCol)
+                else:
+                    data_table.valueColumnsDisplay[valCol] = styles[valCol];
+        else:
+            for row in data_table:
+                val = row.scenario[self.column]
+                if val not in styles:
+                    missing.add(val)
+                else:
+                    row.scenario[self.column] = styles[val]
 
         for m in missing:
             messages.warn("Format missing entry for %s value %s" % (self.column, m))
@@ -927,12 +933,12 @@ class GraphBlock(Block):
                     csv_file.write(csv)
                     csv_file.close()
    
-                    (plot_output, suffixes) = self.produceGraph(graph_hash, graph_path, code, column_keys, [value_key])
+                    (plot_output, suffixes) = self.produceGraph(graph_hash, graph_path, code, column_keys)
                 
                     # Render the HTML!
                     table_html = self.renderPivotHTML(pivot_table, column_keys, row_keys, graph_hash, aggregates, incomplete_rows)
                 
-                    title = present_scenario(value_key)
+                    title = data_table.valueColumnsDisplay[value_key]
                     if len(scenario_keys[scenario]) > 0:
                         title += " [" + ', '.join([present_scenario(k) + ' = ' + present_scenario(scenario_keys[scenario][k]) for k in scenario_keys[scenario].keys()]) + "]"
                 
@@ -963,7 +969,10 @@ class GraphBlock(Block):
 
                 logging.debug("Regenerating graph %s" % graph_path)
 
-                csv = ['"type","","' + series_title + '",' + ",".join(['"%(v)s","%(v)s.%(ci)d%%-CI.lowerBound","%(v)s.%(ci)d%%-CI.upperBound"' % {'v': v, 'ci': settings.CONFIDENCE_LEVEL * 100} for v in bound_value])]
+                def d(v):
+                    return present_scenario_csv(data_table.valueColumnsDisplay[v])
+
+                csv = ['"type","","' + series_title + '",' + ",".join(['"%(v)s","%(v)s.%(ci)d%%-CI.lowerBound","%(v)s.%(ci)d%%-CI.upperBound"' % {'v': d(v), 'ci': settings.CONFIDENCE_LEVEL * 100} for v in bound_value])]
 
                 data = {}
                 if not grouping:
@@ -996,9 +1005,10 @@ class GraphBlock(Block):
                 csv_file.close()
 
                 # Plot the graph
-                (plot_output, suffixes) = self.produceGraph(graph_hash, graph_path, code, bound_value, bound_value, group_values)
+                display_value = [data_table.valueColumnsDisplay[x] for x in bound_value]
+                (plot_output, suffixes) = self.produceGraph(graph_hash, graph_path, code, display_value, group_values)
             
-                html = ['<table><thead><tr>' + ('<th>' + series_title + '</th>' if grouping else '') + ''.join(['<th>' + v + '</th>' for v in bound_value]) + '</tr></thead><tbody>']
+                html = ['<table><thead><tr>' + ('<th>' + series_title + '</th>' if grouping else '') + ''.join(['<th>' + d(v) + '</th>' for v in bound_value]) + '</tr></thead><tbody>']
 
 
                 for key in data_keys:
@@ -1031,18 +1041,23 @@ class GraphBlock(Block):
 
         return True
 
-    def produceGraph(self, graph_hash, graph_path, code, column_keys, value_keys, series_values=[]):
+    def produceGraph(self, graph_hash, graph_path, code, column_keys, series_values=[]):
 
         if not self.sanitizeCode(code):
             raise PipelineError("Plotting code failed security check")
 
         line_colors = self.generateStyles(column_keys)
         columns = [present_scenario_csv(c) for c in column_keys]
-        values = [present_scenario_csv(v) for v in value_keys]
         series = " ".join([present_scenario_csv(s) for s in series_values])
 
         gp_file = open(graph_path + ".gpt", "w")
-        gp_file.write(code.format(graph_hash=graph_hash, line_colors=line_colors, num_cols=len(columns), col=columns, val=values, series=series, font_path=settings.GRAPH_FONT_PATH))
+        try:
+            formatted_code = code.format(graph_hash=graph_hash, line_colors=line_colors, num_cols=len(columns), col=columns, series=series, font_path=settings.GRAPH_FONT_PATH)
+        except IndexError as ie:
+            raise PipelineError("Error formatting gnuplot: index out of range (maybe not enough columns)")
+        except KeyError as ke:
+            raise PipelineError("Error formatting gnuplot: could not find " + str(ke) + " (maybe invalid gnuplot text)")
+        gp_file.write(formatted_code)
         gp_file.close()
         process = subprocess.Popen([settings.GNUPLOT_EXECUTABLE, gp_file.name], cwd=settings.GRAPH_CACHE_DIR, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         (stdout, stderr) = process.communicate()

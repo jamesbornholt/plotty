@@ -178,6 +178,7 @@ var Utilities = {
      * Return the set of keys from a map.
      */
     keys: function(theArray) {
+        if (typeof theArray === 'undefined') return theArray;
         var keys = $.map(theArray, function(value, key) { return key; });
         keys.sort();
         return keys;
@@ -2170,7 +2171,7 @@ var Blocks = {
             var scenarioSelect = $('.select-format-column', this.element);
             var keySelect = $('.select-format-key', this.element);
 
-            Utilities.updateSelect(scenarioSelect, ['[Value Columns]'].concat(this.scenarioColumnsCache), ['-2'].concat(this.scenarioColumnsCache));
+            Utilities.updateSelect(scenarioSelect, ['[Value Columns]'].concat(this.scenarioColumnsCache), ['<VALUES>'].concat(this.scenarioColumnsCache));
             Utilities.updateSelect(keySelect, Pipeline.formatStyleKeysCache, Pipeline.formatStyleKeysCache);
 
             scenarioSelect.val(this.column);
@@ -2178,7 +2179,7 @@ var Blocks = {
         },
         
         refreshColumns: function() {
-            if ( (this.column != -1 && this.column != -2) && jQuery.inArray(this.column, this.scenarioColumnsCache) == -1 ) {
+            if ( (this.column != -1 && this.column != '<VALUES>') && jQuery.inArray(this.column, this.scenarioColumnsCache) == -1 ) {
                 this.column = -1;
                 return true;
             }
@@ -2208,7 +2209,7 @@ var Blocks = {
 
             // Suggested values
             var suggestions =  'None (no column selected)';
-            if (col == -2) {
+            if (col == '<VALUES>') {
                 suggestions = this.valueColumnsCache.join(' ');
             } else if (col != -1) {
                 suggestions = this.scenarioValuesCache[col].join(' ');

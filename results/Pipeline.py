@@ -148,6 +148,9 @@ class Pipeline(object):
         def extractDisplay(vs):
             return dict([(key, list([v.display if isinstance(v, ScenarioValue) else str(v) for v in vs[key]])) for key in vs.iterkeys()])
 
+        def extractValueDisplay(display, cols):
+            return [v.display if isinstance(v, ScenarioValue) else str(v) for v in [display[x] for x in cols]]
+
         # Preempt the pipeline if necessary
         if self.cacheAvailableIndex > -1:
             cacheValue = cache.get(self.cacheAvailableKey)
@@ -169,7 +172,7 @@ class Pipeline(object):
                 selectedScenarioCols = list(self.dataTable.scenarioColumns)
                 selectedScenarioCols.sort()
                 block_values.append(selectedValueCols)
-                block_values_display.append(selectedValueCols)
+                block_values_display.append(extractValueDisplay(self.dataTable.valueColumnsDisplay, selectedValueCols))
                 scenarioValues = self.dataTable.getScenarioValues()
                 block_scenario_values.append(extractValues(scenarioValues))
                 block_scenario_display.append(extractDisplay(scenarioValues))
@@ -182,7 +185,7 @@ class Pipeline(object):
                 selectedScenarioCols = list(self.dataTable.scenarioColumns)
                 selectedScenarioCols.sort()
                 block_values.append(selectedValueCols)
-                block_values_display.append(selectedValueCols)
+                block_values_display.append(extractValueDisplay(self.dataTable.valueColumnsDisplay, selectedValueCols))
                 scenarioValues = self.dataTable.getScenarioValues()
                 block_scenario_values.append(extractValues(scenarioValues))
                 block_scenario_display.append(extractDisplay(scenarioValues))
@@ -259,7 +262,7 @@ class Pipeline(object):
             selectedScenarioCols = list(self.dataTable.scenarioColumns)
             selectedScenarioCols.sort()
             block_values.append(selectedValueCols)
-            block_values_display.append(selectedValueCols)
+            block_values_display.append(extractValueDisplay(self.dataTable.valueColumnsDisplay, selectedValueCols))
             scenarioValues = self.dataTable.getScenarioValues()
             block_scenario_values.append(extractValues(scenarioValues))
             block_scenario_display.append(extractDisplay(scenarioValues))

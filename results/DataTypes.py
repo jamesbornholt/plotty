@@ -89,6 +89,7 @@ class DataTable:
             self.messages.extend(messages)
             if self.lastModified < lastModified: 
                 self.lastModified = lastModified
+        self.valueColumnsDisplay = dict([(x,x) for x in self.valueColumns])
 
     def __iter__(self):
         """ Lets us do `for row in datatable` instead of 
@@ -283,6 +284,7 @@ class DataTable:
                     del row.values[key]
 
         self.valueColumns = vals
+        self.valueColumnsDisplay = dict([(x,self.valueColumnsDisplay[x]) for x in vals])
 
     def selectScenarioColumns(self, cols):
         """ Selects the specified set of scenario columns and throws away all
