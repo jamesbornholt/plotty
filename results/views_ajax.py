@@ -32,7 +32,6 @@ def pipeline(request, pipeline):
             error_output = '<div class="exception"><h1>Error in block ' + str(e.block + 1) + '</h1>' + e.msg + '</div>'
             ambiguity = False
             index = e.block
-            raise e
             dt = e.dataTable
             msg = e.messages
             graph_outputs = e.graph_outputs
