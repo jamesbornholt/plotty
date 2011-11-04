@@ -14,7 +14,7 @@ def pipeline(request, pipeline):
     try:
         p = Pipeline(web_client=True)
         p.decode(pipeline)
-        (block_scenario_values, block_scenario_display, block_values, graph_outputs) = p.apply()
+        (block_scenario_values, block_scenario_display, block_values, block_values_display, graph_outputs) = p.apply()
 
     except LogTabulateStarted as e:
         return HttpResponse(json.dumps({'tabulating': True, 'log': e.log, 'pid': e.pid, 'index': e.index, 'total': e.length}))
@@ -36,6 +36,7 @@ def pipeline(request, pipeline):
             msg = e.messages
             graph_outputs = e.graph_outputs
             block_values = e.block_values
+            block_values_display = e.block_values_display
             block_scenario_values = e.block_scenario_values
             block_scenario_display = e.block_scenario_display
     except PipelineAmbiguityException as e:
@@ -51,6 +52,7 @@ def pipeline(request, pipeline):
             msg = e.messages
             graph_outputs = e.graph_outputs
             block_values = e.block_values
+            block_values_display = e.block_values_display
             block_scenario_values = e.block_scenario_values
             block_scenario_display = e.block_scenario_display
     else:
@@ -88,6 +90,7 @@ def pipeline(request, pipeline):
                                     'block_scenarios': block_scenario_values,
                                     'block_scenario_display': block_scenario_display,
                                     'block_values': block_values,
+                                    'block_values_display': block_values_display,
                                     'format_styles': format_styles,
                                     'graph_formats': graph_formats,
                                     'error_html': error_output,

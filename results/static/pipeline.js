@@ -235,6 +235,10 @@ var Block = Base.extend({
      */
     valueColumnsCache: {},
 
+    /**
+     * Caches the display values for value columns.
+     */
+    valueDisplayCache: {},
 
     /**
      * The HTML div that contains this block.
@@ -1103,7 +1107,7 @@ var Blocks = {
                 }
             });
 
-            Utilities.updateSelect($('.select-normalise-normaliser-value', this.element), this.valueColumnsCache, this.valueColumnsCache);
+            Utilities.updateSelect($('.select-normalise-normaliser-value', this.element), this.valueDisplayCache, this.valueColumnsCache);
             if ( this.getFlag(this.FLAGS.NORMALISE_TO_SPECIFIC_VALUE) ) {
                 $('.select-normalise-normaliser-value', this.element).val(this.normaliserValue).show();
             }
@@ -1285,7 +1289,7 @@ var Blocks = {
                 }
             };
             var addClosure = function(row, i) {
-                Utilities.updateSelect($('.select-graph-value', row), thisBlock.valueColumnsCache, thisBlock.valueColumnsCache, true);
+                Utilities.updateSelect($('.select-graph-value', row), thisBlock.valueDisplayCache, thisBlock.valueColumnsCache, true);
                 thisBlock.values.splice(i, 0, -1);
             };
             
@@ -1433,9 +1437,8 @@ var Blocks = {
             // Update the value columns
             this.valueOptionsTable.reset();
             var thisBlock = this;
-            var valueColumns = thisBlock.valueColumnsCache;
             $('.select-graph-value', this.element).each(function() {
-                Utilities.updateSelect(this, valueColumns, valueColumns, true);
+                Utilities.updateSelect(this, thisBlock.valueDisplayCache, thisBlock.valueColumnsCache, true);
             });
             jQuery.each(this.values, function(i, value) {
                 var row = thisBlock.valueOptionsTable.addRow();
@@ -1700,7 +1703,7 @@ var Blocks = {
             
             // Update the value columns
             $('.select-valuefilter-column', this.element).each(function() {
-                Utilities.updateSelect(this, thisBlock.valueColumnsCache, thisBlock.valueColumnsCache, true);
+                Utilities.updateSelect(this, thisBlock.valueDisplayCache, thisBlock.valueColumnsCache, true);
             });
 
             // Create new rows for each filter
@@ -2573,6 +2576,11 @@ var Pipeline = {
     scenarioDisplayCache: {},
 
     /**
+     * Caches the display values for available value columnss;
+     */
+    valueDisplayCache: [],
+
+    /**
      * Caches the available value columnss;
      */
     valueColumnsCache: [],
@@ -2596,6 +2604,11 @@ var Pipeline = {
      * Caches the available value columnss;
      */
     newBlockValueColumnsCache: [],
+
+    /**
+     * Caches the display values for available value columnss;
+     */
+    newBlockValueDisplayCache: [],
 
     /**
      * The currently selected log files.
@@ -2906,12 +2919,14 @@ var Pipeline = {
         var sc;
         var sd;
         var sv;
+        var vd;
         if ( typeof indexBlock === 'undefined' ) {
             index = Pipeline.blocks.length;
             sc = Pipeline.newBlockScenarioColumnsCache;
             sv = Pipeline.newBlockScenarioValuesCache;
             sd = Pipeline.newBlockScenarioDisplayCache;
             vc = Pipeline.newBlockValueColumnsCache;
+            vd = Pipeline.newBlockValueDisplayCache;
         }
         else {
             index = $(indexBlock).prevAll('.pipeline-block').length;
@@ -2919,12 +2934,14 @@ var Pipeline = {
             sv = index == 0 ? Pipeline.scenarioValuesCache : Pipeline.blocks[index-1].scenarioValuesCache;
             sd = index == 0 ? Pipeline.scenarioDisplayCache : Pipeline.blocks[index-1].scenarioDisplayCache;
             vc = index == 0 ? Pipeline.valueColumnsCache : Pipeline.blocks[index-1].valueColumnsCache;
+            vd = index == 0 ? Pipeline.valueDisplayCache : Pipeline.blocks[index-1].valueDisplayCache;
         }
         var b =  new block(index);
         b.scenarioColumnsCache = sc;
         b.scenarioValuesCache = sv;
         b.scenarioDisplayCache = sd;
         b.valueColumnsCache = vc;
+        b.valueDisplayCache = vd;
         Pipeline.blocks.splice(index, 0, b);
         Pipeline.refresh();
     },
@@ -3067,6 +3084,7 @@ var Pipeline = {
                 Pipeline.scenarioValuesCache = data.block_scenarios[0];
                 Pipeline.scenarioDisplayCache = data.block_scenario_display[0];
                 Pipeline.valueColumnsCache = data.block_values[0];
+                Pipeline.valueDisplayCache = data.block_values_display[0];
                 Pipeline.formatStyleKeysCache = data.format_styles;
                 Pipeline.graphFormatKeysCache = Utilities.keys(data.graph_formats);
                 Pipeline.graphFormatsCache = data.graph_formats;
@@ -3078,6 +3096,7 @@ var Pipeline = {
                     Pipeline.blocks[i].scenarioValuesCache = data.block_scenarios[i+1];
                     Pipeline.blocks[i].scenarioDisplayCache = data.block_scenario_display[i+1];
                     Pipeline.blocks[i].valueColumnsCache = data.block_values[i+1];
+                    Pipeline.blocks[i].valueDisplayCache = data.block_values_display[i+1];
 
                     if (!block.errorBeforeBlock) {
                         changed |= Pipeline.blocks[i].refreshColumns();
@@ -3216,6 +3235,7 @@ var Pipeline = {
                     Pipeline.newBlockScenarioValuesCache = data.block_scenarios[Pipeline.blocks.length+1];
                     Pipeline.newBlockScenarioDisplayCache = data.block_scenario_display[Pipeline.blocks.length+1];
                     Pipeline.newBlockValueColumnsCache = data.block_values[Pipeline.blocks.length+1];
+                    Pipeline.newBlockValueDisplayCache = data.block_values_display[Pipeline.blocks.length+1];
                 }
             } 
         });
