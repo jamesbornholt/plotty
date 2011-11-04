@@ -74,7 +74,9 @@ class FormatBlock(Block):
     def apply(self, data_table, messages):
         """ Apply this block to the given data table.
         """
-        if not self.column in data_table.scenarioColumns:
+        if self.column == -2:
+            raise PipelineError("Feature not yet supported");
+        if self.column != -2 and not self.column in data_table.scenarioColumns:
             raise PipelineError("Invalid column specified for block")
 
         styles = {}

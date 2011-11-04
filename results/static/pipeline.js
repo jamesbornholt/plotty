@@ -2166,8 +2166,8 @@ var Blocks = {
             // columns
             var scenarioSelect = $('.select-format-column', this.element);
             var keySelect = $('.select-format-key', this.element);
-            
-            Utilities.updateSelect(scenarioSelect, this.scenarioColumnsCache, this.scenarioColumnsCache);
+
+            Utilities.updateSelect(scenarioSelect, ['[Value Columns]'].concat(this.scenarioColumnsCache), ['-2'].concat(this.scenarioColumnsCache));
             Utilities.updateSelect(keySelect, Pipeline.formatStyleKeysCache, Pipeline.formatStyleKeysCache);
 
             scenarioSelect.val(this.column);
@@ -2175,7 +2175,7 @@ var Blocks = {
         },
         
         refreshColumns: function() {
-            if ( this.column != -1 && jQuery.inArray(this.column, this.scenarioColumnsCache) == -1 ) {
+            if ( (this.column != -1 && this.column != -2) && jQuery.inArray(this.column, this.scenarioColumnsCache) == -1 ) {
                 this.column = -1;
                 return true;
             }
@@ -2204,7 +2204,13 @@ var Blocks = {
             $('.text-format-key', popup).val(key);
 
             // Suggested values
-            $('.format-suggestions', popup).text(col == -1 ? 'None (no column selected)' : this.scenarioValuesCache[col].join(' '));
+            var suggestions =  'None (no column selected)';
+            if (col == -2) {
+                suggestions = this.valueColumnsCache.join(' ');
+            } else if (col != -1) {
+                suggestions = this.scenarioValuesCache[col].join(' ');
+            }
+            $('.format-suggestions', popup).text(suggestions);
 
             // Rows
             // Get rid of all but the first row
