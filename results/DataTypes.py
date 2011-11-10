@@ -284,7 +284,7 @@ class DataTable:
                     del row.values[key]
 
         self.valueColumns = vals
-        self.valueColumnsDisplay = dict([(x,self.valueColumnsDisplay[x]) for x in vals])
+        self.valueColumnsDisplay = dict([(x,x if x not in self.valueColumnsDisplay else self.valueColumnsDisplay[x]) for x in vals])
 
     def selectScenarioColumns(self, cols):
         """ Selects the specified set of scenario columns and throws away all
