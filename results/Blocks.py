@@ -75,7 +75,7 @@ class FormatBlock(Block):
         """ Apply this block to the given data table.
         """
         isValues = self.column == '<VALUES>'
-        if not isValues or self.column in data_table.scenarioColumns:
+        if not (isValues or self.column in data_table.scenarioColumns):
             raise PipelineError("Invalid column specified for block")
 
         styles = {}
@@ -652,6 +652,11 @@ class NormaliseBlock(Block):
 
 class GraphBlock(Block):
     """ Generate graphs based on the data in the DataTable. """
+
+    FLAGS = {
+        'DO_NOT_GROUP_BY_UNBOUND_SCENARIO_COLUMNS': 1 << 0
+    }
+
     
     def __init__(self):
         super(GraphBlock, self).__init__()
@@ -754,15 +759,12 @@ class GraphBlock(Block):
 
         return pivot_rows, aggregates, column_keys, incomplete_rows
 
-    def group(self, table, include_all, bound_scenario, bound_value):
+    def group(self, table, bound_scenario, bound_value):
         """ Split the rows in the datatable into groups based on the
             cross-product of their scenario columns (apart from those already bound) """
         
         sets = {}
         scenario_keys = {}
-        if include_all:
-            sets['all'] = []
-            scenario_keys['all'] = []
         
         for row in table:
             if all([v in row.values for v in bound_value]):
@@ -776,8 +778,6 @@ class GraphBlock(Block):
                                 del scenario[s]
                         scenario_keys[schash] = scenario
                     sets[schash].append(row)
-                if include_all:
-                    sets['all'].append(row)
         
         return sets, scenario_keys
 
@@ -901,7 +901,7 @@ class GraphBlock(Block):
             # this is a pivot table
             graphs = []
             for value_key in bound_value: 
-                sets, scenario_keys = self.group(data_table, False, [self.series_key, self.pivot_key], [value_key])
+                sets, scenario_keys = self.group(data_table, [self.series_key, self.pivot_key], [value_key])
 
                 for (scenario, rows) in sets.iteritems():
                     # Pivot the data
@@ -949,7 +949,11 @@ class GraphBlock(Block):
             graphs = []
             bound_scenario = [self.series_key] if self.series_key else []
             # this is straight copy, single scenario, multiple values, each row must have all requested values
-            sets, scenario_keys = self.group(data_table, True, bound_scenario, bound_value)
+            if self.getFlag(GraphBlock.FLAGS['DO_NOT_GROUP_BY_UNBOUND_SCENARIO_COLUMNS']):
+                sets = {'all': data_table.rows}
+                scenario_keys = {'all': []}
+            else:
+                sets, scenario_keys = self.group(data_table, bound_scenario, bound_value)
 
             for (scenario, rows) in sets.iteritems():
                 # get the subset of rows we want

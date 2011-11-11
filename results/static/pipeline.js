@@ -766,8 +766,7 @@ var Blocks = {
 
             if ( this.getFlag(this.FLAGS.ADD_SEPARATE_COLUMN) ) {
                 $('input.aggregate-add-column', this.element).attr('checked', 'checked');
-            }
-            else {
+            } else {
                 $('input.aggregate-add-column', this.element).removeAttr('checked');
             }
         },
@@ -1236,6 +1235,13 @@ var Blocks = {
         ID: 4,
 
         /**
+         * The available flags for this block
+         */
+        FLAGS: {
+            DO_NOT_GROUP_BY_UNBOUND_SCENARIO_COLUMNS: 1 << 0
+        },
+        
+        /**
          ** Object fields
          **/
         
@@ -1416,6 +1422,8 @@ var Blocks = {
             $('.select-graph-value', this.element).each(function(i, row) {
                 thisBlock.values.push($(row).val());
             });
+            var groupCheck = $('input.group-by-unbound-scenario', this.element);
+            this.setFlag(this.FLAGS.DO_NOT_GROUP_BY_UNBOUND_SCENARIO_COLUMNS, !groupCheck.attr("checked"));
         },
         
         /**
@@ -1446,6 +1454,11 @@ var Blocks = {
                 var valueSelect = $('.select-graph-value', row);
                 valueSelect.val(value);
             });
+            if ( this.getFlag(this.FLAGS.DO_NOT_GROUP_BY_UNBOUND_SCENARIO_COLUMNS) ) {
+                $('input.group-by-unbound-scenario', this.element).removeAttr('checked');
+            } else {
+                $('input.group-by-unbound-scenario', this.element).attr('checked', 'checked');
+            }
         },
         
         refreshColumns: function() {
@@ -3122,9 +3135,8 @@ var Pipeline = {
 
             if (!error) {
                 var output = $('#output');
-                output.children().not('#loading-indicator').remove();
                 output.hide();
-                output.append(data.error_html);
+                output.html(data.error_html);
                 output.append('<div width="100%" class="graph-table" style="position:relative;"></div>');
                 var graphs = $('.graph-table', output);
                 var showTable = true;
@@ -3132,12 +3144,13 @@ var Pipeline = {
                 if (data.graphs && data.graphs.length > 0) {
                     var row_count = 0;
                     var graphCount = 0;
+                    var timestamp = new Date().getTime();
 
                     jQuery.each(data.graphs, function(i, gb) {
                         jQuery.each(gb, function(i, g) {
                             //'title': title, 'hash': graph_hash, 'table': table_html, 'output': plot_output, 'suffixes
                             // svg
-                            var html = '<img width="100%" src="graph/' + g.hash + '.svg"/>';
+                            var html = '<img width="100%" src="graph/' + g.hash + '.svg?' + timestamp + '"/>';
                             // links
                             links = jQuery.map(g.suffixes, function(s) {
                                 return '<a href="graph/' + g.hash + '.' + s + '">' + s + '</a>';
@@ -3194,7 +3207,6 @@ var Pipeline = {
                             $(document).scrollTop($(tc).offset().top);
                         }
                     });
-
                     showTable = graphCount == 0; 
                 }
                 output.append(Utilities.makeFoldable('Table', data.table_html, showTable, false));
