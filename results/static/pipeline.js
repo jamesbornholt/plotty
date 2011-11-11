@@ -781,7 +781,7 @@ var Blocks = {
  
         complete: function() {
             return this.column != -1;
-        },
+        }
     }),
     
     
@@ -1190,27 +1190,15 @@ var Blocks = {
          * @param row Element The table row to be removed
          */
         removeNormaliser: function(row) {
-            var value = this.normaliserValue(row);
+            var scenario  = $('.select-normalise-column', row).val();
+            var value     = $('.select-normalise-value', row).val();
 
             for ( var i = 0; i < this.normaliser.length; i++ ) {
-                if ( this.normaliser[i].scenario == value.scenario && this.normaliser[i].value == value.value ) {
+                if ( this.normaliser[i].scenario == scenario && this.normaliser[i].value == value ) {
                     this.normaliser.splice(i, 1);
                     break;
                 }
             }
-        },
-        
-        /**
-         * Turns a <tr> in the OptionsTable into a dictionary
-         *
-         * @param row Element The table row to gather values from
-         * @return dict|boolean The values in the given row, or false if
-         *   the selection is incomplete
-         */
-        normaliserValue: function(row) {
-            var scenario = $('.select-normalise-column', row).val();
-            var value    = $('.select-normalise-value', row).val();
-            return {scenario: scenario, value: value};
         }
     }),
     
@@ -1700,7 +1688,7 @@ var Blocks = {
                     column: columnSelect.val(),
                     is: isSelect.val(),
                     lowerbound: lowerboundText.val(),
-                    upperbound: upperboundText.val(),
+                    upperbound: upperboundText.val()
                 });
             });
         },
@@ -2006,7 +1994,7 @@ var Blocks = {
                     break;
                 }
             }
-        },
+        }
     }),
     
     /**
@@ -2344,7 +2332,7 @@ var Blocks = {
                 });
             }
         }
-    }),
+    })
 };
 
 
@@ -2570,7 +2558,7 @@ var Pipeline = {
             4: Blocks.GraphBlock,
             5: Blocks.ValueFilterBlock,
             6: Blocks.CompositeScenarioBlock,
-            7: Blocks.FormatBlock,
+            7: Blocks.FormatBlock
         }
     },
     
