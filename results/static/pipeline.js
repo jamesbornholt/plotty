@@ -3204,7 +3204,7 @@ var Pipeline = {
                         $(tc).data('zoomed', !zoomed)
                         reformatGraphs(graphs);
                         if ($(tc).prev().html() == '') {
-                            $(document).scrollTop($(tc).offset().top);
+                            $('#output').scrollTop($(tc).offset().top);
                         }
                     });
                     showTable = graphCount == 0; 

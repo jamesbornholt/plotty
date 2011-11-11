@@ -6,6 +6,7 @@ body {
     height: 100%;
     padding: 0;
     margin: 0;
+    overflow: hidden;
 }
 
 input {
@@ -275,9 +276,12 @@ input:disabled {
 }
 
 #output {
-    margin-left: 440px;
-    padding: 20px 20px;
-    padding-top: 60px;
+    position: absolute;
+    left:460px;
+    right:0px;
+    top:60px;
+    bottom:0px;
+    overflow: auto;
 }
 
 .ci {
