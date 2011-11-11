@@ -1021,8 +1021,8 @@ class GraphBlock(Block):
                         if grouping:
                             if self.series_key in row.scenario:
                                 html.append('<tr><td>' + (present_scenario(row.scenario[self.series_key])) + '</td>' + values + '</tr>')
-                            else:
-                                html.append(values)
+                        else:
+                            html.append('<tr>' + values + '</tr>')
 
                 html.append('</tbody></table>')
                 table_html = "\n".join(html)
