@@ -2875,6 +2875,10 @@ var Pipeline = {
             Pipeline.purgeCache();
         });
 
+        $("#pipeline-reinstall-defaults").click(function() {
+            Pipeline.reinstallDefaults();
+        });
+
         $("#pipeline-delete-go").click(function() {
             var select = $('#pipeline-load-select');
             if ( select.val() != '-1' ) {
@@ -3555,6 +3559,23 @@ var Pipeline = {
     },
 
     /**
+     * Reinstall the default formats
+     */
+    reinstallDefaults: function() {
+        var confirmed = confirm("Reinstalling default formats will overwrite any existing formats with the same name as a default format.\n\nClick OK to proceed.");
+        if ( confirmed ) {
+            Pipeline.ajax.reinstallDefaults(function(data, textStatus, xhr) {
+                if ( data.error ) {
+                    alert("There was an error:\n\n" + data.message);
+                } else {
+                    alert("Default format styles have been reinstalled.");
+                    window.location.reload();
+                }
+            });
+        }
+    },
+
+    /**
      * Save this pipeline to the server.
      */
     savePipeline: function() {
@@ -3704,6 +3725,13 @@ var Pipeline = {
          */
         purgeCache: function(callback) {
             $.post('ajax/purge-cache/', {}, callback, 'json');
+        },
+
+        /**
+         * ajax/reinstall-defaults/ reinstalls default format styles
+         */
+        reinstallDefaults: function(callback) {
+            $.getJSON('ajax/reinstall-defaults/', callback, 'json');
         },
 
         /**

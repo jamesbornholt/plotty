@@ -176,6 +176,9 @@ input:disabled {
 #pipeline-purgecache-go {
     background-image: url('bin.png');
 }
+#pipeline-reinstall-defaults {
+    background-image: url('drive_cd.png');
+}
 
 .odd {
     background: #eee;

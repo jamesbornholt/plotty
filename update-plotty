@@ -60,6 +60,7 @@ cp $PLOTTY_ROOT/app/plotty/server.wsgi $PLOTTY_ROOT/app/server.wsgi
 
 echo "---> Synchronizing database "
 (cd $PLOTTY_ROOT/app/plotty; PLOTTY_ROOT="$PLOTTY_ROOT" python manage.py syncdb) > /dev/null
+(cd $PLOTTY_ROOT/app/plotty; PLOTTY_ROOT="$PLOTTY_ROOT" python install_defaults.py) > /dev/null
 
 echo "---> Checking permissions for apache"
 chmod -R a+r $PLOTTY_ROOT

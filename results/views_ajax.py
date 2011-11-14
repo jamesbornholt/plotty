@@ -2,11 +2,12 @@ import results.PipelineEncoder
 from django.http import HttpResponse
 from django.shortcuts import render_to_response
 from django.template import RequestContext
+from django.db import transaction
 from plotty.results.DataTypes import *
 from plotty.results.Blocks import *
 from plotty.results.models import *
 from plotty.results.Pipeline import *
-from plotty import settings
+from plotty import settings, install_defaults
 import json, csv, logging, os, shutil, math
 from datetime import datetime
 
@@ -288,3 +289,12 @@ def tabulate_progress(request, pid):
         if done:
             os.remove(os.path.join(settings.CACHE_ROOT, pid + ".status"))
         return resp
+
+def reinstall_defaults(request):
+    try:
+        install_defaults.reinstall_defaults()
+    except Exception:
+        raise
+    else:
+        return HttpResponse(json.dumps({'error': False}))
+        

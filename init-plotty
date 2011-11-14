@@ -61,7 +61,11 @@ fi
 
 echo "---> Moving instance files to correct locations"
 cp $PLOTTY_ROOT/app/plotty/server.wsgi $PLOTTY_ROOT/app/server.wsgi
-cp $PLOTTY_ROOT/app/plotty/database.sqlite3.default $PLOTTY_ROOT/cache/database.sqlite3
+#cp $PLOTTY_ROOT/app/plotty/database.sqlite3.default $PLOTTY_ROOT/cache/database.sqlite3
+
+echo "---> Setting up new database"
+(cd $PLOTTY_ROOT/app/plotty; PLOTTY_ROOT="$PLOTTY_ROOT" python manage.py syncdb) > /dev/null
+(cd $PLOTTY_ROOT/app/plotty; PLOTTY_ROOT="$PLOTTY_ROOT" python install_defaults.py) > /dev/null
 
 echo "---> Fixing permissions for apache"
 chmod -R a+r $PLOTTY_ROOT
