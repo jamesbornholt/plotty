@@ -55,6 +55,7 @@ def reinstall_defaults():
             fmt, created = GraphFormat.objects.get_or_create(key=obj['fields']['key'])
             fmt.value = obj['fields']['value']
             fmt.save()
+            graph_formats[obj['pk']] = fmt
             if obj['fields']['parent']:
                 second_pass.append((fmt, obj['fields']['parent']))
         for fmt, parent in second_pass:
