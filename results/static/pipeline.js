@@ -818,7 +818,8 @@ var Blocks = {
          * The available flags for this block
          */
         FLAGS: {
-            NORMALISE_TO_SPECIFIC_VALUE: 1 << 0
+            NORMALISE_TO_SPECIFIC_VALUE: 1 << 0,
+            INVERT_RESULT: 1 << 1
         },
 
         /**
@@ -879,7 +880,7 @@ var Blocks = {
             this.optionsTable = new OptionsTable($('.pipeline-normalise-table', this.element), removeClosure, Pipeline.refresh, addClosure);
             
             // Hook the dropdowns
-            $(this.element).delegate('select, .select-normalise-group input', 'change', function() {
+            $(this.element).delegate('select, .select-normalise-group input, .normalise-invert', 'change', function() {
                 thisBlock.readState();
                 Pipeline.refresh();
             });
@@ -1046,6 +1047,8 @@ var Blocks = {
             if ( n == this.FLAGS.NORMALISE_TO_SPECIFIC_VALUE ) {
                 this.normaliserValue = $('.select-normalise-normaliser-value', this.element).val();
             }
+            var invResCheck = $('input.normalise-invert', this.element);
+            this.setFlag(this.FLAGS.INVERT_RESULT, invResCheck.is(':checked'));
         },
     
         /**
@@ -1113,6 +1116,12 @@ var Blocks = {
             }
             else {
                 $('.select-normalise-normaliser-value', this.element).hide();
+            }
+
+            if ( this.getFlag(this.FLAGS.INVERT_RESULT) ) {
+                $('input.normalise-invert', this.element).attr('checked', 'checked');
+            } else {
+                $('input.normalise-invert', this.element).removeAttr('checked');
             }
             
         },

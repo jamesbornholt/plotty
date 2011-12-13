@@ -457,7 +457,8 @@ class NormaliseBlock(Block):
     }
 
     FLAGS = {
-        'NORMALISE_TO_SPECIFIC_VALUE': 1 << 0
+        'NORMALISE_TO_SPECIFIC_VALUE': 1 << 0,
+        'INVERT_RESULT': 1 << 1 
     }
 
     def __init__(self):
@@ -568,7 +569,10 @@ class NormaliseBlock(Block):
                     else:
                         normaliserValueKey = key
                     if normaliserValueKey in normalisers[scenario]:
-                        row.values[key] = row.values[key] / normalisers[scenario][normaliserValueKey]
+                        if self.getFlag(NormaliseBlock.FLAGS['INVERT_RESULT']):
+                            row.values[key] = normalisers[scenario][normaliserValueKey] / row.values[key]
+                        else:
+                            row.values[key] = row.values[key] / normalisers[scenario][normaliserValueKey]
                     else:
                         del row.values[key]
                         
@@ -901,7 +905,11 @@ class GraphBlock(Block):
             # this is a pivot table
             graphs = []
             for value_key in bound_value: 
-                sets, scenario_keys = self.group(data_table, [self.series_key, self.pivot_key], [value_key])
+                if self.getFlag(GraphBlock.FLAGS['DO_NOT_GROUP_BY_UNBOUND_SCENARIO_COLUMNS']):
+                    sets = {'all': data_table.rows}
+                    scenario_keys = {'all': []}
+                else:
+                    sets, scenario_keys = self.group(data_table, [self.series_key, self.pivot_key], [value_key])
 
                 for (scenario, rows) in sets.iteritems():
                     # Pivot the data
