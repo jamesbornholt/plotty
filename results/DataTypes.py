@@ -435,7 +435,7 @@ class ScenarioValue:
         return str(self.display)
 
     def __float__(self):
-        return float(self.value)
+        raise PipelineError("ScenarioValue shouldn't treated as a float")
 
     def __ne__(self, other):
         return not (self == other)
@@ -446,7 +446,7 @@ class ScenarioValue:
         return self.value == other
 
     def __cmp__(self, other):
-        raise PipelineError("str on SV");
+        raise PipelineError("ScenarioValues shouldn't be compared directly")
 
     def __hash__(self):
         return hash(self.value)
