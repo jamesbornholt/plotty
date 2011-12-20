@@ -432,11 +432,9 @@ class ScenarioValue:
         return not self.index is None
 
     def __str__(self):
-        raise Error("str on SV");
         return str(self.display)
 
     def __float__(self):
-        raise Error("str on SV");
         return float(self.value)
 
     def __ne__(self, other):
@@ -448,7 +446,7 @@ class ScenarioValue:
         return self.value == other
 
     def __cmp__(self, other):
-        raise Error("str on SV");
+        raise PipelineError("str on SV");
 
     def __hash__(self):
         return hash(self.value)
