@@ -24,7 +24,17 @@ else
     USER=$3
 fi
 
-USER_HOME="/home/$USER"
+USER_HOME=""
+OS=`uname -s`
+if [ "$OS" -eq "Linux" ]; then
+    USER_HOME="/home/$USER"
+elif [ "$OS" -eq "Darwin" ]; then
+    USER_HOME="/Users/$USER"
+else
+   echo "ERROR: unknown OS $OS"
+   exit
+fi
+
 if [[ !( -d $USER_HOME ) ]]; then
     echo "ERROR: invalid user $USER"
     exit
