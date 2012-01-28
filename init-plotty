@@ -26,7 +26,7 @@ fi
 
 USER_HOME=""
 OS=`uname -s`
-if [ "$OS" -eq "Linux" ]; then
+if [ "$OS"=="Linux" ]; then
     USER_HOME="/home/$USER"
 elif [ "$OS" -eq "Darwin" ]; then
     USER_HOME="/Users/$USER"
