@@ -363,7 +363,7 @@ class DataTable:
             if name in values_with_ci:
                 output += '"' + name + '.' + str(settings.CONFIDENCE_LEVEL * 100) + '%-CI.lowerBound",'
                 output += '"' + name + '.' + str(settings.CONFIDENCE_LEVEL * 100) + '%-CI.upperBound",'
-        if output[-1] == ',':
+        if len(output)>0 and output[-1] == ',':
             output = output[:-1]
         output += "\r\n"
         
