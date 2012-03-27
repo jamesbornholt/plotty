@@ -876,17 +876,17 @@ class GraphBlock(Block):
 
         def sort_keys(l):
             # alphabetic, numeric, formatted
-            is_numeric = True
-            for v in l:
+            def isFloat(x):
               try:
-                n = float(v)
-              except ValueError:
-                is_numeric = False
-                break
+                x = float(x)
+                return True
+              except:
+                return False
+            is_numeric = all(map(isFloat, l))
             if is_numeric:
               return l.sort(key=float)
             l.sort(key=lambda x: None if isinstance(x, ScenarioValue) else str(x))
-            l.sort(key=lambda x: None if isinstance(x, ScenarioValue) or isinstance(x, basestring) else float(x))
+            l.sort(key=lambda x: None if isinstance(x, ScenarioValue) or not isFloat(x) else float(x))
             l.sort(key=lambda x: x.index if isinstance(x, ScenarioValue) else 'inf')
 
         # Clean up graph directory.
