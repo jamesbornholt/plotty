@@ -500,6 +500,12 @@ class DataAggregate:
             if val > valMax:
                 valMax = val
             if self.type == 'geomean':
+                if valLogSum is None:
+                    continue
+                # If any value is zero, the geomean is also zero
+                if val == 0:
+                    valLogSum = None
+                    continue
                 valLogSum += math.log(val)
             else:
                 delta = val - valMean
@@ -509,7 +515,10 @@ class DataAggregate:
         self._min = valMin
         self._max = valMax
         if self.type == 'geomean':
-            self._value = math.exp(valLogSum / n)
+            if valLogSum is not None:
+                self._value = math.exp(valLogSum / n)
+            else:
+                self._value = 0.0
             self._stdev = 0
             self._ciUp = self._ciDown = float('nan')
         elif self.type == 'mean':
