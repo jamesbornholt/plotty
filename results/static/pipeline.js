@@ -2917,6 +2917,33 @@ var Pipeline = {
             }, Pipeline.constants.DERIVED_VALUE_COLUMN_CHANGE_TIMEOUT);
         });
 
+        /*
+         * To hide left panel, tiejun
+        */
+        $('#hideLeftPanelButton').click(function() {
+            $('#pipeline').animate({width:'toggle',opacity:'toggle'}, "fast");
+            $('#showLeftPanelButton').css("display","block");
+            $('#header').css('margin-left','40px');
+            $('#output').css('left','40px');
+        });
+
+        $('#showLeftPanelButton').click(function() {
+            $('#pipeline').animate({width:'toggle', opacity:'toggle'}, "fast");
+            $('#showLeftPanelButton').css("display","none");
+            $('#header').css('margin-left','440px');
+            $('#output').css('left','460px');
+        });
+        
+        $('#showLeftPanelButton').mouseover( function() { 
+            $(this).css('opacity','0.99');
+            $(this).css('border-color', 'rgb(255,255,0) rgb(255,255,0) rgb(255,255,0) -moz-use-text-color');
+        });
+
+
+        $('#showLeftPanelButton').mouseout( function() { 
+            $(this).css('opacity','0.4');
+            $(this).css('border-color', 'rgb(230,230,230) rgb(230,230,230) rgb(230,230,230) -moz-use-text-color');
+        });
         // Trigger it once now
         Pipeline.hashChange();
     },
@@ -3773,7 +3800,9 @@ var Pipeline = {
         });
         return logs;
     }
+
 }
+
 
 Pipeline.DEBUG = ( typeof django_debug !== 'undefined' && django_debug );
 

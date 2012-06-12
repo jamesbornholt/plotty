@@ -26,9 +26,9 @@ fi
 
 USER_HOME=""
 OS=`uname -s`
-if [ "$OS"=="Linux" ]; then
+if [ "$OS" == "Linux" ]; then
     USER_HOME="/home/$USER"
-elif [ "$OS" -eq "Darwin" ]; then
+elif [ "$OS" == "Darwin" ]; then
     USER_HOME="/Users/$USER"
 else
    echo "ERROR: unknown OS $OS"
