@@ -82,11 +82,13 @@ div {
     position: fixed;
     background-color: white;
     width: 700px;
-    top: 80px;
+    top: 10px;
     left: 50%;
     margin-left: -350px;
     border: 1px solid #000033;
     box-shadow: 3px 3px 3px #8888aa;
+    overflow: auto;
+    height:90%;
 }
 
 .pipeline-button {
