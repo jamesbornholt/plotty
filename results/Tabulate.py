@@ -86,7 +86,7 @@ def extract_csv(log, csvgz_file, write_status=None):
   csv.write('key,value\n')
 
   re_timedrun = re.compile("mkdir.*timedrun")
-  re_err = re.compile('NullPointerException|JikesRVM: WARNING: Virtual processor has ignored timer interrupt|hardware trap|-- Stack --|code: -1|OutOfMemory|ArrayIndexOutOfBoundsException|FileNotFoundException|FAILED warmup|Validation FAILED')
+  re_err = re.compile('NullPointerException|JikesRVM: WARNING: Virtual processor has ignored timer interrupt|hardware trap|-- Stack --|code: -1|OutOfMemory|ArrayIndexOutOfBoundsException|FileNotFoundException|FAILED warmup|Validation FAILED|caught alarm')
   re_tabulate = re.compile("============================ Tabulate Statistics ============================")
   re_mmtkstats = re.compile("============================ MMTk Statistics Totals ============================")
   re_nonwhitespace = re.compile("\S+")
