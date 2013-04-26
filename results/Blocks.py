@@ -806,11 +806,11 @@ class GraphBlock(Block):
                     if isinstance(val, DataAggregate):
                         ciDown, ciUp = val.ci()
                         if math.isnan(ciDown):
-                            line += '%f,%f,%f,' % ((val.value(),)*3)
+                            line += '%r,%r,%r,' % ((val.value(),)*3)
                         else:
-                            line += '%f,%f,%f,' % (val.value(), ciDown, ciUp)
+                            line += '%r,%r,%r,' % (val.value(), ciDown, ciUp)
                     else:
-                        line += '%f,%f,%f,' % ((val,)*3)
+                        line += '%r,%r,%r,' % ((val,)*3)
                 else:
                     line += ',,,'
             
