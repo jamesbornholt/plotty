@@ -7,7 +7,8 @@ def scenario_hash(scenario, exclude=None, include=None):
     from plotty.results.DataTypes import ScenarioValue
     hashstr = ""
     i = 0
-    for (key,val) in scenario.items():
+    for key in sorted(scenario):
+        val = scenario[key]
         if isinstance(val, ScenarioValue):
             val = val.value
         i += 1
