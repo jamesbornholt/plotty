@@ -70,7 +70,7 @@ def pipeline(request, pipeline):
     # Messages
     msg_output = ''
     if not msg.empty():
-      msg_output = '<div class="messages"><h1>Messages</h1>'
+      msg_output = '<div class="messages">'
 
       for (t,e) in msg.warnings():
         msg_output += '<img src="static/error.png"/> <span class="message-warning-main">' + t + '</span> <span class="message-warning-extra">' + e + '</span><br/>'

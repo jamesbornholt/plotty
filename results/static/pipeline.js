@@ -1235,7 +1235,8 @@ var Blocks = {
          * The available flags for this block
          */
         FLAGS: {
-            DO_NOT_GROUP_BY_UNBOUND_SCENARIO_COLUMNS: 1 << 0
+            DO_NOT_GROUP_BY_UNBOUND_SCENARIO_COLUMNS: 1 << 0,
+            INCLUDE_INCOMPLETE_ROWS_IN_AGGREGATES: 1 << 1,
         },
         
         /**
@@ -1421,6 +1422,8 @@ var Blocks = {
             });
             var groupCheck = $('input.group-by-unbound-scenario', this.element);
             this.setFlag(this.FLAGS.DO_NOT_GROUP_BY_UNBOUND_SCENARIO_COLUMNS, !groupCheck.attr("checked"));
+            var incompCheck = $('input.include-incomplete-rows', this.element);
+            this.setFlag(this.FLAGS.INCLUDE_INCOMPLETE_ROWS_IN_AGGREGATES, incompCheck.attr("checked"));
         },
         
         /**
@@ -1455,6 +1458,11 @@ var Blocks = {
                 $('input.group-by-unbound-scenario', this.element).removeAttr('checked');
             } else {
                 $('input.group-by-unbound-scenario', this.element).attr('checked', 'checked');
+            }
+            if ( this.getFlag(this.FLAGS.INCLUDE_INCOMPLETE_ROWS_IN_AGGREGATES) ) {
+                $('input.include-incomplete-rows', this.element).attr('checked', 'checked');
+            } else {
+                $('input.include-incomplete-rows', this.element).removeAttr('checked');
             }
         },
         

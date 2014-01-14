@@ -503,30 +503,18 @@ th.headerSortDown {
 }
 
 .messages {
-    padding: 0.2em;
-    border: 1px solid #abcdef;
-    background: #D4E9FF;
-    white-space: nowrap;
-}
-.messages h1 {
-    font-size: 110%;
-    padding: 0;
-    margin: 0;
+    padding: 0.5em;
+    margin: 2px;
+    border: 1px solid #f3eb97;
+    background: #fff9bb;
+    margin-top: 1em;
 }
 
 .message-warning-main {
     font-weight: bold;
 }
 
-.message-warning-extra {
-    font-size: 50%;
-}
-
 .message-information-main {
-}
-
-.message-information-extra {
-    font-size: 50%;
 }
 
 .ambiguity {

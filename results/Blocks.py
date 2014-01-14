@@ -658,7 +658,8 @@ class GraphBlock(Block):
     """ Generate graphs based on the data in the DataTable. """
 
     FLAGS = {
-        'DO_NOT_GROUP_BY_UNBOUND_SCENARIO_COLUMNS': 1 << 0
+        'DO_NOT_GROUP_BY_UNBOUND_SCENARIO_COLUMNS': 1 << 0,
+        'INCLUDE_INCOMPLETE_ROWS_IN_AGGREGATES': 1 << 1,
     }
 
     
@@ -734,8 +735,10 @@ class GraphBlock(Block):
                 if full_row and not key in row:
                     incomplete_rows.append(row_key)
                     full_row = False
-            if full_row:
+            if full_row or self.getFlag(GraphBlock.FLAGS['INCLUDE_INCOMPLETE_ROWS_IN_AGGREGATES']):
                 for key in column_keys:
+                    if key not in row:
+                        continue
                     val = float(row[key])
                     # Check for new min/max and update the aggregates
                     if val < mins[key]:
@@ -923,7 +926,19 @@ class GraphBlock(Block):
                 for (scenario, rows) in sets.iteritems():
                     # Pivot the data
                     pivot_table, aggregates, column_keys, incomplete_rows = self.pivot(rows, self.pivot_key, self.series_key, value_key)
-
+                    if incomplete_rows and not self.getFlag(GraphBlock.FLAGS['INCLUDE_INCOMPLETE_ROWS_IN_AGGREGATES']):
+                        messages.warn("Dropped %d rows (pivot values) from ALL aggregates because "
+                            "they have missing data in at least one column: %s." % (
+                            len(incomplete_rows), ", ".join(incomplete_rows)),
+                            "Consider the 'Include incomplete rows in aggregates' option, but "
+                            "note that including these rows in some columns but not others may "
+                            "lead to a misleading comparison between means/geomeans.")
+                    elif incomplete_rows:
+                        messages.warn("Including %d rows in aggregates even though they have "
+                            "missing data from at least one column: %s." % (
+                            len(incomplete_rows), ", ".join(incomplete_rows)),
+                            "This may lead to misleading comparisons, as some columns will include "
+                            "more rows than others in their mean/geomean.")
 
                     # Sort the column and keys so they show nicely in the graph
                     row_keys = pivot_table.keys()
