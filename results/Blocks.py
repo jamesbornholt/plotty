@@ -933,14 +933,14 @@ class GraphBlock(Block):
                     if incomplete_rows and not self.getFlag(GraphBlock.FLAGS['INCLUDE_INCOMPLETE_ROWS_IN_AGGREGATES']):
                         messages.warn("Dropped %d rows (pivot values) from ALL aggregates because "
                             "they have missing data in at least one column: %s." % (
-                            len(incomplete_rows), ", ".join(incomplete_rows)),
+                            len(incomplete_rows), ", ".join(sorted(incomplete_rows))),
                             "Consider the 'Include incomplete rows in aggregates' option, but "
                             "note that including these rows in some columns but not others may "
                             "lead to a misleading comparison between means/geomeans.")
                     elif incomplete_rows:
                         messages.warn("Including %d rows in aggregates even though they have "
                             "missing data from at least one column: %s." % (
-                            len(incomplete_rows), ", ".join(incomplete_rows)),
+                            len(incomplete_rows), ", ".join(sorted(incomplete_rows))),
                             "This may lead to misleading comparisons, as some columns will include "
                             "more rows than others in their mean/geomean.")
 
