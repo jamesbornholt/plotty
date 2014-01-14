@@ -316,6 +316,13 @@ input:disabled {
     color: gray;
 }
 
+.incomplete-row {
+    color: #bbbbbb;
+}
+.incomplete-row .ci {
+    color: #bbbbbb;
+}
+
 .pipeline-derived-value-field {
     width: 250px;
 }

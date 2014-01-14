@@ -852,7 +852,11 @@ class GraphBlock(Block):
             output += '<th>' + present_scenario(key) + '</th>'
         output += '</tr></thead><tbody>'
         for row_name in row_keys:
-            output += '<tr><td>' + present_scenario(row_name) + '</td>'
+            clname = ''
+            if not self.getFlag(GraphBlock.FLAGS['INCLUDE_INCOMPLETE_ROWS_IN_AGGREGATES']):
+                if row_name in incomplete_rows:
+                    clname = ' class="incomplete-row"'
+            output += '<tr' + clname + '><td>' + present_scenario(row_name) + '</td>'
             for key in column_keys:
                 if key in pivot_table[row_name]:
                     output += '<td class="value">' + present_value(pivot_table[row_name][key]) + '</td>'
