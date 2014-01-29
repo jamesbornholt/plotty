@@ -25,16 +25,17 @@ def extract_csv(log, csvgz_file, write_status=None):
     r = r + key + ',' + str(value) + '\n'
     return r
 
-  re_filename = re.compile("^(\w+)\.(\d+)\.(\d+)\.([a-zA-Z0-9_\-\.]+)\.log\.gz$")
+  re_filename = re.compile("^(\w+)\.(\d+)\.(\d+)\.([a-zA-Z0-9_\-\.\:\,]+)\.log\.gz$")
   re_notdigit = re.compile("^[0-9]")
   re_scenario_kv = re.compile("^([^-]*)-(.*)$")
   def extract_scenario(scenario, entry):
+    entry = entry.replace(',',':');
     m = re_filename.match(entry)
     scenario["benchmark"] = m.group(1)
     scenario["hfac"] = m.group(2)
     scenario["heap"] = m.group(3)
     scenario["buildstring"] = m.group(4)
-    buildparams = scenario["buildstring"].split(".") 
+    buildparams = scenario["buildstring"].split(".")
     scenario["build"] = buildparams[0]
     for p in buildparams[1::] :
       if not re_notdigit.match(p):
@@ -107,7 +108,7 @@ def extract_csv(log, csvgz_file, write_status=None):
     e.close()
     gunzip_process.wait()
     line_count = len(lines)
-    line = 0 
+    line = 0
     while 1:
       # Read a line
 
@@ -204,7 +205,7 @@ def extract_csv(log, csvgz_file, write_status=None):
     if subentry >= 0 and error == 0:
       for r in results:
         csv.write(r)
-    progress += 2 
+    progress += 2
     if write_status != None:
       f.write(str(progress) + "\r\n")
       f.flush()
@@ -221,7 +222,7 @@ if __name__ == "__main__":
     if len(sys.argv) < 3 or len(sys.argv) > 4:
         print "Usage: python Tabulate.py log-folder csv-file [status-dir]"
         sys.exit(1)
-    
+
     print "Tabulating %s to %s (pid %d)" % (sys.argv[1], sys.argv[2], os.getpid())
     if len(sys.argv) == 3:
       extract_csv(sys.argv[1], sys.argv[2])
