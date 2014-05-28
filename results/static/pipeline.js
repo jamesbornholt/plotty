@@ -1268,6 +1268,9 @@ var Blocks = {
          */
         valueOptionsTable: null,
 
+        myPopup: null,
+        myPopupFilter: null,
+
         /**
          ** Object methods
          **/
@@ -1311,6 +1314,8 @@ var Blocks = {
 
             // Hook up the popup
             var popup = $('.popup', this.element);
+            this.myPopup = popup;
+            this.myPopupFilter =  $('.popupfilter', this.element);
             $(".text-format-key", popup).change(function() {
                 var oldVal = $(popup).data("initial_key");
                 var newVal = $(".text-format-key", popup).val();
@@ -1330,9 +1335,8 @@ var Blocks = {
                 }
             });
             $(".cancel-button", popup).click(function() {
-                $('.popup', thisBlock.element).hide();
-                $('.popupfilter', thisBlock.element).hide();
-
+                thisBlock.myPopup = thisBlock.myPopup.appendTo(thisBlock.element).hide();
+                thisBlock.myPopupFilter = thisBlock.myPopupFilter.appendTo(thisBlock.element).hide();
             });
             $('#popup-format-save-go', popup).click(function() {
                 thisBlock.popupSave();
@@ -1503,9 +1507,10 @@ var Blocks = {
         },
 
         popupOpen: function(key) {
-            var popup = $('.popup', this.element);
-            popup.show();
-            $('.popupfilter', this.element).show();
+            var popup = this.myPopup.insertBefore('#pipeline').show();
+            var filter = this.myPopupFilter.insertBefore('#pipeline').show();
+            this.myPopup = popup;
+            this.myPopupFilter = filter;
 
             key = (key == -1) ? "" : key;
             $(popup).data("initial_key", key);
@@ -1534,7 +1539,7 @@ var Blocks = {
 
         popupSave: function() {
             var thisBlock = this;
-            var popup = $('.popup', this.element)
+            var popup = this.myPopup;
             var key = $('.text-format-key', popup).val();
             if (key != '') {
                 var value =  $('.textarea-format-value', popup).val();
@@ -1543,8 +1548,8 @@ var Blocks = {
                 var thisBlock = this;
                 Pipeline.ajax.saveGraphFormat(key, parent, value, function(data) {
                     if (data.error == false) {
-                        $('.popupfilter', thisBlock.element).hide();
-                        $('.popup', thisBlock.element).hide();
+                        thisBlock.myPopup = thisBlock.myPopup.appendTo(thisBlock.element).hide();
+                        thisBlock.myPopupFilter = thisBlock.myPopupFilter.appendTo(thisBlock.element).hide();
                         thisBlock.format = key;
                         thisBlock.loadState();
                         Pipeline.refresh();
@@ -1554,14 +1559,14 @@ var Blocks = {
         },
 
         popupDelete: function() {
-            var popup = $('.popup', this.element);
+            var popup = this.myPopup;
             var thisBlock = this;
             var key = $('.text-format-key', popup).val();
             if ( key != '' ) {
                 Pipeline.ajax.deleteGraphFormat(key, function(data) {
                     if ( data.error == false ) {
-                        $('.popupfilter', thisBlock.element).hide();
-                        $('.popup', thisBlock.element).hide();
+                        thisBlock.myPopup = thisBlock.myPopup.appendTo(thisBlock.element).hide();
+                        thisBlock.myPopupFilter = thisBlock.myPopupFilter.appendTo(thisBlock.element).hide();
                         thisBlock.format = -1;
                         thisBlock.loadState();
                         Pipeline.refresh();
@@ -2057,6 +2062,9 @@ var Blocks = {
          */
         popupEntryOptionsTable: null,
 
+        myPopup: null,
+        myPopupFilter: null,
+
         /**
          ** Object methods
          **/
@@ -2081,6 +2089,8 @@ var Blocks = {
 
             // Hook up the popup
             var popup = $('.popup', this.element);
+            this.myPopup = popup;
+            this.myPopupFilter = $('.popupfilter', this.element);
             $(".text-format-key", popup).change(function() {
                 var oldVal = $(popup).data("initial_key");
                 var newVal = $(".text-format-key", popup).val();
@@ -2092,9 +2102,8 @@ var Blocks = {
             });
             bindColorPicker($('.text-format-color', popup));
             $(".cancel-button", popup).click(function() {
-                $('.popup', thisBlock.element).hide();
-                $('.popupfilter', thisBlock.element).hide();
-
+                thisBlock.myPopup = thisBlock.myPopup.appendTo(thisBlock.element).hide();
+                thisBlock.myPopupFilter = thisBlock.myPopupFilter.appendTo(thisBlock.element).hide();
             });
             $(".check-group", popup).change(function() {
                 if ($(".check-group", popup).attr("checked")) {
@@ -2215,9 +2224,10 @@ var Blocks = {
         },
         
         popupOpen: function(col, key) {
-            var popup = $('.popup', this.element);
-            popup.show();
-            $('.popupfilter', this.element).show();
+            var popup = this.myPopup.insertBefore('#pipeline').show();
+            var filter = this.myPopupFilter.insertBefore('#pipeline').show();
+            this.myPopup = popup;
+            this.myPopupFilter = filter;
 
             key = (key == -1) ? "" : key;
             $(popup).data("initial_key", key);
@@ -2282,8 +2292,8 @@ var Blocks = {
                             $(".check-group", popup).removeAttr('checked');
                         }
                     } else {
-                        $(".popup", thisBlock.element).hide();
-                        $('.popupfilter', thisBlock.element).hide();
+                        thisBlock.myPopup = thisBlock.myPopup.appendTo(thisBlock.element).hide();
+                        thisBlock.myPopupFilter = thisBlock.myPopupFilter.appendTo(thisBlock.element).hide();
                     }
                 });
 
@@ -2291,7 +2301,7 @@ var Blocks = {
         },
 
         popupSave: function() {
-            var popup = $('.popup', this.element);
+            var popup = this.myPopup;
             var table = $('.popup-format-table', popup);
             var styles = [];
             var useColor = $(".check-color", popup).attr("checked");
@@ -2323,8 +2333,8 @@ var Blocks = {
                 var thisBlock = this;
                 Pipeline.ajax.saveFormatStyle(key, styles, function(data) {
                     if (data.error == false) {
-                        $('.popupfilter', thisBlock.element).hide();
-                        $('.popup', thisBlock.element).hide();
+                        thisBlock.myPopup = thisBlock.myPopup.appendTo(thisBlock.element).hide();
+                        thisBlock.myPopupFilter = thisBlock.myPopupFilter.appendTo(thisBlock.element).hide();
                         thisBlock.key = key;
                         thisBlock.loadState();
                         Pipeline.refresh();
@@ -2334,14 +2344,14 @@ var Blocks = {
         },
 
         popupDelete: function() {
-            var popup = $('.popup', this.element);
+            var popup = this.myPopup;
             var thisBlock = this;
             var key = $('.text-format-key', popup).val();
             if ( key != '' ) {
                 Pipeline.ajax.deleteFormatStyle(key, function(data) {
                     if ( data.error == false ) {
-                        $('.popupfilter', thisBlock.element).hide();
-                        $('.popup', thisBlock.element).hide();
+                        thisBlock.myPopup = thisBlock.myPopup.appendTo(thisBlock.element).hide();
+                        thisBlock.myPopupFilter = thisBlock.myPopupFilter.appendTo(thisBlock.element).hide();
                         thisBlock.key = '-1';
                         thisBlock.loadState();
                         Pipeline.refresh();
