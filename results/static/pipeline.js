@@ -3179,8 +3179,9 @@ var Pipeline = {
                 Utilities.updateMultiSelect($("#select-value-cols"), Pipeline.valueColumnsCache, Pipeline.valueColumnsCache, Pipeline.selectedValueColumns);
             }
 
+            var output = $('#output');
+            output.prepend(data.error_html);
             if (!error) {
-                var output = $('#output');
                 output.hide();
                 output.html(data.error_html);
                 output.append('<div width="100%" class="graph-table" style="position:relative;"></div>');

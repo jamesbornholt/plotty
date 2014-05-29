@@ -27,7 +27,7 @@ def pipeline(request, pipeline):
         return HttpResponse(json.dumps({'error': True, 'error_html': output, 'rows': 1}))
     except PipelineError as e:
         if isinstance(e.block, str):
-            output = '<div class="exception"><h1>Error in' + e.block + '</h1>' + e.msg + '</div>'
+            output = '<div class="exception"><h1>Error in ' + e.block + '</h1>' + e.msg + '</div>'
             return HttpResponse(json.dumps({'error': True, 'index': e.block, 'error_html': output, 'rows': 1}))
         else:
             error_output = '<div class="exception"><h1>Error in block ' + str(e.block + 1) + '</h1>' + e.msg + '</div>'

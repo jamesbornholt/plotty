@@ -152,7 +152,9 @@ class DataTable:
             if schash not in scenarios:
                 scenarios[schash] = DataRow(line)
             if key_clean in scenarios[schash].values:
-              raise PipelineError("Invalid log file, multiple values for key %s with scenario %s" % (key_clean, line))
+              err_str = "Invalid log file, multiple values for key %s with scenario %s" % (key_clean, line)
+              err_src = "log file '%s'" % str(log)
+              raise PipelineError(err_str, err_src)
             try:
               scenarios[schash].values[key_clean] = float(value)
             except:
