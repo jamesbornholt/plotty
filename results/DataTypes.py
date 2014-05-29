@@ -153,6 +153,10 @@ class DataTable:
                 scenarios[schash] = DataRow(line)
             if key_clean in scenarios[schash].values:
               err_str = "Invalid log file, multiple values for key %s with scenario %s" % (key_clean, line)
+              if key_clean == 'majorGC':
+                  err_str += "<br/><br/>"
+                  err_str += "<b>Possible cause</b>: bug RVM-1025 caused StickyImmix to have two majorGC counters; "
+                  err_str += "this was fixed in Jikes RVM r10619."
               err_src = "log file '%s'" % str(log)
               raise PipelineError(err_str, err_src)
             try:
