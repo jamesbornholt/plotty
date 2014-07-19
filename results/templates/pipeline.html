@@ -347,7 +347,7 @@
         <div id="tabulate-progress"><img src="static/loading.gif" /> Tabulating <span class="tabulate-logfile">[LOGFILE]</span> (<span class="tabulate-percent"></span>% complete)</div>
         <div id="loading-indicator"><img src="static/loading.gif" /> Loading...</div>
         <div id="large-table-confirm">
-            There are <span>0</span> rows of results for this pipeline. Rendering the table may hang your browser temporarily. <button type="button" id="load-large-table">Load anyway</button>
+            There are <span id="row-count">0</span> rows of results. Rendering the table may hang your browser. <button type="button" id="load-large-table">Load anyway</button> <button type="button" id="load-large-table-nosort">Load without sorting (faster)</button>
         </div>
     </div>
     <div id="output">

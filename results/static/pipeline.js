@@ -2557,7 +2557,7 @@ var Pipeline = {
 
         // How many rows should a table contain before we don't render it
         // automatically?
-        MAX_TABLE_ROWS_AUTO_RENDER: 200
+        MAX_TABLE_ROWS_AUTO_RENDER: 2000
     },
 
     /**
@@ -2827,7 +2827,12 @@ var Pipeline = {
         $('#load-large-table').click(function() {
             Utilities.outputTableSort();
             $('#output table, #output .foldable.table').show();
-            $('#output').css('paddingTop', '60px');
+            $('#output').css('paddingTop', '0');
+            $('#large-table-confirm').hide();
+        });
+        $('#load-large-table-nosort').click(function() {
+            $('#output table, #output .foldable.table').show();
+            $('#output').css('paddingTop', '0');
             $('#large-table-confirm').hide();
         });
 
@@ -3258,15 +3263,14 @@ var Pipeline = {
                 }
                 output.append(Utilities.makeFoldable('Table', data.table_html, showTable, false));
                 output.append(data.warn_html);
-                if ( data.rows > Pipeline.constants.MAX_TABLE_ROWS_AUTO_RENDER && !data.graph) {
+                if ( data.rows > Pipeline.constants.MAX_TABLE_ROWS_AUTO_RENDER) {
                     $('#output table, #output .foldable.table').hide();
-                    $('#large-table-confirm span').html(data.rows);
+                    $('#large-table-confirm span#row-count').html(data.rows);
                     $('#large-table-confirm').show();
-                    output.css('paddingTop', '6em');
+                    output.css('paddingTop', '3em');
                 }
                 else {
                     $('#large-table-confirm').hide();
-                    output.css('paddingTop', '60px');
                     Utilities.outputTableSort();
                 }
                 output.show();
