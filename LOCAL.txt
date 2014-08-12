@@ -10,9 +10,9 @@ and try pip again.
 
 Install prerequisites:
     For Mac:
-        $ pip install django==1.2.3
-        $ pip install numpy
-        $ pip install scipy
+        $ sudo pip install django==1.2.3
+        $ sudo pip install numpy
+        $ sudo pip install scipy
         You need to install gnuplot. You can do this with homebrew (http://brew.sh/):
             $ brew install gnuplot
         or by hand:
@@ -47,7 +47,7 @@ Configure the path to gnuplot:
     probably good enough)
 
 Get a log folder to test with:
-    $ scp -r squirrel.moma:/home/james/plotty/test-tip/log/rvm-1046
+    $ scp -r squirrel.moma:/home/james/plotty/test-tip/log/rvm-1046 log/
 
 Run the server:
     $ python manage.py runserver
