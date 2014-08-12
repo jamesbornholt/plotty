@@ -1,0 +1,55 @@
+First, make sure you have a version of python 2.7 (subversion doesn't matter):
+    $ python --version
+    Python 2.7.3
+Also make sure you have pip installed (version and path shouldn't matter):
+    $ pip --version
+    pip 1.0 from /usr/lib/python2.7/dist-packages (python 2.7)
+If not, run:
+    $ sudo easy_install pip
+and try pip again.
+
+Install prerequisites:
+    For Mac:
+        $ pip install django==1.2.3
+        $ pip install numpy
+        $ pip install scipy
+        You need to install gnuplot. You can do this with homebrew (http://brew.sh/):
+            $ brew install gnuplot
+        or by hand:
+            $ wget https://downloads.sourceforge.net/project/gnuplot/gnuplot/4.6.5/gnuplot-4.6.5.tar.gz
+            $ tar xzf gnuplot-4.6.5.tar.gz
+            $ cd gnuplot-4.6.5
+            $ ./configure
+            $ make
+            $ sudo make install
+    For Ubuntu (tested on 12.04):
+        $ sudo pip install django==1.2.3
+        $ sudo apt-get install python-numpy python-scipy gnuplot
+
+Set up the plotty directory:
+    $ hg clone ssh://squirrel.moma//home/mercurial/all/shared/plotty
+    $ cd plotty
+    $ mkdir cache
+    $ mkdir cache/csv
+    $ mkdir cache/graph
+    $ mkdir cache/log
+    $ chmod -R a+rw cache
+    $ cp database.sqlite3.default cache/database.sqlite3
+    $ mkdir log
+
+Initialise the database:
+    $ python manage.py syncdb
+    $ python install_defaults.py
+
+Configure the path to gnuplot:
+    Open settings.py in your favourite editor, and edit the variable
+    GNUPLOT_EXECUTABLE to point to gnuplot (just the string "gnuplot" is
+    probably good enough)
+
+Get a log folder to test with:
+    $ scp -r squirrel.moma:/home/james/plotty/test-tip/log/rvm-1046
+
+Run the server:
+    $ python manage.py runserver
+
+Go to http://localhost:8000 in your browser and try it out.
