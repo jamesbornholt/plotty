@@ -28,7 +28,7 @@ CACHE_CULL_FRACTION = 2 # delete 1/CACHE_CULL_FRACTION entries when max entries 
 CACHE_OPTIONS = 'timeout=%d&max_entries=%d&cull_frequency=%d' % (CACHE_TIMEOUT, CACHE_MAX_ENTRIES, CACHE_CULL_FRACTION)
 CACHE_BACKEND = "file://%s?%s" % (os.path.join(ROOT_DIR, 'cache/log'), CACHE_OPTIONS)
 
-GNUPLOT_EXECUTABLE = '/usr/local/bin/gnuplot'
+GNUPLOT_EXECUTABLE = '/home/web-scripts/plotty-gnuplot/bin/gnuplot'
 GRAPH_CACHE_DIR = os.path.join(ROOT_DIR, 'cache/graph')
 GRAPH_FONT_PATH = '/usr/share/fonts/truetype/msttcorefonts'
 
