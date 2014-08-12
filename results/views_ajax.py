@@ -8,7 +8,7 @@ from plotty.results.Blocks import *
 from plotty.results.models import *
 from plotty.results.Pipeline import *
 from plotty import settings, install_defaults
-import json, csv, logging, os, shutil, math
+import json, csv, logging, os, shutil, math, random
 from datetime import datetime
 
 def pipeline(request, pipeline):
@@ -218,27 +218,14 @@ def create_shorturl(request):
         return HttpResponse(json.dumps({'error': False, 'url': request.build_absolute_uri('../../p/'+old.url)}))
     except ShortURL.DoesNotExist:
         # Create a short URL
-        url = ""
-        num = float(abs(hash(request.POST['encoded']))) # could be random instead
-        # To avoid confusion, don't use 0/o/O, l/L/i/I/1
         valid_chars = "ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789"
-        base = len(valid_chars)
         url_length = 6
-        if num < base**url_length:
-            t = math.floor(math.log(num, base))
-            while t <= url_length:
-                num *= base**t
-        num = num % (base**url_length)
-        for t in xrange(url_length-1, -1, -1):
-            factor = base**t
-            i = int(math.floor(num / factor) % base)
-            url += valid_chars[i]
-            num -= i * factor
-        
+        hunk = ''.join(random.choice(valid_chars) for _ in xrange(url_length))
+        # don't bother checking for collisions, it's astronomically unlikely
         # Save it
-        new = ShortURL(url=url, encoded=request.POST['encoded'])
+        new = ShortURL(url=hunk, encoded=request.POST['encoded'])
         new.save()
-        return HttpResponse(json.dumps({'error': False, 'url': request.build_absolute_uri('../../p/'+url)}))
+        return HttpResponse(json.dumps({'error': False, 'url': request.build_absolute_uri('../../p/'+hunk)}))
     except:
         return HttpResponse(json.dumps({'error': True}))
 
