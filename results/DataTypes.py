@@ -6,7 +6,7 @@ from plotty.results.Tabulate import extract_csv
 from plotty.results.Exceptions import LogTabulateStarted, PipelineError
 import tempfile
 from scipy import stats
-import Image, ImageDraw, StringIO, urllib
+import StringIO, urllib
 
 class Messages(object):
 
