@@ -41,11 +41,6 @@ Initialise the database:
     $ python manage.py syncdb
     $ python install_defaults.py
 
-Configure the path to gnuplot:
-    Open settings.py in your favourite editor, and edit the variable
-    GNUPLOT_EXECUTABLE to point to gnuplot (just the string "gnuplot" is
-    probably good enough)
-
 Get a log folder to test with:
     $ scp -r squirrel.moma:/home/james/plotty/test-tip/log/rvm-1046 log/
 
