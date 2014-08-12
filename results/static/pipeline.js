@@ -1344,6 +1344,8 @@ var Blocks = {
             $("#popup-format-delete-go", popup).click(function() {
                 thisBlock.popupDelete();
             });
+
+            this.setFlag(this.FLAGS.DO_NOT_GROUP_BY_UNBOUND_SCENARIO_COLUMNS, true);
         },
         
         /**
