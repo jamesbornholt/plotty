@@ -12,8 +12,10 @@ TEMPLATE_DEBUG = DEBUG
 CONFIDENCE_LEVEL = 0.95
 if 'PLOTTY_ROOT' in os.environ:
     ROOT_DIR = os.environ['PLOTTY_ROOT']
+    IS_SQUIRREL = True
 else:
     ROOT_DIR = os.path.dirname(__file__)
+    IS_SQUIRREL = False
 
 APP_ROOT = os.path.dirname(__file__)
 
@@ -28,12 +30,17 @@ CACHE_CULL_FRACTION = 2 # delete 1/CACHE_CULL_FRACTION entries when max entries 
 CACHE_OPTIONS = 'timeout=%d&max_entries=%d&cull_frequency=%d' % (CACHE_TIMEOUT, CACHE_MAX_ENTRIES, CACHE_CULL_FRACTION)
 CACHE_BACKEND = "file://%s?%s" % (os.path.join(ROOT_DIR, 'cache/log'), CACHE_OPTIONS)
 
-# GNUPLOT_EXECUTABLE = '/home/web-scripts/plotty-gnuplot/bin/gnuplot'  # squirrel
 GNUPLOT_EXECUTABLE = 'gnuplot'
+if IS_SQUIRREL:
+    GNUPLOT_EXECUTABLE = '/home/web-scripts/plotty-gnuplot/bin/gnuplot'
 GRAPH_CACHE_DIR = os.path.join(ROOT_DIR, 'cache/graph')
 GRAPH_FONT_PATH = '/usr/share/fonts/truetype/msttcorefonts'
 
-TABULATE_EXECUTABLE = os.path.join(APP_ROOT, 'results/Tabulate.py')
+USE_NEW_LOGPARSER = True
+if USE_NEW_LOGPARSER:
+    TABULATE_EXECUTABLE = os.path.join(APP_ROOT, 'results/LogParser.py')
+else:
+    TABULATE_EXECUTABLE = os.path.join(APP_ROOT, 'results/Tabulate.py')
 
 if ROOT_DIR not in sys.path:
     sys.path.insert(0, ROOT_DIR)

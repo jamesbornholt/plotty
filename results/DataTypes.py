@@ -2,7 +2,6 @@ from django.core.cache import cache
 import logging, sys, csv, os, math, re, string, subprocess, time, stat
 from plotty import settings
 from plotty.results.Utilities import present_value, present_value_csv, scenario_hash, length_cmp
-from plotty.results.Tabulate import extract_csv
 from plotty.results.Exceptions import LogTabulateStarted, PipelineError
 import tempfile
 from scipy import stats
@@ -128,7 +127,12 @@ class DataTable:
                 pid = subprocess.Popen(["python", settings.TABULATE_EXECUTABLE, dir_path, csv_file, settings.CACHE_ROOT]).pid
                 raise LogTabulateStarted(log, pid)
             else:
-                extract_csv(dir_path, csv_file)
+                if settings.USE_NEW_LOGPARSER:
+                    from plotty.results.LogParser import tabulate_log_folder
+                    tabulate_log_folder(dir_path, csv_file)
+                else:
+                    from plotty.results.Tabulate import extract_csv
+                    extract_csv(dir_path, csv_file)
         else:
             logging.debug("Valid CSV already exists for " + dir_path + ", skipping retabulation.")
 
