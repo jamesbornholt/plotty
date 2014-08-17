@@ -1,10 +1,9 @@
 from django.core.cache import cache
 import logging, sys, csv, os, math, re, string, subprocess, time, stat
 from plotty import settings
-from plotty.results.Utilities import present_value, present_value_csv, scenario_hash, length_cmp
+from plotty.results.Utilities import present_value, present_value_csv, scenario_hash, length_cmp, t_quantile
 from plotty.results.Exceptions import LogTabulateStarted, PipelineError
 import tempfile
-from scipy import stats
 import StringIO, urllib
 
 class Messages(object):
@@ -537,7 +536,7 @@ class DataAggregate:
             if allow_cis:
                 self._stdev = math.sqrt(valM2 / (n - 1))
     
-                ciDelta = stats.t.isf((1 - settings.CONFIDENCE_LEVEL) / 2, n-1) * self._stdev / math.sqrt(n)
+                ciDelta = t_quantile(1 - settings.CONFIDENCE_LEVEL, n-1) * self._stdev / math.sqrt(n)
                 self._ciUp = self._value + ciDelta
                 self._ciDown = self._value - ciDelta
             else:
@@ -667,7 +666,7 @@ class DataAggregate:
             
             # Motulsky, 'Intuitive Biostatistics', pp285-6
             if self.value() <> 0 and other.value() <> 0:
-                tinv = stats.t.isf((1 - settings.CONFIDENCE_LEVEL) / 2, self.count() + other.count() - 2)
+                tinv = t_quantile(1 - settings.CONFIDENCE_LEVEL, self.count() + other.count() - 2)
                 g = (tinv * (other.sem() / other.value()))**2
                 if g >= 1.0:
                     ciUp = ciDown = float('nan')

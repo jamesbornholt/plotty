@@ -1,7 +1,7 @@
-First, make sure you have a version of python 2.7 (subversion doesn't matter):
+First, make sure you have a version of python 2.7 (the subversion doesn't matter):
     $ python --version
     Python 2.7.3
-Also make sure you have pip installed (version and path shouldn't matter):
+Also make sure you have pip installed (version and path don't matter):
     $ pip --version
     pip 1.0 from /usr/lib/python2.7/dist-packages (python 2.7)
 If not, run:
@@ -9,22 +9,20 @@ If not, run:
 and try pip again.
 
 Install prerequisites:
-    For Mac:
+    Django:
         $ sudo pip install django==1.2.3
-        $ sudo pip install numpy
-        $ sudo pip install scipy
-        You need to install gnuplot. You can do this with homebrew (http://brew.sh/):
+    Gnuplot:
+        Use a package manager (brew on OS X, apt-get on Ubuntu):
             $ brew install gnuplot
-        or by hand:
+            or
+            $ sudo apt-get install gnuplot
+        Or compile manually:
             $ wget https://downloads.sourceforge.net/project/gnuplot/gnuplot/4.6.5/gnuplot-4.6.5.tar.gz
             $ tar xzf gnuplot-4.6.5.tar.gz
             $ cd gnuplot-4.6.5
             $ ./configure
             $ make
             $ sudo make install
-    For Ubuntu (tested on 12.04):
-        $ sudo pip install django==1.2.3
-        $ sudo apt-get install python-numpy python-scipy gnuplot
 
 Set up the plotty directory:
     $ hg clone ssh://squirrel.moma//home/mercurial/all/shared/plotty
@@ -34,7 +32,6 @@ Set up the plotty directory:
     $ mkdir cache/graph
     $ mkdir cache/log
     $ chmod -R a+rw cache
-    $ cp database.sqlite3.default cache/database.sqlite3
     $ mkdir log
 
 Initialise the database:
