@@ -140,7 +140,6 @@ def parse_csv(logpath, filename):
                 # Start of a new invocation, finalise this one (wrap up the
                 # last iteration if necessary)
                 if len(value) > 0:
-                    # r = DataRow()
                     if legacy_mode:
                         if not legacy_scenario:
                             extract_scenario(legacy_scenario, filename)
@@ -178,7 +177,7 @@ def parse_csv(logpath, filename):
                 state = states.IN_TABULATE_STATS_DATA
             else:
                 # not valid
-                state = IN_ERROR
+                state = states.IN_ERROR
 
         elif state == states.IN_TABULATE_STATS_DATA:
             # next line should be a list of data
@@ -209,7 +208,7 @@ def parse_csv(logpath, filename):
             if re_digit.match(l):
                 vals = re_whitespace.split(l)
                 if len(vals) != len(tabulate_stats_headers):
-                    state = IN_ERROR
+                    state = states.IN_ERROR
                     continue
                 totaltime = 0.0
                 for k, v in zip(tabulate_stats_headers, vals):
