@@ -294,6 +294,8 @@ def tabulate_log_folder(logpath, outfile, write_status=None):
         for k in scenario_headers_sorted:
             if k in r.scenario:
                 scenario_str += str(r.scenario[k])
+            else:
+                scenario_str += "null"
             scenario_str += ","
         for key, val in r.value:
             csv_out.write(scenario_str)
