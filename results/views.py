@@ -62,8 +62,8 @@ def list(request, pipeline):
     return HttpResponse('<html><head><title>Listing</title></head><body>' + output + '</body></html')
 
 def pipeline(request):
-    is_log_dir = lambda f: os.path.isdir(os.path.join(settings.BM_LOG_DIR)) and not f.endswith(".ca")
-    is_csv_file = lambda f: os.path.isfile(os.path.join(settings.BM_LOG_DIR)) and f.endswith(".csv")
+    is_log_dir = lambda f: os.path.isdir(os.path.join(settings.BM_LOG_DIR, f)) and not f.endswith(".ca")
+    is_csv_file = lambda f: os.path.isfile(os.path.join(settings.BM_LOG_DIR, f)) and f.endswith(".csv")
     logs = [f for f in os.listdir(settings.BM_LOG_DIR) if is_log_dir(f) or is_csv_file(f)]
     logs.sort(key=str.lower)
     pipelines = SavedPipeline.objects.all().order_by('name')
