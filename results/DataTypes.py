@@ -3,6 +3,7 @@ import logging, sys, csv, os, math, re, string, subprocess, time, stat
 from plotty import settings
 from plotty.results.Utilities import present_value, present_value_csv, scenario_hash, length_cmp, t_quantile
 from plotty.results.Exceptions import LogTabulateStarted, PipelineError
+from plotty.results.CSVParser import parse_csv
 import tempfile
 import StringIO, urllib
 
@@ -60,18 +61,27 @@ class DataTable:
         self.valueColumns = set()
         self.messages = Messages()
         self.lastModified = 0
-        for i,log in enumerate(logs):
+        for i, log in enumerate(logs):
             dir_path = os.path.join(settings.BM_LOG_DIR, log)
             cached_vals = cache.get("LOGFILE-" + log)
             file_last_modified = os.path.getmtime(dir_path)
-            if cached_vals == None or cached_vals['last_modified'] < file_last_modified:
+            if cached_vals is None or cached_vals['last_modified'] < file_last_modified:
+                # cache is invalid, we need to reload
+                messages = Messages()
                 try:
-                    rows, lastModified, scenarioColumns, valueColumns, messages = self.loadCSV(log, wait)
+                    rows, lastModified, scenarioColumns, valueColumns = self.loadLog(log, wait, messages)
                 except LogTabulateStarted as e:
                     e.index = i
                     e.length = len(logs)
                     raise e
-                ret = cache.set("LOGFILE-" + log, {'last_modified': lastModified, 'rows': rows, 'scenarioColumns': scenarioColumns, 'valueColumns': valueColumns, 'messages': messages})
+
+                # store the results in the cache
+                ret = cache.set("LOGFILE-" + log, {
+                    'last_modified': lastModified, 
+                    'rows': rows,
+                    'scenarioColumns': scenarioColumns,
+                    'valueColumns': valueColumns,
+                    'messages': messages})
                 
                 logging.debug('For log %s: cache empty or expired, stored %d rows to cache.' % (log, len(rows)))
             else:
@@ -95,83 +105,129 @@ class DataTable:
         """
         return iter(self.rows)
 
-    def loadCSV(self, log, wait):
-        """ Parses the CSV file at log into an array of DataRow objects.
+    def loadLog(self, log, wait, messages):
+        """ Load a log file directly (services the cache)
             
             log: a relative path to the log file to be parsed.
+            wait: should we wait for the parser (true), or return immediately
+                  while it runs in the background (false)
         """
-        scenarios = {}
-        value_cols = set()
-        messages = Messages()
+        # is this a log directory, or a plain csv file?
+        log_path = os.path.join(settings.BM_LOG_DIR, log)
+        lastModified = os.path.getmtime(log_path)
+        if os.path.isdir(log_path):
+            rows = self.loadLogDirectory(log, wait)
+        else:
+            rows = parse_csv(log_path)
 
-        dir_path = os.path.join(settings.BM_LOG_DIR, log)
+        # make column names safe
+        num_unnamed_columns = 0
+        safe_chars = frozenset('_.')
+        def make_column_name_safe(k, tag):
+            if any(c.isalnum() or c == '_' for c in k):
+                newk = ''.join(c if c.isalnum() or c in safe_chars else '_' for c in k)
+                if newk[0].isdigit():
+                    newk = "_" + newk
+            else:
+                newk = tag + num_unnamed_columns
+                num_unnamed_columns += 1
+            return newk
+
+        clean_rows = []
+        scenario_column_names = {'logfile': 'logfile'}
+        value_column_names = {}
+        duplicate_value_columns = set()
+        nonnumeric_value_columns = set()
+        
+        for row in rows:
+            # validate scenario keys
+            for k in row.scenario.keys():
+                # sanitise the column name
+                if k not in scenario_column_names:
+                    scenario_column_names[k] = make_column_name_safe(k, "scenario_")
+                newk = scenario_column_names[k]
+                # rename the column in the row if necessary
+                if k != newk:
+                    row.scenario[newk] = row.scenario[k]
+                    del row.scenario[k]
+            # add the log's name to its scenario columns; force cast from unicode
+            row.scenario['logfile'] = str(log)
+
+            # validate value keys
+            value = {}
+            for k, v in row.value:
+                # if the value isn't numeric, we're not going to use it, so
+                # need to do nothing for this (k, v)
+                try:
+                    v = float(v)
+                except ValueError:
+                    if k not in nonnumeric_value_columns:
+                        messages.warn("Non-numeric values for value column '%s'." % k,
+                            "For example, scenario %s has %s value '%s'." % (
+                                row.scenario, k, v))
+                        nonnumeric_value_columns.add(k)
+                    continue
+                # sanitise the column name
+                if k not in value_column_names:
+                    value_column_names[k] = make_column_name_safe(k, "value_")
+                newk = value_column_names[k]
+                # check for duplicates that are distinct (we let repeated values
+                # through silently)
+                if newk in value and v != value[newk]:
+                    # only output a warning once per column
+                    if newk not in duplicate_value_columns:
+                        messages.warn("Duplicate values for value column '%s'." % k,
+                            "For example, scenario %s has %s values %s and %s." % (
+                                row.scenario, k, value[newk], v))
+                        duplicate_value_columns.add(newk)
+                # write the value into this row; we do this regardless of
+                # duplicates, so the last value always wins
+                value[newk] = v
+
+            # add the row
+            clean_rows.append(DataRow(row.scenario, value))
+
+        # summarise what we've done
+        logging.debug('Parsed %d results from log %s' % (len(clean_rows), log))
+        scenario_columns = set(scenario_column_names.values())
+        value_columns = set(value_column_names.values())
+        return clean_rows, lastModified, scenario_columns, value_columns
+
+    def loadLogDirectory(self, log, wait):
+        """ Tabulate a log directory into the CSV cache """
+        # path to the log directory
+        log_path = os.path.join(settings.BM_LOG_DIR, log)
+
+        # the tabulation script will output a csv file into the csv directory
         csv_dir = os.path.join(settings.CACHE_ROOT, "csv")
-        csv_file = os.path.join(csv_dir, log + ".csv.gz")
         if not os.path.exists(csv_dir):
             os.mkdir(csv_dir)
+        csv_file = os.path.join(csv_dir, log + ".csv.gz")
 
-
-        # Store the log's last modified date
-        lastModified = os.path.getmtime(dir_path)
-        
-        invalid_chars = frozenset("+-/*|&^")
-        
-        # Only retabulate if the logs have been modified since the csv was
-        # generated.
+        # we need to re-parse the log file if the csv doesn't yet exist or the
+        # log directory has changed since the csv was written
+        lastModified = os.path.getmtime(log_path)
         if not os.path.exists(csv_file) or os.path.getmtime(csv_file) < lastModified:
-            logging.debug("Retabulating CSV for " + dir_path + " since CSV was out of date or non-existent")
+            logging.debug("Retabulating CSV for " + log_path + " since CSV was out of date or non-existent")
+            
             if not wait:
-                # We don't want to wait - throw an exception and tell the client
-                # to come back later.
-                pid = subprocess.Popen(["python", settings.TABULATE_EXECUTABLE, dir_path, csv_file, settings.CACHE_ROOT]).pid
+                # we're not going to wait for the parser; run it in the background
+                pid = subprocess.Popen(["python", settings.TABULATE_EXECUTABLE, log_path, csv_file, settings.CACHE_ROOT]).pid
                 raise LogTabulateStarted(log, pid)
             else:
+                # call the parser directly
                 if settings.USE_NEW_LOGPARSER:
                     from plotty.results.LogParser import tabulate_log_folder
-                    tabulate_log_folder(dir_path, csv_file)
+                    tabulate_log_folder(log_path, csv_file)
                 else:
                     from plotty.results.Tabulate import extract_csv
-                    extract_csv(dir_path, csv_file)
+                    extract_csv(log_path, csv_file)
         else:
-            logging.debug("Valid CSV already exists for " + dir_path + ", skipping retabulation.")
+            logging.debug("Valid CSV already exists for " + log_path + ", skipping retabulation.")
 
-        gunzip_process = subprocess.Popen(["gunzip", "-c", csv_file], stdout=subprocess.PIPE)
-        reader = csv.DictReader(gunzip_process.stdout)
-        reader.fieldnames = map(str.lower, reader.fieldnames)
-        for line in reader:
-            key = line.pop('key')
-            if key == None or key == '':
-                continue
-            key_clean = ''.join(('.' if c in invalid_chars else c) for c in key)
-            if key_clean == '':
-                continue
-            value = line.pop('value')
-            if value == '' or value == None:
-                continue
-            if key_clean not in value_cols:
-                value_cols.add(key_clean)
-            line['logfile'] = str(log)
-            schash = scenario_hash(line)
-            if schash not in scenarios:
-                scenarios[schash] = DataRow(line)
-            if key_clean in scenarios[schash].values:
-              err_str = "Invalid log file, multiple values for key %s with scenario %s" % (key_clean, line)
-              if key_clean == 'majorGC':
-                  err_str += "<br/><br/>"
-                  err_str += "<b>Possible cause</b>: bug RVM-1025 caused StickyImmix to have two majorGC counters; "
-                  err_str += "this was fixed in Jikes RVM r10619."
-              err_src = "log file '%s'" % str(log)
-              raise PipelineError(err_str, err_src)
-            try:
-              scenarios[schash].values[key_clean] = float(value)
-            except:
-              messages.warn("'%s' not numeric" % value, str(line))
-        
-        logging.debug('Parsed %d rows from CSV' % len(scenarios))
-        scenario_cols = reader.fieldnames
-        scenario_cols.remove('key')
-        scenario_cols.remove('value')
-        return scenarios.values(), lastModified, set(scenario_cols), value_cols, messages
+        # parse the resulting CSV
+        rows = parse_csv(csv_file)
+        return rows
 
     def headers(self):
         """ Returns the headers that would be used to output a table of
@@ -401,15 +457,12 @@ class DataRow:
         dictionaries - DataRow.scenario for the scenario columns, and
         DataRow.values for the value columns. 
     """
-    def __init__(self, scenario=None):
-        """ Creates a new DataRow, optionally using a specified scenario
-            dictionary.
-            
-            scenario: (optional) the initial scenario dictionary for this row.
-        """
-        if scenario == None:
+    def __init__(self, scenario=None, values=None):
+        if scenario is None:
             scenario = {}
-        self.values = {}
+        if values is None:
+            values = {}
+        self.values = values
         self.scenario = scenario
         
     def __repr__(self):
