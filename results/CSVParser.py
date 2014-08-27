@@ -17,10 +17,12 @@ def parse_csv(csv_path):
     scenario variables, but the value variables can come in two formats:
     1. Long-format data has two columns 'key' and 'value'. The 'key' column
        contains the name of each value variable, and the 'value' column the
-       corresponding value.
-    2. Wide-format data has one column for each value variable. To distinguish
-       scenario variables from value variables, we assume value variables are
-       prefixed with 'value.' (e.g. 'value.bmtime').
+       corresponding value. Each invocation has multiple rows in a long-format
+       CSV, one row for each value variable.
+    2. Wide-format data has one column for each value variable. Each invocation
+       has a single row in a wide-format CSV. To distinguish scenario variables 
+       from value variables, we assume value variables are prefixed with 
+       'value.' (e.g. 'value.bmtime').
     """
 
     filename = str(os.path.basename(csv_path))
