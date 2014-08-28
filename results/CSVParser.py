@@ -57,14 +57,14 @@ def parse_csv(csv_path):
     return rows
 
 def _load_from_long_csv(reader):
-    headers = set(reader.fieldnames) - set(['key', 'value'])
+    headers = sorted(set(reader.fieldnames) - set(['key', 'value']))
 
     scenarios = {}
     values = {}
     for row in reader:
         key = row.pop('key')
         val = row.pop('value')
-        sc = scenario_hash(row)
+        sc = _scenario_hash_fast(row, headers)
         if sc not in scenarios:
             scenarios[sc] = row
             values[sc] = []
@@ -94,3 +94,8 @@ def _load_from_wide_csv(reader):
         dr = Result(scenario, value)
         rows.append(dr)
     return rows
+
+def _scenario_hash_fast(row, columns):
+    # csv parser guarantees that each x appears in row, so columns is used just
+    # for ordering
+    return tuple(row[x] for x in columns)
