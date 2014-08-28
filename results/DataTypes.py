@@ -124,8 +124,8 @@ class DataTable:
         num_unnamed_columns = 0
         safe_chars = frozenset('_.')
         def make_column_name_safe(k, tag):
-            if any(c.isalnum() or c == '_' for c in k):
-                newk = ''.join(c if c.isalnum() or c in safe_chars else '_' for c in k)
+            if any(c.isalnum() or c in safe_chars for c in k):
+                newk = ''.join(c if c.isalnum() or c in safe_chars else '.' for c in k)
                 if newk[0].isdigit():
                     newk = "_" + newk
             else:
