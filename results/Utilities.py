@@ -194,7 +194,7 @@ def t_quantile(alpha, df):
     Source: G. W. Hill. 1970. Algorithm 396: Students t-Quantiles. Commun. ACM 13, 10 (October 1970), 619-620.
     doi 10.1145/355598.355600 """
     if df < 1 or not (0 <= alpha < 1):
-        raise ArithmeticError("Invalid arguments for t_quantile(%f, %f)" % (alpha, df))
+        return float('nan')
 
     if df == 2:
         return math.sqrt(2.0 / (alpha * (2.0 - alpha)) - 2.0)
