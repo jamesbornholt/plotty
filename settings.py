@@ -28,7 +28,7 @@ CACHE_TIMEOUT = 7*24*60*60
 CACHE_MAX_ENTRIES = 300
 CACHE_CULL_FRACTION = 2 # delete 1/CACHE_CULL_FRACTION entries when max entries reached
 CACHE_OPTIONS = 'timeout=%d&max_entries=%d&cull_frequency=%d' % (CACHE_TIMEOUT, CACHE_MAX_ENTRIES, CACHE_CULL_FRACTION)
-CACHE_BACKEND = "file://%s?%s" % (os.path.join(ROOT_DIR, 'cache/log'), CACHE_OPTIONS)
+CACHE_BACKEND = "plotty.results.Cache://%s?%s" % (os.path.join(ROOT_DIR, 'cache/log'), CACHE_OPTIONS)
 
 GNUPLOT_EXECUTABLE = 'gnuplot'
 if IS_SQUIRREL:
