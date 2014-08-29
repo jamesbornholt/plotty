@@ -212,7 +212,7 @@ class DataTable:
             
             if not wait:
                 # we're not going to wait for the parser; run it in the background
-                pid = subprocess.Popen(["python", settings.TABULATE_EXECUTABLE, log_path, csv_file, settings.CACHE_ROOT]).pid
+                pid = subprocess.Popen([settings.LOGPARSER_PYTHON, settings.TABULATE_EXECUTABLE, log_path, csv_file, settings.CACHE_ROOT]).pid
                 raise LogTabulateStarted(log, pid)
             else:
                 # call the parser directly

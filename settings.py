@@ -37,8 +37,12 @@ GRAPH_CACHE_DIR = os.path.join(ROOT_DIR, 'cache/graph')
 GRAPH_FONT_PATH = '/usr/share/fonts/truetype/msttcorefonts'
 
 USE_NEW_LOGPARSER = True
+LOGPARSER_PYTHON = 'python'
 if USE_NEW_LOGPARSER:
     TABULATE_EXECUTABLE = os.path.join(APP_ROOT, 'results/LogParser.py')
+    pypy_path = '/home/web-scripts/plotty-pypy/bin/pypy'
+    if IS_SQUIRREL and os.path.exists(pypy_path):
+        LOGPARSER_PYTHON = pypy_path
 else:
     TABULATE_EXECUTABLE = os.path.join(APP_ROOT, 'results/Tabulate.py')
 
