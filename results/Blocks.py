@@ -821,6 +821,12 @@ class GraphBlock(Block):
             output.append(line[:-1])
 
         if aggregates:
+            # first add a fake row to create a gap
+            line = '"data","full","",'
+            for col in column_keys:
+                line += ",,,"
+            output.append(line[:-1])
+            # now add the aggregates
             for agg in ['min', 'max', 'mean', 'geomean']:
                 line = '"agg","full","' + agg + '",'
                 for col in column_keys:
