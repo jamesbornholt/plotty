@@ -969,12 +969,13 @@ class GraphBlock(Block):
                     csv_file.write(csv)
                     csv_file.close()
    
-                    (plot_output, suffixes) = self.produceGraph(graph_hash, graph_path, code, column_keys)
-                
+                    title = data_table.valueColumnsDisplay[value_key]
+
+                    (plot_output, suffixes) = self.produceGraph(graph_hash, graph_path, code, column_keys, ylabel=title)
+                    
                     # Render the HTML!
                     table_html = self.renderPivotHTML(pivot_table, column_keys, row_keys, graph_hash, aggregates, incomplete_rows)
                 
-                    title = data_table.valueColumnsDisplay[value_key]
                     if len(scenario_keys[scenario]) > 0:
                         title += " [" + ', '.join([present_scenario(k) + ' = ' + present_scenario(scenario_keys[scenario][k]) for k in scenario_keys[scenario].keys()]) + "]"
                 
@@ -1081,7 +1082,7 @@ class GraphBlock(Block):
 
         return True
 
-    def produceGraph(self, graph_hash, graph_path, code, column_keys, series_values=[]):
+    def produceGraph(self, graph_hash, graph_path, code, column_keys, series_values=[], ylabel=""):
 
         if not self.sanitizeCode(code):
             raise PipelineError("Plotting code failed security check")
@@ -1092,7 +1093,7 @@ class GraphBlock(Block):
 
         gp_file = open(graph_path + ".gpt", "w")
         try:
-            formatted_code = code.format(graph_hash=graph_hash, line_colors=line_colors, num_cols=len(columns), col=columns, series=series, font_path=settings.GRAPH_FONT_PATH)
+            formatted_code = code.format(graph_hash=graph_hash, line_colors=line_colors, num_cols=len(columns), col=columns, series=series, font_path=settings.GRAPH_FONT_PATH, ylabel=ylabel)
         except IndexError as ie:
             raise PipelineError("Error formatting gnuplot: index out of range (maybe not enough columns)")
         except KeyError as ke:
