@@ -25,7 +25,7 @@ Install prerequisites:
             $ sudo make install
 
 Set up the plotty directory:
-    $ hg clone ssh://squirrel.moma//home/mercurial/all/shared/plotty
+    $ git clone git@github.com/jamesbornholt/plotty
     $ cd plotty
     $ mkdir cache
     $ mkdir cache/csv
@@ -38,8 +38,8 @@ Initialise the database:
     $ python manage.py syncdb
     $ python install_defaults.py
 
-Get a log folder to test with:
-    $ scp -r squirrel.moma:/home/james/plotty/test-tip/log/rvm-1046 log/
+Get some logs to test with:
+    $ cp ~/data.csv log/
 
 Run the server:
     $ python manage.py runserver
