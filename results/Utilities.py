@@ -50,7 +50,7 @@ def present_value(val):
             else:
                 output += ' <span class="ci">-%.2f%%, +%.2f%%</span>' % (ciDown, ciUp)
     else:
-        output = str(val)
+        output = "%.3f" % val
     return output
     
 def present_value_csv(key, val, values_with_ci):
