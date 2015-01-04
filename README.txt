@@ -25,7 +25,7 @@ Install prerequisites:
             $ sudo make install
 
 Set up the plotty directory:
-    $ git clone git@github.com/jamesbornholt/plotty
+    $ git clone git@github.com:jamesbornholt/plotty.git
     $ cd plotty
     $ mkdir cache
     $ mkdir cache/csv
