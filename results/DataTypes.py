@@ -121,7 +121,7 @@ class DataTable:
             rows = parse_csv(log_path)
 
         # make column names safe
-        num_unnamed_columns = 0
+        num_unnamed_columns = [0]
         safe_chars = frozenset('_.')
         def make_column_name_safe(k, tag):
             if any(c.isalnum() or c in safe_chars for c in k):
@@ -129,8 +129,8 @@ class DataTable:
                 if newk[0].isdigit():
                     newk = "_" + newk
             else:
-                newk = tag + num_unnamed_columns
-                num_unnamed_columns += 1
+                newk = tag + str(num_unnamed_columns[0])
+                num_unnamed_columns[0] += 1
             return newk
 
         clean_rows = []
